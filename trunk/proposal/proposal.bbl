@@ -1,0 +1,22 @@
+\begin{thebibliography}{}
+
+\bibitem[\protect\citeauthoryear{Johansson \& Olsson}{2006}]{JohOls2006}
+Johansson, S., and Olsson, F.
+\newblock 2006.
+\newblock Using multi-agent system technology in risk bots.
+\newblock {\em In AIIDE}.
+
+\bibitem[\protect\citeauthoryear{Olsson}{2005}]{Ols2005}
+Olsson, F.
+\newblock 2005.
+\newblock A multi-agent system for playing the board game {R}isk.
+\newblock Master's thesis, Blekinge Institute of Technology.
+
+\bibitem[\protect\citeauthoryear{Zuckerman, Felner, \&
+  Kraus}{2009}]{ZuckFelnerKraus2009}
+Zuckerman, I.; Felner, A.; and Kraus, S.
+\newblock 2009.
+\newblock Mixing search strategies for multi-player games.
+\newblock {\em In IJCAI}.
+
+\end{thebibliography}
