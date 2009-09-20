@@ -1,0 +1,44 @@
+\documentclass[12pt]{article}  % list options between brackets
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{fullpage}
+\usepackage{ulem}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+
+% type user-defined commands here
+
+\begin{document} 
+
+\begin{algorithm}
+	\caption{MaxN-MC(Node $node$, int $depth$, int $numMCRollOuts$)}
+	\begin{algorithmic}
+		\IF{$node$.isTerminal()}
+			\RETURN{evaluationFunction($node$)}
+		\ENDIF
+		\IF{$depth > 0$}
+			\FORALL{$child$ of $node$}
+				\STATE $child.value$ $\gets$ MaxN-MC($child$, $depth - 1$)
+			\ENDFOR
+			\STATE Find $child$ of $node$ with greatest $child.value(node$.getPlayerIndex())
+			\RETURN{$child.value$}
+		\ELSE	
+			\FOR{$i=1$ to $numMCRollOuts$}
+				\STATE $values(i) \gets $ MonteCarloRollOut($node$)
+			\ENDFOR
+			\RETURN{component-wise average of $values$}
+		\ENDIF
+	\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+	\caption{MonteCarloRollOut(Node $node$)}
+	\begin{algorithmic}
+		\IF{$node$.isTerminalNode()}
+			\RETURN{evaluationFunction($node$)}
+		\ENDIF
+		\STATE Pick $child$ from $node$ at random \COMMENT{Could replace with a bias given some heuristic}
+		\RETURN{MonteCarloRollOut($child$)}
+	\end{algorithmic}
+\end{algorithm}
+
+\end{document}
