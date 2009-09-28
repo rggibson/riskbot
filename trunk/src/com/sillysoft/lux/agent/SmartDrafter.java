@@ -8,6 +8,8 @@ package com.sillysoft.lux.agent;
 import com.sillysoft.lux.*;
 import com.sillysoft.lux.util.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 
 /**
@@ -286,13 +288,114 @@ public class SmartDrafter extends SmartAgentBase
         assert(finalDraftState.length == board.getNumberOfCountries());
 
         // Check to make sure that this is a terminal state
-        for (int i = 0; i < finalDraftState.length; ++i)
+        for (int i = 0; i < finalDraftState.length; i++)
         {
             assert(finalDraftState[i] != -1);
         }
 
-        // TODO: IMPLEMENT ME!!
-        return new int[board.getNumberOfPlayers()];
+        // MARS evaluation function        
+        
+        int playerValue[] = new int[board.getNumberOfPlayers()];
+        
+        for (int i = 0; i < board.getNumberOfPlayers(); i++)
+        {
+        	for (int j = 0; j < board.getNumberOfCountries(); j++)
+        	{
+        		playerValue[i] += territoryValue(j, i);        		
+        	}        	
+        }
+
+        return playerValue;
+    }
+    
+    private int territoryValue(int territoryNum, int playerNum)
+    {
+    	// Constants
+    	double Csv=70;
+    	double Cfn=1.2;
+    	double Cen=-0.3;
+    	double Cfnu=0.05;
+    	double Cenu=-0.003;
+    	double Ccb=0.5;
+    	double Coc=20;
+    	double Ceoc=4;
+    	
+    	// Game information
+    	Country country[] = board.getCountries();    	
+    	int curContinent = country[territoryNum].getContinent();
+    	
+    	// List of countries in current continent
+    	List<Country> cyInContinent = new ArrayList<Country>();
+    	
+    	int numBorders = 0;
+    	int numOwned[] = new int[board.getNumberOfPlayers()];
+		
+    	for (int i = 0; i < country.length; i++ )
+    	{
+    		if (country[i].getContinent() == curContinent)
+    		{
+    			cyInContinent.add(country[i]);
+    			
+    			numOwned[country[i].getOwner()]++;
+    			
+    			Country border[] = country[i].getAdjoiningList();
+    			
+    			for (int j = 0; j < border.length; j++ )
+    	    	{
+    				if (border[j].getContinent() != curContinent)
+    				{
+    					numBorders++;
+    				}
+    	    	}
+    		}
+    	}    	   
+    	
+    	
+    	// Variables
+        int Vb = board.getContinentBonus(curContinent);
+        int Vs = cyInContinent.size();
+        int Vnb = numBorders;
+        double Vsv = Vb/(Vs*Vnb);
+        
+        double Vcp = numOwned[playerNum] / cyInContinent.size();
+        int Vfn = country[territoryNum].getNumberPlayerNeighbors(playerNum);
+        int Vfnu=0;
+        int Ven = country[territoryNum].getNumberNotPlayerNeighbors(playerNum);
+        int Venu=0;
+        
+        int Vcb = 0;
+        Country border[] = country[territoryNum].getAdjoiningList();        
+		for (int j = 0; j < border.length; j++ )
+    	{
+			if (border[j].getContinent() != curContinent)
+			{
+				Vcb++;
+			}
+    	}
+		
+		int Voc = 0;  //boolean
+		if ( numOwned[playerNum] ==  cyInContinent.size() - 1 &&
+				country[territoryNum].getOwner() != playerNum )
+		{
+			Voc = 1;
+		}
+				
+        int Veoc = 0; //boolean
+        for (int i = 0; i < board.getNumberOfPlayers(); i++ )
+        {
+        	if (numOwned[i] == cyInContinent.size() &&
+        			i != playerNum)
+        	{
+        		Veoc = 1;
+        		break;
+        	}
+        }
+        
+        int returnVal = (int) (Vsv*Csv+Vfn*Cfn+Vfnu*Cfnu+Ven*Cen+Venu*Cenu+Vcb*Ccb+Vb*(Vcp+Voc*Coc+Veoc*Ceoc)); 
+    	
+    	System.err.println(returnVal);
+    	return returnVal;
+    	
     }
 
 }
