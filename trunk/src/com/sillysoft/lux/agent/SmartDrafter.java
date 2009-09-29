@@ -296,15 +296,22 @@ public class SmartDrafter extends SmartAgentBase
         // MARS evaluation function        
         
         int playerValue[] = new int[board.getNumberOfPlayers()];
+        int totalValue = 0;
         
         for (int i = 0; i < board.getNumberOfPlayers(); i++)
         {
         	for (int j = 0; j < board.getNumberOfCountries(); j++)
         	{
         		playerValue[i] += territoryValue(j, i);        		
-        	}        	
+        	}
+        	totalValue = totalValue + playerValue[i];
         }
 
+        // Convert values to probabilities of winning
+        for (int i = 0; i < board.getNumberOfPlayers(); i++)
+        {
+        	playerValue[i] = playerValue[i] / totalValue;        		
+        }
         return playerValue;
     }
     
