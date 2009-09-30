@@ -149,12 +149,12 @@ public class SmartDrafter extends SmartAgentBase
 
         // Determine which country is the best to choose
         int bestPick = -1;
-        int valueOfBestPick = Integer.MIN_VALUE;
+        double valueOfBestPick = Double.MIN_VALUE;
         for (Integer countryIndex : unownedCountries)
         {
             // Determine the value of picking this country
             draftState[countryIndex] = ID; // Pick country
-            int[] values = maxNMC_r(draftState, (ID + 1) % board.getNumberOfPlayers(), MC_DEPTH);
+            double[] values = maxNMC_r(draftState, (ID + 1) % board.getNumberOfPlayers(), MC_DEPTH);
             draftState[countryIndex] = -1; // Undo pick
 
             // Is country better than the rest we've seen?
@@ -181,7 +181,7 @@ public class SmartDrafter extends SmartAgentBase
      * @param depth How much further we need to go before MC roll outs take over
      * @return The value of this state for each player
      */
-    private int[] maxNMC_r(int[] draftState, int player, int depth)
+    private double[] maxNMC_r(int[] draftState, int player, int depth)
     {
         // First, find all unowned territories
         Vector<Integer> unownedCountries = new Vector<Integer>();
@@ -202,13 +202,13 @@ public class SmartDrafter extends SmartAgentBase
         if (depth > 0)
         {
             // Continue with MaxN portion of the algorithm
-            int[] valuesOfBestMove = null;
+            double[] valuesOfBestMove = null;
             for (Integer countryIndex : unownedCountries)
             {
                 // Evaluate how good it is to take this country.
                 // Note that player + 1 mod numPlayers is the index of the next player to pick
                 draftState[countryIndex] = player; // Pick the country
-                int[] valuesOfThisMove = maxNMC_r(draftState, (player + 1) % board.getNumberOfPlayers(), depth - 1);
+                double[] valuesOfThisMove = maxNMC_r(draftState, (player + 1) % board.getNumberOfPlayers(), depth - 1);
                 draftState[countryIndex] = -1; // Undo the pick
 
                 // For now, in the case of ties, we take the first country we checked.
@@ -227,7 +227,7 @@ public class SmartDrafter extends SmartAgentBase
             // We are in the MC portion of the algorithm
 
             // This will store the cumulative average of the roll outs
-            int[] valuesOfNode = new int[board.getNumberOfPlayers()];
+            double[] valuesOfNode = new double[board.getNumberOfPlayers()];
             for (int i = 0; i < valuesOfNode.length; ++i)
             {
                 valuesOfNode[i] = 0;
@@ -236,7 +236,7 @@ public class SmartDrafter extends SmartAgentBase
             // Get the roll outs and iteratively update the cumulative average
             for (int i = 0; i < NUM_MC_ROLL_OUTS; ++i)
             {
-                int[] rollOutValues = monteCarloRollOut(draftState, player, unownedCountries);
+                double[] rollOutValues = monteCarloRollOut(draftState, player, unownedCountries);
                 for (int j = 0; j < valuesOfNode.length; ++j)
                 {
                     valuesOfNode[j] += (1.0 / (i + 1))*(rollOutValues[j] - valuesOfNode[j]);
@@ -256,7 +256,7 @@ public class SmartDrafter extends SmartAgentBase
      * @param unownedCountries The countries available to be picked by the players
      * @return The values of the final state reached via the roll outs.
      */
-    private int[] monteCarloRollOut(int[] draftState, int player, Vector<Integer> unownedCountries)
+    private double[] monteCarloRollOut(int[] draftState, int player, Vector<Integer> unownedCountries)
     {
         // If this is a terminal node, then evaluate
         if (unownedCountries.size() == 0)
@@ -269,7 +269,7 @@ public class SmartDrafter extends SmartAgentBase
         int randomCountry = unownedCountries.get(randomCountryIndex);
         unownedCountries.remove(randomCountryIndex);
         draftState[randomCountry] = player; // Pick country
-        int[] values = monteCarloRollOut(draftState, (player + 1) % board.getNumberOfPlayers(), unownedCountries);
+        double[] values = monteCarloRollOut(draftState, (player + 1) % board.getNumberOfPlayers(), unownedCountries);
         draftState[randomCountry] = -1; // Undo the pick... is this necessary?
         unownedCountries.add(randomCountry);
 
@@ -282,7 +282,7 @@ public class SmartDrafter extends SmartAgentBase
      * @param finalDraftState The final assignment of countries to the players
      * @return An array of length numPlayers denoting how much each player likes this state
      */
-    private int[] evaluationFunction(int[] finalDraftState)
+    private double[] evaluationFunction(int[] finalDraftState)
     {
         // Check to make sure this is a legal state
         assert(finalDraftState.length == board.getNumberOfCountries());
@@ -295,9 +295,10 @@ public class SmartDrafter extends SmartAgentBase
 
         // MARS evaluation function        
         
-        int playerValue[] = new int[board.getNumberOfPlayers()];
-        int totalValue = 0;
+        double playerValue[] = new double[board.getNumberOfPlayers()];
+        double totalValue = 0;
         
+        // Calculate the cumulative values of all territories for each player
         for (int i = 0; i < board.getNumberOfPlayers(); i++)
         {
         	for (int j = 0; j < board.getNumberOfCountries(); j++)
@@ -315,7 +316,13 @@ public class SmartDrafter extends SmartAgentBase
         return playerValue;
     }
     
-    private int territoryValue(int territoryNum, int playerNum)
+    /**
+     * Calculates a value for a territory for a particular player
+     * @param territoryNum The territory number
+     * @param playerNum The player number
+     * @return A value for this territory
+     */
+    private double territoryValue(int territoryNum, int playerNum)
     {
     	// Constants
     	double Csv=70;
@@ -328,6 +335,7 @@ public class SmartDrafter extends SmartAgentBase
     	double Ceoc=4;
     	
     	// Game information
+    	
     	Country country[] = board.getCountries();    	
     	int curContinent = country[territoryNum].getContinent();
     	
@@ -342,9 +350,7 @@ public class SmartDrafter extends SmartAgentBase
     		if (country[i].getContinent() == curContinent)
     		{
     			cyInContinent.add(country[i]);
-    			
     			numOwned[country[i].getOwner()]++;
-    			
     			Country border[] = country[i].getAdjoiningList();
     			
     			for (int j = 0; j < border.length; j++ )
@@ -380,14 +386,14 @@ public class SmartDrafter extends SmartAgentBase
 			}
     	}
 		
-		int Voc = 0;  //boolean
+		int Voc = 0;  //boolean value: 0 or 1
 		if ( numOwned[playerNum] ==  cyInContinent.size() - 1 &&
 				country[territoryNum].getOwner() != playerNum )
 		{
 			Voc = 1;
 		}
 				
-        int Veoc = 0; //boolean
+        int Veoc = 0; //boolean value: 0 or 1
         for (int i = 0; i < board.getNumberOfPlayers(); i++ )
         {
         	if (numOwned[i] == cyInContinent.size() &&
@@ -398,7 +404,7 @@ public class SmartDrafter extends SmartAgentBase
         	}
         }
         
-        int returnVal = (int) (Vsv*Csv+Vfn*Cfn+Vfnu*Cfnu+Ven*Cen+Venu*Cenu+Vcb*Ccb+Vb*(Vcp+Voc*Coc+Veoc*Ceoc)); 
+        double returnVal = Vsv*Csv+Vfn*Cfn+Vfnu*Cfnu+Ven*Cen+Venu*Cenu+Vcb*Ccb+Vb*(Vcp+Voc*Coc+Veoc*Ceoc); 
     	
     	System.err.println(returnVal);
     	return returnVal;
