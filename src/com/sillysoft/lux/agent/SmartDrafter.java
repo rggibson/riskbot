@@ -11,6 +11,9 @@ import com.sillysoft.lux.util.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
+import java.util.Comparator;
+import java.util.Arrays;
+import java.util.Hashtable;
 
 /**
  * This agent is equivalent to EvilPixie except in the draft phase
@@ -30,9 +33,16 @@ public class SmartDrafter extends SmartAgentBase
      */
     protected LuxAgent postDraftPlayer;
 
+    /**
+     * We store all of the calls to kthBestPick along with the returned territory
+     */
+    protected Hashtable<String, Integer> kthBestPickCalls;
+
     public SmartDrafter()
     {
         super();
+
+        kthBestPickCalls = new Hashtable<String, Integer>();
     }
 
     @Override
@@ -112,7 +122,8 @@ public class SmartDrafter extends SmartAgentBase
     @Override
     public int pickCountry()
     {
-        return maxNMC();
+//        return maxNMC();
+        return kthBestPick();
     }
 
     /**
@@ -167,15 +178,15 @@ public class SmartDrafter extends SmartAgentBase
                 valueOfBestPick = values[ID];
             }
         }
- 
+
         return bestPick;
     }
 
 
     /**
      * The recursive portion of MaxN-MC.
-     * TODO: Let's pass in the unowned countries vector here so that we don't
-     * have to recompute it every time.
+     * TODO: rggibson - Let's pass in the unowned countries vector here so that
+     * we don't have to recompute it every time.
      * @param draftState The current assignment of territories in the draft
      * @param player The player whose turn it is
      * @param depth How much further we need to go before MC roll outs take over
@@ -293,17 +304,17 @@ public class SmartDrafter extends SmartAgentBase
             assert(finalDraftState[i] != -1);
         }
 
-        // MARS evaluation function        
-        
+        // MARS evaluation function
+
         double playerValue[] = new double[board.getNumberOfPlayers()];
         double totalValue = 0;
-        
+
         // Calculate the cumulative values of all territories for each player
         for (int i = 0; i < board.getNumberOfPlayers(); i++)
         {
         	for (int j = 0; j < board.getNumberOfCountries(); j++)
         	{
-        		playerValue[i] += territoryValue(j, i);        		
+        		playerValue[i] += territoryValue(j, i);
         	}
         	totalValue = totalValue + playerValue[i];
         }
@@ -311,11 +322,11 @@ public class SmartDrafter extends SmartAgentBase
         // Convert values to probabilities of winning
         for (int i = 0; i < board.getNumberOfPlayers(); i++)
         {
-        	playerValue[i] = playerValue[i] / totalValue;        		
+        	playerValue[i] = playerValue[i] / totalValue;
         }
         return playerValue;
     }
-    
+
     /**
      * Calculates a value for a territory for a particular player
      * @param territoryNum The territory number
@@ -333,26 +344,29 @@ public class SmartDrafter extends SmartAgentBase
     	double Ccb=0.5;
     	double Coc=20;
     	double Ceoc=4;
-    	
+
     	// Game information
-    	
-    	Country country[] = board.getCountries();    	
+
+    	Country country[] = board.getCountries();
     	int curContinent = country[territoryNum].getContinent();
-    	
+
     	// List of countries in current continent
     	List<Country> cyInContinent = new ArrayList<Country>();
-    	
+
     	int numBorders = 0;
     	int numOwned[] = new int[board.getNumberOfPlayers()];
-		
+
     	for (int i = 0; i < country.length; i++ )
     	{
     		if (country[i].getContinent() == curContinent)
     		{
     			cyInContinent.add(country[i]);
-    			numOwned[country[i].getOwner()]++;
+                        if (country[i].getOwner() >= 0)
+                        {
+                            numOwned[country[i].getOwner()]++;
+                        }
     			Country border[] = country[i].getAdjoiningList();
-    			
+
     			for (int j = 0; j < border.length; j++ )
     	    	{
     				if (border[j].getContinent() != curContinent)
@@ -361,23 +375,23 @@ public class SmartDrafter extends SmartAgentBase
     				}
     	    	}
     		}
-    	}    	   
-    	
-    	
+    	}
+
+
     	// Variables
         int Vb = board.getContinentBonus(curContinent);
         int Vs = cyInContinent.size();
         int Vnb = numBorders;
-        double Vsv = Vb/(Vs*Vnb);
-        
+        double Vsv = Vb/(Vs*Vnb); // Should we be casting something to a double?
+
         double Vcp = numOwned[playerNum] / cyInContinent.size();
         int Vfn = country[territoryNum].getNumberPlayerNeighbors(playerNum);
         int Vfnu=0;
         int Ven = country[territoryNum].getNumberNotPlayerNeighbors(playerNum);
         int Venu=0;
-        
+
         int Vcb = 0;
-        Country border[] = country[territoryNum].getAdjoiningList();        
+        Country border[] = country[territoryNum].getAdjoiningList();
 		for (int j = 0; j < border.length; j++ )
     	{
 			if (border[j].getContinent() != curContinent)
@@ -385,14 +399,14 @@ public class SmartDrafter extends SmartAgentBase
 				Vcb++;
 			}
     	}
-		
+
 		int Voc = 0;  //boolean value: 0 or 1
 		if ( numOwned[playerNum] ==  cyInContinent.size() - 1 &&
 				country[territoryNum].getOwner() != playerNum )
 		{
 			Voc = 1;
 		}
-				
+
         int Veoc = 0; //boolean value: 0 or 1
         for (int i = 0; i < board.getNumberOfPlayers(); i++ )
         {
@@ -403,12 +417,299 @@ public class SmartDrafter extends SmartAgentBase
         		break;
         	}
         }
-        
-        double returnVal = Vsv*Csv+Vfn*Cfn+Vfnu*Cfnu+Ven*Cen+Venu*Cenu+Vcb*Ccb+Vb*(Vcp+Voc*Coc+Veoc*Ceoc); 
-    	
-    	System.err.println(returnVal);
+
+        double returnVal = Vsv*Csv+Vfn*Cfn+Vfnu*Cfnu+Ven*Cen+Venu*Cenu+Vcb*Ccb+Vb*(Vcp+Voc*Coc+Veoc*Ceoc);
+
+//    	System.err.println(returnVal);
     	return returnVal;
-    	
+
     }
 
+    /**
+     * A helper class for comparing the values of territories
+     */
+    private class TerritoryComparator implements Comparator<Integer>
+    {
+        int playerNum;
+
+        /**
+         * Constructor
+         */
+        public TerritoryComparator(int playerNum)
+        {
+            this.playerNum = playerNum;
+        }
+
+        /**
+         * Compares the passed in territories according to the territory
+         * evaluation funciton.
+         * @param terr1 The first territory
+         * @param terr2 The second territory
+         * @return -1, 0, or 1 if terr1 is better, equal, or worse in value compared to terr2
+         */
+        public int compare(Integer terr1, Integer terr2)
+        {
+            // TODO: rggibson - Try using RL to learn territory values?
+            double terr1Val = territoryValue(terr1, playerNum);
+            double terr2Val = territoryValue(terr2, playerNum);
+
+            if (terr1Val > terr2Val)
+            {
+                return -1;
+            }
+            else if (terr1Val == terr2Val)
+            {
+                return 0;
+            }
+            else
+            {
+                return 1;
+            }
+        }
+    }
+
+    /**
+     * The kthBestPick algorithm for drafting territories
+     * @return The index of the territory chosen by the kthBestPick algorithm
+     */
+    private int kthBestPick()
+    {
+        // Get current state of the draft
+        int[] draftState = new int[countries.length];
+        Vector<Integer> unownedCountries = new Vector<Integer>();
+        for (int i = 0; i < draftState.length; ++i)
+        {
+            draftState[i] = countries[i].getOwner();
+            if (draftState[i] == -1)
+            {
+                unownedCountries.add(i);
+            }
+        }
+
+        // Check the Hashtable to see if we've already called the algorithm
+        // on this state
+        int terr = -1;
+        String draftStateIndex = getDraftStateIndex(draftState);
+        if (kthBestPickCalls.containsKey(draftStateIndex))
+        {
+            terr = kthBestPickCalls.get(draftStateIndex);
+        }
+        else
+        {
+            terr = kthBestPick_internal(draftState, unownedCountries, ID);
+            kthBestPickCalls.put(draftStateIndex, terr);
+        }
+
+        return terr;
+    }
+
+    /**
+     * The maximum number of picks that we will consider looking ahead
+     * for the kthBestPick algorithm.
+     */
+    final int MAX_NUM_PICKS_CONSIDERED = 5;
+
+    /**
+     * The rest of the kthBestPick algorithm for drafting territories.
+     * @param draftState The current state of the draft (who owns what)
+     * @param unownedCountries The countries left to pick
+     * @param playerId The index of the player whose turn it is to pick
+     * @return The index of the territory chosen by the kthBestPick algorithm.
+     */
+    private int kthBestPick_internal(int[] draftState, Vector<Integer> unownedCountries, int playerId)
+    {
+        // How many picks do we have left in the draft?
+        int numPicksRemaining = (int)Math.ceil((double)unownedCountries.size() / board.getNumberOfPlayers());
+
+        // We truncate the number of picks we are considering
+        // TODO: rggibson - Change this so that we assume the draft ends after numPicksRemaining,
+        // rather than just truncating to the same number of picks at each recursive call
+        numPicksRemaining = Math.min(numPicksRemaining, MAX_NUM_PICKS_CONSIDERED);
+
+        // Now we need to sort the unowned territories in decreasing order according
+        // to the probability of winning given we draft that territory
+
+        // TODO: rggibson - Would it be faster to just find the top numPicksRemainging number
+        // of territories rather than sorting the entire array?  It doesn't look like it
+        // for the small map, but it could be the case for the classic map.
+        TerritoryComparator comp = new TerritoryComparator(playerId);
+        Integer[] topPicks = new Integer[unownedCountries.size()];
+        for (int i = 0; i < topPicks.length; ++i)
+        {
+            topPicks[i] = unownedCountries.get(i);
+        }
+        Arrays.sort(topPicks, comp);
+
+        // Alternative sorting technique
+//        int[] topPicks = new int[numPicksRemaining];
+//        double[] valueOfTopPicks = new double[numPicksRemaining];
+//        for (int i = 0; i < numPicksRemaining; ++i)
+//        {
+//            // Initialize
+//            topPicks[i] = -1;
+//            valueOfTopPicks[i] = -Double.MAX_VALUE;
+//        }
+//        for (int i = 0; i < unownedCountries.size(); ++i)
+//        {
+//            // Get the value of this unowned country
+//            int terr = unownedCountries.get(i);
+//            double valueOfTerr = territoryValue(terr, playerId);
+//
+//            // Find its rank in the current top picks
+//            int rank = numPicksRemaining;
+//            while (rank > 0 && valueOfTopPicks[rank - 1] < valueOfTerr)
+//            {
+//                rank--;
+//            }
+//
+//            // Adjust the top picks to make room for the new territory
+//            for (int j = numPicksRemaining - 2; j >= rank; --j)
+//            {
+//                topPicks[j+1] = topPicks[j];
+//                valueOfTopPicks[j+1] = valueOfTopPicks[j];
+//            }
+//
+//            // Put the territory into place
+//            if (rank < numPicksRemaining)
+//            {
+//                topPicks[rank] = terr;
+//                valueOfTopPicks[rank] = valueOfTerr;
+//            }
+//        }
+
+        for (int k = numPicksRemaining - 1; k >=0; --k)
+        {
+            // The pick we are now considering
+            Integer terr = topPicks[k];
+
+            // The list of territories we want to get later on if we
+            // make this pick
+            Vector<Integer> higherRankedTerrs = new Vector<Integer>();
+            for (int i = 0; i < k; ++i)
+            {
+                int higherRankedTerr = topPicks[i];
+
+                // Just a simple check to detect possible bugs with the sorting
+                assert(territoryValue(higherRankedTerr, playerId) >= territoryValue(terr, playerId));
+
+                higherRankedTerrs.add(higherRankedTerr);
+            }
+
+            // Assign the territory to the current player
+            assert(draftState[terr] == -1);
+            assert(unownedCountries.contains(terr));
+            draftState[terr] = playerId;
+            unownedCountries.remove(terr);
+
+            // Check if we should make this pick
+            boolean makeThisPick = territoriesPickedBy(higherRankedTerrs, playerId, draftState, unownedCountries, (playerId + 1) % board.getNumberOfPlayers());
+
+            // Undo the territory assignment
+            assert(draftState[terr] == playerId);
+            assert(!unownedCountries.contains(terr));
+            draftState[terr] = -1;
+            unownedCountries.add(terr);
+
+            if (makeThisPick)
+            {
+                return terr;
+            }
+        }
+
+        // Should never make it out here
+        assert(false);
+
+        return -1;
+    }
+
+    /**
+     * Determines whether the original player will draft every country in
+     * territories, assuming players play according to kthBestPick.
+     * @param territories The territories that must be picked by originalPlayer
+     * @param originalPlayer The index of the original player
+     * @param draftState The current state of the draft
+     * @param unownedCountries Countries still left to pick
+     * @param activePlayer The player whose turn it is to pick
+     * @return True if all territories are picked by originalPlayer, false otherwise
+     */
+    private boolean territoriesPickedBy(Vector<Integer> territories, int originalPlayer, int[] draftStateParam, Vector<Integer> unownedCountriesParam, int activePlayer)
+    {
+        // Clone the state
+        int[] draftState = draftStateParam.clone();
+        Vector<Integer> unownedCountries = (Vector<Integer>) unownedCountriesParam.clone();
+
+        while (!territories.isEmpty())
+        {
+            // Figure out the active player's next pick
+
+            // Check the Hashtable to see if we've already called the algorithm
+            // on this state
+            int pick = -1;
+            String draftStateIndex = getDraftStateIndex(draftState);
+            if (kthBestPickCalls.containsKey(draftStateIndex))
+            {
+                pick = kthBestPickCalls.get(draftStateIndex);
+            }
+            else
+            {
+                pick = kthBestPick_internal(draftState, unownedCountries, activePlayer);
+                kthBestPickCalls.put(draftStateIndex, pick);
+            }
+
+            if (territories.contains(pick))
+            {
+                if (originalPlayer == activePlayer)
+                {
+                    // This pick is ok here
+                    territories.remove((Integer) pick);
+                    assert(!territories.contains(pick));
+                }
+                else
+                {
+                    // Can't have another player make a pick from territories
+                    return false;
+                }
+            }
+
+            // Now we make the pick
+            assert(draftState[pick] == -1);
+            assert(unownedCountries.contains(pick));
+
+            draftState[pick] = activePlayer;
+            unownedCountries.remove((Integer) pick);
+            activePlayer = (activePlayer + 1) % board.getNumberOfPlayers();
+
+            assert(!unownedCountries.contains(pick));
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the index to map the draftState to in the Hashtable
+     * @param draftState The current draft state
+     * @return The String to use as an index
+     */
+    private String getDraftStateIndex(int[] draftState)
+    {
+        String index = "";
+
+        for (int i = 0; i < draftState.length; i = i + 3)
+        {
+            int num = draftState[i] + 1;
+            if (i + 1 < draftState.length)
+            {
+                num += (board.getNumberOfPlayers() + 1) * (draftState[i+1] + 1);
+            }
+            if (i + 2 < draftState.length)
+            {
+                num += Math.pow(board.getNumberOfPlayers() + 1, 2) * (draftState[i+2] + 1);
+            }
+
+            char c = (char)('A' + num);
+            index += c;
+        }
+
+        return index;
+    }
 }
