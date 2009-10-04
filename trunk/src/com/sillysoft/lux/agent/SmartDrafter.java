@@ -335,6 +335,7 @@ public class SmartDrafter extends SmartAgentBase
      */
     private double territoryValue(int territoryNum, int playerNum)
     {
+    	
     	// Constants
     	double Csv=70;
     	double Cfn=1.2;
@@ -343,19 +344,28 @@ public class SmartDrafter extends SmartAgentBase
     	double Cenu=-0.003;
     	double Ccb=0.5;
     	double Coc=20;
-    	double Ceoc=4;
+    	double Ceoc=-4;
 
     	// Game information
 
     	Country country[] = board.getCountries();
     	int curContinent = country[territoryNum].getContinent();
 
+    	
+    	// if the player does not own this territory, return 0.0
+    	if (country[territoryNum].getOwner() != playerNum)
+    		return 0.0;
+    	    	
+    	
     	// List of countries in current continent
     	List<Country> cyInContinent = new ArrayList<Country>();
 
     	int numBorders = 0;
     	int numOwned[] = new int[board.getNumberOfPlayers()];
 
+    	// Get list of countries in current continent  
+    	// number of territories owned by each player in the current continent,
+    	// number of borders to the current continent
     	for (int i = 0; i < country.length; i++ )
     	{
     		if (country[i].getContinent() == curContinent)
@@ -379,18 +389,18 @@ public class SmartDrafter extends SmartAgentBase
 
 
     	// Variables
-        int Vb = board.getContinentBonus(curContinent);
-        int Vs = cyInContinent.size();
-        int Vnb = numBorders;
-        double Vsv = Vb/(Vs*Vnb); // Should we be casting something to a double?
+        int Vb = board.getContinentBonus(curContinent);   // the continent bonus value
+        int Vs = cyInContinent.size();                    // size of continent
+        int Vnb = numBorders;                             // number of borders to continent
+        double Vsv = (double) Vb/ (Vs*Vnb);               // static territory value
+        
+        double Vcp = (double) numOwned[playerNum] / cyInContinent.size();       // how much do we own 
+        int Vfn = country[territoryNum].getNumberPlayerNeighbors(playerNum);    // how many friendly neighbours
+        int Vfnu=0;                                                             // how many friendly armies
+        int Ven = country[territoryNum].getNumberNotPlayerNeighbors(playerNum); // how many enemy neighbours
+        int Venu=0;                                                             // how many enemy armies
 
-        double Vcp = numOwned[playerNum] / cyInContinent.size();
-        int Vfn = country[territoryNum].getNumberPlayerNeighbors(playerNum);
-        int Vfnu=0;
-        int Ven = country[territoryNum].getNumberNotPlayerNeighbors(playerNum);
-        int Venu=0;
-
-        int Vcb = 0;
+        int Vcb = 0;                                                            // how many continents does this territory border
         Country border[] = country[territoryNum].getAdjoiningList();
 		for (int j = 0; j < border.length; j++ )
     	{
@@ -400,14 +410,13 @@ public class SmartDrafter extends SmartAgentBase
 			}
     	}
 
-		int Voc = 0;  //boolean value: 0 or 1
-		if ( numOwned[playerNum] ==  cyInContinent.size() - 1 &&
-				country[territoryNum].getOwner() != playerNum )
+		int Voc = 0;   //boolean value: 0 or 1, if we own the whole continent
+		if ( numOwned[playerNum] ==  cyInContinent.size() )
 		{
 			Voc = 1;
 		}
 
-        int Veoc = 0; //boolean value: 0 or 1
+        int Veoc = 0;  //boolean value: 0 or 1, if an enemy owns the whole continent
         for (int i = 0; i < board.getNumberOfPlayers(); i++ )
         {
         	if (numOwned[i] == cyInContinent.size() &&
