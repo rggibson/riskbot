@@ -122,8 +122,8 @@ public class SmartDrafter extends SmartAgentBase
     @Override
     public int pickCountry()
     {
-//        return maxNMC();
-        return kthBestPick();
+        return maxNMC();
+//        return kthBestPick();
     }
 
     /**
@@ -131,7 +131,7 @@ public class SmartDrafter extends SmartAgentBase
      * TODO: rggibson - This should not be a fixed number.  It sould really just
      * be dependent on how many states we can afford to expand in a MaxN search.
      */
-    final int MC_DEPTH = 5;
+    final int MAX_NODES_TO_EXPAND = 100000;
 
     /**
      * The number of Monte Carlo roll outs that we average over in MaxNMC, for
@@ -158,6 +158,17 @@ public class SmartDrafter extends SmartAgentBase
             }
         }
 
+        // Determine the depth to which we can search
+        int numNodesToExpand = 1;
+        int branchingFactor = unownedCountries.size();
+        int depth = -1;
+        while (numNodesToExpand < MAX_NODES_TO_EXPAND && branchingFactor > 0)
+        {
+            numNodesToExpand *= branchingFactor;
+            branchingFactor--;
+            depth++;
+        }
+
         // Determine which country is the best to choose
         int bestPick = -1;
         double valueOfBestPick = Double.MIN_VALUE;
@@ -165,7 +176,7 @@ public class SmartDrafter extends SmartAgentBase
         {
             // Determine the value of picking this country
             draftState[countryIndex] = ID; // Pick country
-            double[] values = maxNMC_r(draftState, (ID + 1) % board.getNumberOfPlayers(), MC_DEPTH);
+            double[] values = maxNMC_r(draftState, (ID + 1) % board.getNumberOfPlayers(), depth);
             draftState[countryIndex] = -1; // Undo pick
 
             // Is country better than the rest we've seen?
@@ -335,7 +346,7 @@ public class SmartDrafter extends SmartAgentBase
      */
     private double territoryValue(int territoryNum, int playerNum)
     {
-    	
+
     	// Constants
     	double Csv=70;
     	double Cfn=1.2;
@@ -351,19 +362,19 @@ public class SmartDrafter extends SmartAgentBase
     	Country country[] = board.getCountries();
     	int curContinent = country[territoryNum].getContinent();
 
-    	
+
     	// if the player does not own this territory, return 0.0
     	if (country[territoryNum].getOwner() != playerNum)
     		return 0.0;
-    	    	
-    	
+
+
     	// List of countries in current continent
     	List<Country> cyInContinent = new ArrayList<Country>();
 
     	int numBorders = 0;
     	int numOwned[] = new int[board.getNumberOfPlayers()];
 
-    	// Get list of countries in current continent  
+    	// Get list of countries in current continent
     	// number of territories owned by each player in the current continent,
     	// number of borders to the current continent
     	for (int i = 0; i < country.length; i++ )
@@ -393,8 +404,8 @@ public class SmartDrafter extends SmartAgentBase
         int Vs = cyInContinent.size();                    // size of continent
         int Vnb = numBorders;                             // number of borders to continent
         double Vsv = (double) Vb/ (Vs*Vnb);               // static territory value
-        
-        double Vcp = (double) numOwned[playerNum] / cyInContinent.size();       // how much do we own 
+
+        double Vcp = (double) numOwned[playerNum] / cyInContinent.size();       // how much do we own
         int Vfn = country[territoryNum].getNumberPlayerNeighbors(playerNum);    // how many friendly neighbours
         int Vfnu=0;                                                             // how many friendly armies
         int Ven = country[territoryNum].getNumberNotPlayerNeighbors(playerNum); // how many enemy neighbours
@@ -437,45 +448,45 @@ public class SmartDrafter extends SmartAgentBase
     /**
      * A helper class for comparing the values of territories
      */
-    private class TerritoryComparator implements Comparator<Integer>
-    {
-        int playerNum;
-
-        /**
-         * Constructor
-         */
-        public TerritoryComparator(int playerNum)
-        {
-            this.playerNum = playerNum;
-        }
-
-        /**
-         * Compares the passed in territories according to the territory
-         * evaluation funciton.
-         * @param terr1 The first territory
-         * @param terr2 The second territory
-         * @return -1, 0, or 1 if terr1 is better, equal, or worse in value compared to terr2
-         */
-        public int compare(Integer terr1, Integer terr2)
-        {
-            // TODO: rggibson - Try using RL to learn territory values?
-            double terr1Val = territoryValue(terr1, playerNum);
-            double terr2Val = territoryValue(terr2, playerNum);
-
-            if (terr1Val > terr2Val)
-            {
-                return -1;
-            }
-            else if (terr1Val == terr2Val)
-            {
-                return 0;
-            }
-            else
-            {
-                return 1;
-            }
-        }
-    }
+//    private class TerritoryComparator implements Comparator<Integer>
+//    {
+//        int playerNum;
+//
+//        /**
+//         * Constructor
+//         */
+//        public TerritoryComparator(int playerNum)
+//        {
+//            this.playerNum = playerNum;
+//        }
+//
+//        /**
+//         * Compares the passed in territories according to the territory
+//         * evaluation funciton.
+//         * @param terr1 The first territory
+//         * @param terr2 The second territory
+//         * @return -1, 0, or 1 if terr1 is better, equal, or worse in value compared to terr2
+//         */
+//        public int compare(Integer terr1, Integer terr2)
+//        {
+//            // TODO: rggibson - Try using RL to learn territory values?
+//            double terr1Val = territoryValue(terr1, playerNum);
+//            double terr2Val = territoryValue(terr2, playerNum);
+//
+//            if (terr1Val > terr2Val)
+//            {
+//                return -1;
+//            }
+//            else if (terr1Val == terr2Val)
+//            {
+//                return 0;
+//            }
+//            else
+//            {
+//                return 1;
+//            }
+//        }
+//    }
 
     /**
      * The kthBestPick algorithm for drafting territories
@@ -541,50 +552,50 @@ public class SmartDrafter extends SmartAgentBase
         // TODO: rggibson - Would it be faster to just find the top numPicksRemainging number
         // of territories rather than sorting the entire array?  It doesn't look like it
         // for the small map, but it could be the case for the classic map.
-        TerritoryComparator comp = new TerritoryComparator(playerId);
-        Integer[] topPicks = new Integer[unownedCountries.size()];
-        for (int i = 0; i < topPicks.length; ++i)
-        {
-            topPicks[i] = unownedCountries.get(i);
-        }
-        Arrays.sort(topPicks, comp);
+//        TerritoryComparator comp = new TerritoryComparator(playerId);
+//        Integer[] topPicks = new Integer[unownedCountries.size()];
+//        for (int i = 0; i < topPicks.length; ++i)
+//        {
+//            topPicks[i] = unownedCountries.get(i);
+//        }
+//        Arrays.sort(topPicks, comp);
 
         // Alternative sorting technique
-//        int[] topPicks = new int[numPicksRemaining];
-//        double[] valueOfTopPicks = new double[numPicksRemaining];
-//        for (int i = 0; i < numPicksRemaining; ++i)
-//        {
-//            // Initialize
-//            topPicks[i] = -1;
-//            valueOfTopPicks[i] = -Double.MAX_VALUE;
-//        }
-//        for (int i = 0; i < unownedCountries.size(); ++i)
-//        {
-//            // Get the value of this unowned country
-//            int terr = unownedCountries.get(i);
-//            double valueOfTerr = territoryValue(terr, playerId);
-//
-//            // Find its rank in the current top picks
-//            int rank = numPicksRemaining;
-//            while (rank > 0 && valueOfTopPicks[rank - 1] < valueOfTerr)
-//            {
-//                rank--;
-//            }
-//
-//            // Adjust the top picks to make room for the new territory
-//            for (int j = numPicksRemaining - 2; j >= rank; --j)
-//            {
-//                topPicks[j+1] = topPicks[j];
-//                valueOfTopPicks[j+1] = valueOfTopPicks[j];
-//            }
-//
-//            // Put the territory into place
-//            if (rank < numPicksRemaining)
-//            {
-//                topPicks[rank] = terr;
-//                valueOfTopPicks[rank] = valueOfTerr;
-//            }
-//        }
+        int[] topPicks = new int[numPicksRemaining];
+        double[] valueOfTopPicks = new double[numPicksRemaining];
+        for (int i = 0; i < numPicksRemaining; ++i)
+        {
+            // Initialize
+            topPicks[i] = -1;
+            valueOfTopPicks[i] = -Double.MAX_VALUE;
+        }
+        for (int i = 0; i < unownedCountries.size(); ++i)
+        {
+            // Get the value of this unowned country
+            int terr = unownedCountries.get(i);
+            double valueOfTerr = territoryValue(terr, playerId);
+
+            // Find its rank in the current top picks
+            int rank = numPicksRemaining;
+            while (rank > 0 && valueOfTopPicks[rank - 1] < valueOfTerr)
+            {
+                rank--;
+            }
+
+            // Adjust the top picks to make room for the new territory
+            for (int j = numPicksRemaining - 2; j >= rank; --j)
+            {
+                topPicks[j+1] = topPicks[j];
+                valueOfTopPicks[j+1] = valueOfTopPicks[j];
+            }
+
+            // Put the territory into place
+            if (rank < numPicksRemaining)
+            {
+                topPicks[rank] = terr;
+                valueOfTopPicks[rank] = valueOfTerr;
+            }
+        }
 
         for (int k = numPicksRemaining - 1; k >=0; --k)
         {
