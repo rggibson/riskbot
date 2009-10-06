@@ -5,6 +5,7 @@
 
 package com.sillysoft.lux.agent;
 
+import java.io.*;
 import com.sillysoft.lux.*;
 import com.sillysoft.lux.util.*;
 
@@ -317,6 +318,7 @@ public class SmartDrafter extends SmartAgentBase
 
         // MARS evaluation function
 
+        
         double playerValue[] = new double[board.getNumberOfPlayers()];
         double totalValue = 0;
 
@@ -325,7 +327,7 @@ public class SmartDrafter extends SmartAgentBase
         {
         	for (int j = 0; j < board.getNumberOfCountries(); j++)
         	{
-        		playerValue[i] += territoryValue(j, i);
+        		playerValue[i] += territoryValue(j, i, finalDraftState);        		
         	}
         	totalValue = totalValue + playerValue[i];
         }
@@ -344,7 +346,7 @@ public class SmartDrafter extends SmartAgentBase
      * @param playerNum The player number
      * @return A value for this territory
      */
-    private double territoryValue(int territoryNum, int playerNum)
+    private double territoryValue(int territoryNum, int playerNum, int[] finalDraftState)
     {
 
     	// Constants
@@ -362,9 +364,8 @@ public class SmartDrafter extends SmartAgentBase
     	Country country[] = board.getCountries();
     	int curContinent = country[territoryNum].getContinent();
 
-
     	// if the player does not own this territory, return 0.0
-    	if (country[territoryNum].getOwner() != playerNum)
+    	if (finalDraftState[territoryNum] != playerNum)
     		return 0.0;
 
 
@@ -382,10 +383,11 @@ public class SmartDrafter extends SmartAgentBase
     		if (country[i].getContinent() == curContinent)
     		{
     			cyInContinent.add(country[i]);
-                        if (country[i].getOwner() >= 0)
-                        {
-                            numOwned[country[i].getOwner()]++;
-                        }
+                if (finalDraftState[i] >= 0)
+                {
+                    numOwned[finalDraftState[i]]++;
+                }
+                
     			Country border[] = country[i].getAdjoiningList();
 
     			for (int j = 0; j < border.length; j++ )
@@ -409,8 +411,8 @@ public class SmartDrafter extends SmartAgentBase
         int Vfn = country[territoryNum].getNumberPlayerNeighbors(playerNum);    // how many friendly neighbours
         int Vfnu=0;                                                             // how many friendly armies
         int Ven = country[territoryNum].getNumberNotPlayerNeighbors(playerNum); // how many enemy neighbours
-        int Venu=0;                                                             // how many enemy armies
-
+        int Venu=0;                                                             // how many enemy armies        
+        
         int Vcb = 0;                                                            // how many continents does this territory border
         Country border[] = country[territoryNum].getAdjoiningList();
 		for (int j = 0; j < border.length; j++ )
@@ -451,15 +453,23 @@ public class SmartDrafter extends SmartAgentBase
 //    private class TerritoryComparator implements Comparator<Integer>
 //    {
 //        int playerNum;
+//        int[] draftState;
 //
 //        /**
 //         * Constructor
 //         */
+//        public TerritoryComparator(int playerNum, int[] draftState)
+//        {
+//            this.playerNum = playerNum;
+//            this.draftState = draftState;
+//        }
+//
 //        public TerritoryComparator(int playerNum)
 //        {
 //            this.playerNum = playerNum;
+//            this.draftState = null;
 //        }
-//
+//        
 //        /**
 //         * Compares the passed in territories according to the territory
 //         * evaluation funciton.
@@ -470,8 +480,8 @@ public class SmartDrafter extends SmartAgentBase
 //        public int compare(Integer terr1, Integer terr2)
 //        {
 //            // TODO: rggibson - Try using RL to learn territory values?
-//            double terr1Val = territoryValue(terr1, playerNum);
-//            double terr2Val = territoryValue(terr2, playerNum);
+//            double terr1Val = territoryValue(terr1, playerNum, draftState);
+//            double terr2Val = territoryValue(terr2, playerNum, draftState);
 //
 //            if (terr1Val > terr2Val)
 //            {
@@ -487,6 +497,7 @@ public class SmartDrafter extends SmartAgentBase
 //            }
 //        }
 //    }
+
 
     /**
      * The kthBestPick algorithm for drafting territories
@@ -573,7 +584,7 @@ public class SmartDrafter extends SmartAgentBase
         {
             // Get the value of this unowned country
             int terr = unownedCountries.get(i);
-            double valueOfTerr = territoryValue(terr, playerId);
+            double valueOfTerr = territoryValue(terr, playerId, draftState);
 
             // Find its rank in the current top picks
             int rank = numPicksRemaining;
@@ -610,7 +621,7 @@ public class SmartDrafter extends SmartAgentBase
                 int higherRankedTerr = topPicks[i];
 
                 // Just a simple check to detect possible bugs with the sorting
-                assert(territoryValue(higherRankedTerr, playerId) >= territoryValue(terr, playerId));
+                assert(territoryValue(higherRankedTerr, playerId, draftState) >= territoryValue(terr, playerId, draftState));
 
                 higherRankedTerrs.add(higherRankedTerr);
             }
