@@ -1,0 +1,271 @@
+\documentclass[letterpaper]{article}
+%\usepackage{../../../LaTeX/styles/aaai}
+\usepackage{aaai}
+\usepackage{times}
+\usepackage{helvet}
+\usepackage{courier}
+\usepackage{latexsym} 
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\newtheorem{df}{Definition}
+\newtheorem{notation}{Notation}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{col}{Corollary}
+\newcommand{\bt}{\begin{theorem}\em}
+\newcommand{\et}{\end{theorem}}
+\newcommand{\Qed}{$\blacksquare$}
+\newcommand{\qed}{$\Box$}
+\newcommand{\proof}{{\bf Proof. }}
+
+\newcommand{\nin}{\noindent}
+
+\newcommand{\bea}{\begin{eqnarray}}
+\newcommand{\eea}{\end{eqnarray}}
+
+\newcommand{\bdf}{\begin{df}\em}
+\newcommand{\edf}{\end{df}}
+
+\newcommand{\ben}{\begin{enumerate}}
+\newcommand{\een}{\end{enumerate}}
+\newcommand{\ie}{\item}
+
+\newcommand{\dist}{\operatorname{dist}}
+
+\newcommand{\avg}{\operatorname{avg}}
+
+
+\numberwithin{equation}{section}
+\numberwithin{theorem}{section}
+\numberwithin{lemma}{section}
+\numberwithin{df}{section}
+
+\title{Search Strategies in Multi-Player Drafting Games  \\ \small \vspace{0.1cm} CMPUT 651 Progress Report}
+
+\nocopyright
+
+\author{Neesha Dessai, Richard Gibson \and Richard Zhao \\
+Department of Computing Science, University of Alberta \\
+Edmonton, Alberta, T6G 2E8, Canada \\
+$\{$neesha$\mid$rggibson$\mid$rxzhao$\}$@cs.ualberta.ca}
+
+
+\begin{document}
+
+\maketitle
+
+%\begin{abstract}
+%A good abstract will go here.
+%\end{abstract}
+
+\section{Introduction}
+
+% Talk about search for single agent, minimax for two-player, 0-sum, MaxN for multi-player.  Examples like chess, checkers, etc.
+
+% Also include Risk in this discussion
+Many commercial video games on the market today, particularly sports games, include some kind of drafting aspect.  A draft works by having multiple agents take turns selecting from a collection of items until either agent has made a fixed number of choices or there are no more items left.  For instance, when playing through multiple seasons of the baseball game \textit{MLB 09: The Show} from Sony, a rookie draft takes place in between each season, where the human player and the computer opponents take turns choosing from a pool of new players who may then be added to the respective team's roster.  Another example is the new hockey game \textit{NHL 10} by EA Sports, where a fantasy draft can be activated at the beginning of a season.  In a fantasy draft, all players are removed from their current teams, and then selected one-by-one by the agents (human or computer-controlled teams) in the league.  
+
+%We will use the board game \textit{Risk} by Hasbro Inc.~as a testbed for our drafting technique.  In the game of Risk, there are two main variations that can be used to start the game.  The first variation randomly assigns each of the 42 territories among the (up to six) players so that each player has an equal (or as close as possible) number of territories.  Another, more strategically demanding opening is to use territory selection, where the players participate in a draft until all territories have been selected.  The latter case is what we will use throughout this project.  Note that we will be using uniform initial army placements, as is done in \cite{ZuckFelnerKraus2009}.
+
+% What is our goal/contribution?  When are our algorithms best suited?
+
+% Outline rest of the paper
+
+What is the best strategy for making selections in a draft in order to have the ``best'' set-up (or team of players) we could possibly achieve?  We expect to develop a method, perhaps search-based or learning-based, which will result in ``better'' drafting than current methods used in our domain of choice, Risk.
+
+\section{Problem Formulation}
+\label{sec:Prob}
+
+% Maybe turn this section into Introduction and Background?
+
+We now formally introduce the problem of drafting.  A \emph{drafting game} is a finite, deterministic, full-information game played by a set of $n$ players, which we label 0 through $n-1$.  For simplicity, we assume that players' turns are in numerical order, so that player $i$'s turn is always followed by player $i+1$ mod $n$.  The game has a single set of actions or \emph{picks} $A$ initially available to every player.  Once a player makes a pick $a$, that pick is forbidden to all players for the rest of the game.  Play continues until all actions in $A$ have been picked by the players.  At the game's conclusion, the picks made by each of the players induce a partition $Z = \{A_0, A_1, ..., A_{n-1}\}$ of $A$, where $A_i$ is the set of all picks made by player $i$.  Each player then receives a reward signal $r_i(Z)$ according to the partition $Z$ obtained.  Player $i$'s objective is to make picks in such a way to maximize $r_i(Z)$.
+
+In many applications, a drafting game is a precursor to a larger competition involving the same set of players.  For example, in Risk, players first participate in a drafting game, taking turns selecting territories until all territories on the map are occupied.  The game then continues until a single player wins by occupying all territories on the map.  When the drafting game is a prelude like this, it is sensible to model the reward signal $r_i(Z)$ as the probability that player $i$ wins the ``larger'' game, given that $Z$ is the result of the draft.  We use this as our reward signal for our experiments with drafting in Risk.
+
+%
+%Given that we will be experimenting with drafting strategies in Risk, how can we determine if our draft selections were ``good'' or ``bad''?  In idealistic terms, we can measure this using an oracle function which returns our probability of winning the game, given the outcome of the draft and the strategies used following the draft.  Such an oracle function is not feasible to calculate, as the game of Risk is extremely large and assumptions must be made about our opponents' strategies; however, game state evaluation functions are commonly computed to estimate positions in games.  For instance, if $v_i$ is the value to player $i$ of the initial state following the draft, then player $j$ could approximate the oracle function via
+%\[ \frac{v_j}{\sum_i v_i}. \]
+%Our problem is to determine how we should select territories in the draft as to maximize this final oracle value, or perhaps some approximation of it.
+
+\section{Related Work}
+
+Perhaps the most widely known approach to computer game playing is the minimax adversarial search algorithm for zero sum games with two players, denoted Max and Min.  The Max player (assumed to be the active player) performs a search of a game tree rooted at the current state of the game.  Each leaf node of the tree is evaluated by a heuristic function, which returns a value estimating the merit of the state to Max.  These values are then backed up the tree; at nodes belonging to Max, the maximum value of all child nodes is propagated up, whereas at nodes belonging to Min, the minimum value of the children is backed up.  The Max player then chooses the action leading to the child with the maximum propagated value.
+
+% MaxN, Paranoid
+% MP-Mix which extends MaxN (was used only for branching factor of 3, and for single winner games)
+
+While minimax search is a traditional strategy employed in many two-player games, it is not applicable to games with more $n > 2$ players.  Perhaps the simplest generalization of traditional minimax search to more players is the MaxN algorithm \cite{MaxN}.  At the leaf nodes of the game tree, a heuristic function now estimates a vector of $n$ merits $(h_1, ..., h_n)$, one for each player.  At nodes belonging to player $i$, the vector with the highest $h_i$ value is propagated up to the node.  Thus, players are assumed to be maximizing their own individual payoffs throughout the remainder of the game.  An alternative to MaxN is the Paranoid algorithm \cite{Paranoid}, where the active player assumes that the other players will attempt to minimize her payoffs with complete disregard to their own benefits.  The Paranoid algorithm is essentially equivalent to the minimax algorithm, where the other players are represented as one meta-player (Min) attempting to minimize the individual heuristic value of the active player (Max).  Finally, the MaxN and Paranoid propagation strategies can be dynamically selected according to the game situation.  This is done in the MP-Mix algorithm \cite{ZuckFelnerKraus2009}, along with a third strategy called Offensive.  However, MP-Mix was designed for games with only a single winner, which does not directly fit into the framework of a drafting game.
+
+% Monte Carlo Tree Search in Go
+Monte-Carlo tree search algorithms, such as UCT \cite{UCT}, are a different approach to game playing than minimax-type methods.  Simply put, thousands of games are simulated to completion, and each node's value is set to the average of the outcomes which passed through that node.  As game trees typically grow exponentially in their branching factor, minimax-type algorithms must often rely on an accurate heuristic function at non-terminal nodes due to memory or time constraints.  Monte-Carlo tree search, on the other hand, needs no heuristic function and receives an unbiased estimate of the value of each action.  Because of this, UCT is often preferred in games with large action spaces or which lack a quality heuristic function, and has had much success in Computer Go \cite{ComputerGo}.  However, simple Monte-Carlo algorithms use random action selection during the simulations, which often lead to outcomes that will never occur among competent players.  Minimax type algorithms, however, assume players behave in some logical manner.  Our first contribution in this paper, MaxN-MC search, is a hybrid of these two approaches.
+
+% Meta-models for reducing action space
+
+In drafting games, the initial action space is typically large.  Rather than resorting to Monte-Carlo techniques, we can try to reduce the set of actions considered by the players to allow deeper minimax-type searches.  One can automate this by using a tool called Genetic Algorithms with Meta-Models (GAMM) \cite{GAMM}.  A simpler approach would be to consider only the most favourable actions according to the heuristic values of the immediate children.  Our second contribution, the KthBestPick algorithm, incorporates this approach in a novel search strategy designed specifically for drafting games.
+ 
+
+%There has been some work towards creating competent bots for playing the game of Risk.  Firstly, \cite{JohOls2006} (and in more detail in \cite{Ols2005}) use a hand-crafted territory value function to determine the desirability of conquering each of the enemy territories.  This was used to determine whether or not to continue to attack, and if so, which of the territories to attack.  Then, \cite{ZuckFelnerKraus2009} developed a search strategy called MP-Mix which utilizes the evaluation function of \cite{JohOls2006} to perform a type of extension of Minimax search to multi-player games.  While these previous efforts have shown good results in Risk with randomly assigned initial territories, no work has been done to our knowledge towards good techniques for drafting in Risk.  In addition, we are not aware of any artificial intelligence research directly related to drafting in another domain.  Our problem appears to be fairly unexplored.
+%
+
+
+\section{MaxN-MC Search}
+
+% MaxN-MC search
+
+The MaxN-MC algorithm is an adversarial search algorithm for multi-player games.  It applies MaxN search to a fixed depth in the game tree.  Then, at each leaf in the search, we do not use a heuristic function to estimate its value as in the regular MaxN algorithm.  Instead, we carry out Monte-Carlo simulations and average the outcomes to evaluate the leaf node.  These outcomes are then what is propagated back to the root of the search in the remainder of the MaxN algorithm.  
+
+% How to calculate reward signal: 1) Territory value from Risk bot paper  2) Off-line self-play 
+
+\begin{algorithm}[htb]
+	\caption{MaxN-MC(Node $node$, int $d$, int $M$)}
+	\label{alg:MaxN-MC}
+	\begin{algorithmic}[1]
+		\IF{$node$ is terminal}
+			\RETURN{payouts associated with $node$}
+		\ENDIF
+		\IF{$d > 0$}
+			\FORALL{$child$ of $node$}
+				\STATE $child.value$ $\gets$ MaxN-MC($child$, $d - 1$, $M$)
+			\ENDFOR
+			\STATE Find $child$ of $node$ with greatest value for the active player
+			\RETURN{$child.value$}
+		\ELSIF{$d = 0$}
+			\FOR{$i$ from $1$ to $M$}
+				\STATE Pick $child$ of $node$ at random
+				\STATE $values(i) \gets $ MaxN-MC($child$, $d-1$, $M$)
+			\ENDFOR
+			\RETURN{component-wise average of $values$}
+		\ELSE
+			\STATE Pick $child$ of $node$ at random
+			\RETURN{MaxN-MC($child$, $d-1$, $M$)}
+		\ENDIF
+	\end{algorithmic}
+\end{algorithm}
+
+The pseudocode for MaxN-MC is presented in Algorithm \ref{alg:MaxN-MC}.  It receives the current state of the game as input, as well as two numbers, $d$ and $M$, which denote the depth of the MaxN search and the number of Monte-Carlo simulations to perform at each leaf node respectively.  First, MaxN-MC checks if the game is over (line 1), in which case then returns the associated payouts each player receives (line 2).  For drafting games, we would return the vector of rewards $(r_1(Z), ..., r_n(Z))$ where $Z$ is the partition of the initial action space as described previously.  At a node at depth less than $d$, we make recursive calls on each of its children in the game tree, counting down the depth in the tree on each pass (line 3).  Each call returns a vector of values, one for each player, indicating the merit of the child state to each of the players.  The parent node then back-propagates the vector with the best merit for the active player at this parent node (line 9).  Once we reach a node at depth $d$, we perform $M$ random walks down the game tree, each initiated at lines 12 and 13, and continued by lines 17 and 18 until returning a terminal value at line 2.  Finally, for each player, we average the $M$ merits associated with the outcomes of the random walks, and propagate back these averages (line 15).
+
+
+
+ 
+\section{The KthBestPick Algorithm}
+% kthBestPick search
+
+%We have two main ideas on how to approach drafting in Risk:
+%\begin{enumerate}
+%  \item Adapt MP-Mix search \cite{ZuckFelnerKraus2009} to drafting.  One issue with MP-Mix in post-draft Risk is that the branching factor is restricted to the 3 most promising moves so that the size of the search tree is controlled.  However, with drafting, there will often be more than 3 moves that look very promising, in particular at the beginning of the draft when all territories are available.  Once adapting MP-Mix search to simply apply to the drafting game, can we dynamically control the branching factor of the search?  Also, can we use the approximate oracle function idea to evaluate our search at the terminal nodes in the draft?  Furthermore, could we abstract the draft states to simplify MP-Mix search in a similar manner to PRA$^*$?  A natural way of grouping territories together in Risk is by the continent which they belong to, as there are bonuses for owning each of the entire continents.  Could this type of abstraction simplify the search?
+%
+%\item Use reinforcement learning and repeated self-play to develop a solid drafting strategy.  Again, this would require some sort of draft state abstraction, as there are simply too many ways a draft can go down.  What type of learning algorithm would be best suited for drafting?  What should be used as the reward signal?  Again, we could try to use an approximation of an oracle function, or we could ``roll out'' the rest of the game following some base strategy and use the win/loss result as the reward.  This roll out method may be more desirable as it would give us a draft strategy that works well with the strategy played post draft, something that an approximation of an oracle function may not be able to do.
+%\end{enumerate}
+
+
+%Then present your algorithm formally. If you decide to use pseudocode (e.g., Figure~\ref{fig:PR-LRTS}), make sure you complement it with a plain English description. Additionally hand trace your pseudocode line by line (make sure you refer to the line numbers in your pseudo-code) on a simple example.
+
+%\begin{figure}[t]
+%\small
+%\hrule\smallskip
+%\textbf{PR LRTS}
+
+%\vspace{1mm}
+
+%\begin{tabular} {p{0.2cm}l}
+%1 & assign A*/LRTS to abstraction levels $0,\dots,N$ \\
+%2 & initialize the heuristic for all LRTS-levels \\
+%3 & reset the current state:  $s \leftarrow s_\text{start}$ \\
+%4 & reset abstraction level $\ell = 0$ \\
+%5 & {\bf while} $s \neq s_\text{goal}$ {\bf do} \\
+%6 & \hspace{2mm} {\bf if} algorithm at level $\ell$ reached the end of corridor $c_\ell$ {\bf then} \\
+%7 & \hspace{6mm} {\bf if} we are at the top level $\ell = N$ {\bf then} \\
+%8 & \hspace{10mm} run algorithm at level $N$ \\
+%9 & \hspace{10mm} generate path $p_N$ and corridor $c_{N-1}$  \\
+%10 & \hspace{10mm} go down abstraction level: $\ell = \ell-1$ \\
+%11 & \hspace{6mm} {\bf else} \\
+%12 & \hspace{10mm} go up abstraction level: $\ell = \ell + 1$ \\ 
+%13 & \hspace{6mm} {\bf end if} \\
+%14 & \hspace{2mm} {\bf else} \\
+%15 & \hspace{6mm} run algorithm at level $\ell$ within corridor $c_\ell$ \\
+%16 & \hspace{6mm} generate path $p_\ell$ and corridor $c_{\ell-1}$ \\ 
+%17 & \hspace{6mm} {\bf if} $\ell = 0$ {\bf then} execute path $p_0$ \\
+%18 & \hspace{6mm} {\bf else} continue refinement: $\ell = \ell-1$ \\
+%19 & \hspace{2mm} {\bf end if} \\
+%20 & {\bf end while} \\
+%\end{tabular}
+
+%\smallskip\hrule
+%\caption{\small Path refinement learning real-time search, reproduced with permission from~\cite{Bulitko:05b}.}\label{fig:PR-LRTS}
+%\end{figure} 
+
+\section{Theoretical Analysis}
+
+% Can we show that MaxN-MC converges to a Nash equilibrium, much like UCT converges to the minimax value?
+
+%When playing Risk against a computer controlled opponent, we do not want to be forced to wait long periods of time for the computer to decide on an action.  We must therefore take the runtime into account for our approach.  If we decide to use reinforcement learning, this should not be an issue, as RL techniques are generally designed to allow for immediate action response to a given observation.  On the other hand, with search, we may need to include a time limit before requiring an action to be selected.  Unfortunately, \cite{ZuckFelnerKraus2009} do not provide any details about such time limits.
+
+\section{Empirical Evaluation}
+
+% Include tests of whether the risk bot evaluation function will be good for our purposes.  Also include any experiments that we've been able to do for MaxN-MC versus other bots.
+
+%We will use the Lux Delux\footnote{http://sillysoft.net/lux/} environment to run all of our experiments.  Lux Delux provides several Risk bots with source code, as well as an API for writing our own agents.  To evaluate our drafting strategies, we will compare them to the drafting strategies used by bots within Lux by playing matches.  To do so, we will keep the post-draft strategy constant for all players, so that the drafting stage is the only difference in strategies among the players.  Initially, we will use the post-draft strategies provided with Lux, and perhaps later try out our own.  Note, however, that it is important that the drafting strategy plays well with the post-draft strategy.  For instance, if our post-draft strategy is to conquer Europe but we claim South America in the draft, then this overall strategy is likely to perform very poorly (compared to a post-draft strategy which tries to keep South America).  We plan to report our results in much the same manner as in \cite{ZuckFelnerKraus2009}.
+
+%Now you get an opportunity to support your hypothesis formulated above. Don't be shy to list negative results as well --- they still improve our understanding of the field. Make sure your describe your experimental set up in enough detail for other researchers to replicate your work.
+
+%A solid empirical study not only offers some findings but also sheds light on how confident we should be about them. This can be accomplished through statistical tests (e.g., the T-test) and/or confidence intervals (e.g., Figure~\ref{fig:convPC}).
+
+%\begin{figure*}[t]
+%\begin{center}
+%\includegraphics[width=14cm]{convPC.pdf}
+%\caption{\small Planning cost of various algorithms during convergence on initially unknown maps. Problems are bucketed according to their difficulty. Each of the ten buckets contains 100 random path-planning problems.}\label{fig:convPC}
+%\end{center}
+%\end{figure*}
+
+%Also, do not hesitate to complement your figures with compact and readable tables (e.g., Table~\ref{tab:PRLRTS-cummulative}).
+
+%\begin{table}
+%\caption{\small Typical results averaged over 50 convergence runs on 10 maps. The average shortest path length is 59.6. Reproduced with permission from~\cite{Bulitko:05b}.}\label{tab:PRLRTS-cummulative}
+%\vspace{0.1cm}
+%{\small \begin{center}
+%\begin{tabular}{c|c|c|c}
+%\hline
+% Algorithm & 1st move time & Conv. travel & Suboptimality \\ \hline
+%A* & 5.01 ms & 186 & 0.0\% \\
+%LRTA* & 0.02 ms & 25,868 &  0.0\% \\
+%LRTS & 0.93 ms & 555 &  2.07\% \\
+%{\bf PR-LRTS} & {\bf 0.95 ms} & {\bf 345} & {\bf 2.19\%} \\
+%\hline
+%\end{tabular}
+%\end{center}}
+%\end{table}
+
+
+
+%\section{Discussion}
+
+%Here you would discuss your results with respect to the hypotheses you formulated and the demands of the problem at hand. Don't be shy to admit that you do not understand some of the results you obtained. Leave them as open questions for further research. 
+
+%\section{Future Work}
+%
+%While we strive to find an approach that works well for drafting in the Risk domain, our final product may not extend well to larger domains, such as fantasy drafts in sports video games.  This is because fantasy drafts typically involve many more selections than drafts in Risk, and the pool of players is much greater than 42, the number of territories in Risk.  So we could see possible future work adapting our project to work for a larger variety of domain sizes.  However, we hope that our techniques we develop for drafting will still scale well to large environments.  
+
+\section{Conclusions}
+
+% Summarize what we have so far with the algorithms and empirical results
+
+% Future work includes trying to use path refinement and abstraction in the space of actions (group the territories into continents in Risk, or by position in fantasy drafts).  Could also try to use automated feature selection rather than using the features described in the risk bot paper.  Also restricting the branching factor in MaxN-MC using a territory heuristic like in kthBestPick.
+
+%Have one paragraph that refreshes the reader on the problem at hand, motivation, shortfalls of the previous work, ideas of your new algorithm and the results of the empirical study. You may want to repeat listing the contributions your paper makes here. 
+
+
+%\section*{Acknowledgments}
+%
+%None yet.
+
+%\bibliography{../../../LaTeX/bib}
+%\bibliographystyle{../../../LaTeX/Styles/aaai}
+\bibliography{bib}
+\bibliographystyle{aaai}
+
+\end{document}
