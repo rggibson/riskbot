@@ -1,0 +1,6 @@
+player 0 has value 0.1954650317106133
+player 1 has value 0.2312345073065707
+player 2 has value 0.573300460982816
+player 0 has value 0.2312345073065707
+player 1 has value 0.1954650317106133
+player 2 has value 0.573300460982816
