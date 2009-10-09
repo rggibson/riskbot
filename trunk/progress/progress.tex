@@ -215,12 +215,12 @@ Work still to be done:
 
 All of our experiments will be conducted in the board game Risk using the Lux Delux\footnote{http://sillysoft.net/lux/} environment.  Lux Delux provides several Risk bots with source code, which include their own hand-coded drafting strategies.  Conveniently, this gives us plenty of competition to test our algorithms against.  We use the selected countries and even initial army placement options in all of our experiments.
 
-An evaluation function in Risk is provided by (Johansson & Olsson 2006), and in more detail in (Olsson 2005), to calculate the value of a single territory.  This territory value is meant to approximate how desirable an enemy territory is to a player during gameplay.  The evaluation function is a sum of different sub-components, each measuring a unique situation in the game.  Advantageous situations are given positive values and disadvantageous situations are given negative values.  For example, it is desirable to have more friendly neighbours around a territory, thus the number of friendly neighbours to a territory is a sub-component that contribute positively to the value of this territory.
-We adopted this evaluation function to measure the value of an entire draft to a particular player.  The territory values given by the evaluation function for all territories owned by the player are added together, creating a draft evaluation function.  However, we have to make changes to Johansson & Olsson’s territory evaluation function (from here on referred to as JO) since some sub-components are not longer valid with our new intended purpose:
+An evaluation function in Risk is provided by (Johansson \& Olsson 2006), and in more detail in (Olsson 2005), to calculate the value of a single territory.  This territory value is meant to approximate how desirable an enemy territory is to a player during gameplay.  The evaluation function is a sum of different sub-components, each measuring a unique situation in the game.  Advantageous situations are given positive values and disadvantageous situations are given negative values.  For example, it is desirable to have more friendly neighbours around a territory, thus the number of friendly neighbours to a territory is a sub-component that contribute positively to the value of this territory.
+We adopted this evaluation function to measure the value of an entire draft to a particular player.  The territory values given by the evaluation function for all territories owned by the player are added together, creating a draft evaluation function.  However, we have to make changes to Johansson \& Olsson's territory evaluation function (from here on referred to as JO) since some sub-components are not longer valid with our new intended purpose:
 \begin{itemize}
-JO gives a value of 0.05 for each army in a friendly neighbour and -0.03 for each army in an enemy neighbour.  Since we are evaluating a complete draft before the post-draft play (where the placing of armies occur), these two components do not apply to us.
-JO gives a value of 20 for owning the whole continent except this territory.  Thus this territory has a high value to the player.  Such a territory is highly desirable since obtaining an entire continent provides a bonus to armies.  In our case, we only give the same value for actually owning the whole continent, since in a final draft all territory ownerships are determined.
-JO gives a value of 4 if an enemy owns the whole continent. In such cases, conquering this enemy territory is desirable since it prevents the enemy from getting the continent army bonus.  In our case, if an enemy owns a continent in the final draft, then it is disadvantageous for the player, so a value of -4 is given.
+  \item JO gives a value of 0.05 for each army in a friendly neighbour and -0.03 for each army in an enemy neighbour.  Since we are evaluating a complete draft before the post-draft play (where the placing of armies occur), these two components do not apply to us.
+  \item JO gives a value of 20 for owning the whole continent except this territory.  Thus this territory has a high value to the player.  Such a territory is highly desirable since obtaining an entire continent provides a bonus to armies.  In our case, we only give the same value for actually owning the whole continent, since in a final draft all territory ownerships are determined.
+  \item JO gives a value of 4 if an enemy owns the whole continent. In such cases, conquering this enemy territory is desirable since it prevents the enemy from getting the continent army bonus.  In our case, if an enemy owns a continent in the final draft, then it is disadvantageous for the player, so a value of -4 is given.
 \end{itemize}	
 	
 
@@ -251,27 +251,26 @@ The results show that there are draft combinations that the evaluation function 
 \hline                       %inserts double horizontal lines
 Draft &  & 0 & 1 & 2 \\[0.5ex]% inserts
 \hline                    % inserts single horizontal line
-0&Evaluation Function&0.278&0.345&0.377\\&Ordered&283&360&357\\&Unordered&420&304&276\\1&Evaluation Function&0.317&0.343&0.34\\&Ordered&322&272&406\\&Unordered&258&309&433\\2&Evaluation Function&0.347&0.342&0.312\\&Ordered&412&354&234\\&Unordered&373&342&285\\3&Evaluation Function&0.323&0.361&0.306\\&Ordered&293&368&339\\&Unordered&347&287&366\\4&Evaluation Function&0.288&0.333&0.379\\&Ordered&330&374&296\\&Unordered&356&368&276\\5&Evaluation Function&0.362&0.302&0.336\\&Ordered&405&356&239\\&Unordered&317&332&351\\6&Evaluation Function&0.195&0.231&0.573\\&Ordered&216&271&513\\&Unordered&247&199&554\\
+0&Evaluation Function&0.278&0.345&0.377\\&Ordered&283&360&357\\&Unordered&420&304&276\\1&Evaluation Function&0.317&0.343&0.34\\&Ordered&322&272&406\\&Unordered&258&309&433\\2&Evaluation Function&0.347&0.342&0.312\\&Ordered&412&354&234\\&Unordered&373&342&285\\3&Evaluation Function&0.323&0.361&0.306\\&Ordered&293&368&339\\&Unordered&347&287&366\\4&Evaluation Function&0.288&0.333&0.379\\&Ordered&330&374&296\\&Unordered&356&368&276\\5&Evaluation Function&0.362&0.302&0.336\\&Ordered&405&356&239\\&Unordered&317&332&351\\6&Evaluation Function&0.195&0.231&0.573\\&Ordered&216&271&513\\&Unordered&247&199&554\\
 [1ex]
 \hline     %inserts single line 
 \end{tabular} 
 %\label{table:nonlin}  % is used to refer this table in the text 
 %\end{center}
-\caption{\label{tab:results} Results of evaluation function and sets on the draft configurations..}
+\caption{\label{tab:results} Results of evaluation function and sets on the draft configurations.}
 \end{table}
 
 
 \subsection{Evaluating MaxN-MC using Evaluation Function}
 
-We have run experiments to get an idea of the effectiveness of MaxN-MC using our new evaluation function.  The experiments are set up to have three players.  All three players have identical post-draft strategies provided by a hard-coded Lux agent (namely EvilPixie).  The difference is in the strategies employed in the drafting stage.  While Players 1 and 2 use the hard-coded rules of EvilPixie, Player 0 uses MaxN-MC with our new evaluation function.  Six sets of experiments were run on the world map, each set consisting of  $ to # episodes.  An episode is defined as a complete game where each player used their own strategy in the drafting stage then played until a winner is emerged.  
-The results are presented in Table~\ref{tab:experiments}.  MAX_NODES represents the depth in MaxN search where Monte Carlo roll outs take over. NUM_ ROLL_OUTS represents the number of Monte Carlo roll outs that we average over in MaxN-MC, for each leaf node of the MaxN portion of the search.  A different number of episodes were run for each set of experiments because we have constrained each set to a 24-hour period, and having a larger MAX_NODES or a larger NUM_ ROLL_OUTS means that each episode will take longer time.  All experiments show promising results that Player 0 has won a higher number of episodes than the other two players.  Because these results are still preliminary, no conclusions can yet be made.
+We have run experiments to get an idea of the effectiveness of MaxN-MC using our new evaluation function.  The experiments are set up to have three players.  All three players have identical post-draft strategies provided by a hard-coded Lux agent (namely EvilPixie).  The difference is in the strategies employed in the drafting stage.  While Players 1 and 2 use the hard-coded rules of EvilPixie, Player 0 uses MaxN-MC with our new evaluation function.  Six sets of experiments were run on the world map, each set consisting of 63 to 241 episodes.  An episode is defined as a complete game where each player used their own strategy in the drafting stage then played until a winner is emerged.  
 
-\begin{table}[]
-%\begin{center}
-%\centering      % used for centering table 
+The results are presented in Table~\ref{tab:experiments}.  MAX\_NODES represents the depth in MaxN search where Monte Carlo roll outs take over. NUM\_ROLL\_OUTS represents the number of Monte Carlo roll outs that we average over in MaxN-MC, for each leaf node of the MaxN portion of the search.  A different number of episodes were run for each set of experiments because we have constrained each set to a 24-hour period, and having a larger MAX\_NODES or a larger NUM\_ROLL\_OUTS means that each episode will take longer time.  All experiments show promising results that Player 0 has won a higher number of episodes than the other two players.  Because these results are still preliminary, no conclusions can yet be made.
+
+\begin{table*}[]
 \begin{tabular}{r r r r r r}  % centered columns (6 columns) 
 \hline                       %inserts double horizontal lines
-MAX_NODES & NUM_ ROLL_OUTS & Total episodes & Player 0 winning rate & Player 1 winning rate & Player 2 winning rate \\[0.5ex]% inserts
+MAX\_NODES&NUM\_ROLL\_OUTS&Total episodes&Player 0 winning rate&Player 1 winning rate&Player 2 winning rate\\[0.5ex]% inserts
 \hline                    % inserts single horizontal line
 1000&10&190&0.468&0.274&0.258\\
 5000&10&216&0.384&0.361&0.255\\
@@ -284,8 +283,8 @@ MAX_NODES & NUM_ ROLL_OUTS & Total episodes & Player 0 winning rate & Player 1 w
 \end{tabular} 
 %\label{table:nonlin}  % is used to refer this table in the text 
 %\end{center}
-\caption{\label{tab:experiments} Results of experiments comparing drafting strategies of MaxN-MC with EvilPixie}
-\end{table}
+\caption{\label{tab:experiments} Results of experiments comparing drafting strategies of MaxN-MC with EvilPixie.}
+\end{table*}
 
 \subsection{Work still to be done:}
 
