@@ -10,26 +10,24 @@ import java.util.ArrayList;
 
 /**
  *
- * @author Richard
+ * @author Richard Gibson, Neesha Desai, Richard Zhao
  */
 public class MaxN_MC_Drafter extends SmartDrafter
 {    /**
      * The depth in MaxN search where Monte Carlo roll outs take over.
-     * TODO: rggibson - This should not be a fixed number.  It sould really just
-     * be dependent on how many states we can afford to expand in a MaxN search.
      */
-    final int MAX_NODES_TO_EXPAND = 100000;
+    final static int MAX_NODES_TO_EXPAND = 100000;
 
     /**
      * The number of Monte Carlo roll outs that we average over in MaxNMC, for
      * each leaf node of the MaxN portion of the search.
      */
-    final int NUM_MC_ROLL_OUTS = 1;
+    final static int NUM_MC_ROLL_OUTS = 1;
 
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         // Determine the depth to which we can search
-        int depth = calculateMaxNSearchDepth(unownedCountries.size(), MAX_NODES_TO_EXPAND);
+        int depth = calculateMaxNSearchDepth(unownedCountries.size());
 
         // Determine which country is the best to choose
         int bestPick = -1;
@@ -48,7 +46,7 @@ public class MaxN_MC_Drafter extends SmartDrafter
             draftState[countryIndex] = ID; // Pick country
             unownedCountries.remove((Integer) countryIndex);
 
-            double[] values = maxNMC(draftState, unownedCountries, (ID + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), NUM_MC_ROLL_OUTS, board);
+            double[] values = maxNMC(draftState, unownedCountries, (ID + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), board);
 
             assert(draftState[countryIndex] != -1);
             assert(!unownedCountries.contains((Integer) countryIndex));
@@ -75,12 +73,12 @@ public class MaxN_MC_Drafter extends SmartDrafter
      * @param maxNumNodesToExpand The maximum number of nodes we are allowed to expand in the search
      * @return The depth to search to
      */
-    public static int calculateMaxNSearchDepth(int numUnownedCountries, int maxNumNodesToExpand)
+    public static int calculateMaxNSearchDepth(int numUnownedCountries)
     {
         int numNodesToExpand = 1;
         int branchingFactor = numUnownedCountries;
         int depth = -1;
-        while (numNodesToExpand < maxNumNodesToExpand && branchingFactor > 0)
+        while (numNodesToExpand < MAX_NODES_TO_EXPAND && branchingFactor > 0)
         {
             numNodesToExpand *= branchingFactor;
             branchingFactor--;
@@ -99,7 +97,7 @@ public class MaxN_MC_Drafter extends SmartDrafter
      * @param numPlayers The number of players playing in the draft
      * @return The value of this state for each player
      */
-    public static double[] maxNMC(int[] draftState, ArrayList<Integer> unownedCountries, int player, int depth, int numPlayers, int numMcRollOuts, Board board)
+    public static double[] maxNMC(int[] draftState, ArrayList<Integer> unownedCountries, int player, int depth, int numPlayers, Board board)
     {
         // Evaluate this state if it is terminal (i.e. all territories owned)
         if (unownedCountries.size() == 0)
@@ -126,7 +124,7 @@ public class MaxN_MC_Drafter extends SmartDrafter
                 draftState[countryIndex] = player; // Pick the country
                 unownedCountries.remove((Integer) countryIndex);
 
-                double[] valuesOfThisMove = maxNMC(draftState, unownedCountries, (player + 1) % numPlayers, depth - 1, numPlayers, numMcRollOuts, board);
+                double[] valuesOfThisMove = maxNMC(draftState, unownedCountries, (player + 1) % numPlayers, depth - 1, numPlayers, board);
                 
                 // Undo the pick
                 assert(draftState[countryIndex] != -1);
@@ -157,7 +155,7 @@ public class MaxN_MC_Drafter extends SmartDrafter
             }
 
             // Get the roll outs and iteratively update the cumulative average
-            for (int i = 0; i < numMcRollOuts; ++i)
+            for (int i = 0; i < NUM_MC_ROLL_OUTS; ++i)
             {
                 double[] rollOutValues = monteCarloRollOut(draftState, unownedCountries, player, numPlayers, board);
                 for (int j = 0; j < valuesOfNode.length; ++j)

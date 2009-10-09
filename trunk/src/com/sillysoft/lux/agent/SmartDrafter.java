@@ -11,8 +11,7 @@ import java.util.ArrayList;
 
 /**
  * This agent is equivalent to EvilPixie except in the draft phase
- * of the game.  In the draft phase, this agent instead uses MaxNMC to
- * pick territories.
+ * of the game.
  * @author Richard Gibson, Neesha Desai, and Richard Zhao
  */
 public abstract class SmartDrafter extends SmartAgentBase
