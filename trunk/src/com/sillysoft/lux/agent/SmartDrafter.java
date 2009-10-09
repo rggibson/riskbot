@@ -117,12 +117,17 @@ public abstract class SmartDrafter extends SmartAgentBase
             }
         }
 
+        // There is redundency in the parameters here, but it is useful to pass
+        // in the unownedCountries so that we don't have to go through and find
+        // the available picks every time.
         return getPick(draftState, unownedCountries);
     }
 
     /**
      * The method each SmartDrafter needs to implement for picking countires
      * in the draft.
+     * @param draftState Who owns what
+     * @param unownedCountries The territories left to be picked
      * @return The index of the territory to pick
      */
     protected abstract int getPick(int[] draftState, ArrayList<Integer> unownedCountries);
