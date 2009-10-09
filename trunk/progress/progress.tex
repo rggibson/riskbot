@@ -221,6 +221,43 @@ To include:
 	\item Experiments involving MaxN-MC using this evaluation function versus hard-coded Lux agents (namely just EvilPixie).  Note that the post-draft strategies are identical among all players.
 \end{itemize}
 
+\subsection{Analyzing Evaluation Function}
+
+Before we committed to using the evaluation function as it is listed in the paper, we needed to test how well it worked at predicting completed draft states. To test this, we created 6 random draft configurations. These were created by having three agents randomly pick a territory, and then storing the values chosen by each so that they could be recreated later. Therefore, each draft configuration was made up of three sets of draft picks, one for each of the three players (agents). An example map is shown in Figure~\ref{fig:random}. We had a 7th draft configuration where one agent owns an entire continent, in this case Australia, which is shown in Figure~\ref{fig:continent}. 
+
+Next, we computed the evaluation function for each set of picks in each draft. From there, each draft was used to play two sets of 1000 games. The first 1000 games were played such that each agent chose their draft picks based on their turn order, so whichever agent went first on each game chose from set 0. The second set of 1000 games were played such that each agent always choose the same draft picks regardless of order, ie one agent always choose from set 0, one from set 1 and the third from set 2. The number of games each set won for each draft are presented in Table~\ref{tab:results}.
+
+The results show that there are draft combinations that the evaluation function is not taking advantage of, as show in the results for player 2 in set 1, or player 0 in set 2. The other interesting result is that for some draft selections, being the first player (as shown in the ordered results) can be an advantage, something we expected. But, there are cases where a draft set actually does better in the random configuration. By running more tests of the 6 possible orders for the three agents, we may be able to learn more about the advantages/disadvantages the turn order provides. 
+
+\begin{figure}[htp]
+\centering
+\includegraphics[scale=0.3]{testmap2.png}
+\caption{Example random draft selection.}\label{fig:random}
+\end{figure}
+
+\begin{figure}[htp]
+\centering
+\includegraphics[scale=0.3]{testmapcontinent.png}
+\caption{Draft selection so that a single player owns a whole continent.}\label{fig:continent}
+\end{figure}
+
+\begin{table}[]
+%\begin{center}
+%\centering      % used for centering table 
+\begin{tabular}{l l r r r}  % centered columns (4 columns) 
+\hline                       %inserts double horizontal lines
+Draft &  & 0 & 1 & 2 \\[0.5ex]% inserts
+\hline                    % inserts single horizontal line
+0&Evaluation Function&0.278&0.345&0.377\\&Ordered&283&360&357\\&Unordered&420&304&276\\1&Evaluation Function&0.317&0.343&0.34\\&Ordered&322&272&406\\&Unordered&258&309&433\\2&Evaluation Function&0.347&0.342&0.312\\&Ordered&412&354&234\\&Unordered&373&342&285\\3&Evaluation Function&0.323&0.361&0.306\\&Ordered&293&368&339\\&Unordered&347&287&366\\4&Evaluation Function&0.288&0.333&0.379\\&Ordered&330&374&296\\&Unordered&356&368&276\\5&Evaluation Function&0.362&0.302&0.336\\&Ordered&405&356&239\\&Unordered&317&332&351\\6&Evaluation Function&0.195&0.231&0.573\\&Ordered&216&271&513\\&Unordered&247&199&554\\
+[1ex]
+\hline     %inserts single line 
+\end{tabular} 
+%\label{table:nonlin}  % is used to refer this table in the text 
+%\end{center}
+\caption{\label{tab:results} Results of evaluation function and sets on the draft configurations..}
+\end{table}
+
+
 Work still to be done:
 \begin{itemize}
 	\item Build a heuristic function for the KthBestPick algorithm using RL.
