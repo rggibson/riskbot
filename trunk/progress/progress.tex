@@ -215,15 +215,18 @@ Work still to be done:
 
 All of our experiments will be conducted in the board game Risk using the Lux Delux\footnote{http://sillysoft.net/lux/} environment.  Lux Delux provides several Risk bots with source code, which include their own hand-coded drafting strategies.  Conveniently, this gives us plenty of competition to test our algorithms against.  We use the selected countries and even initial army placement options in all of our experiments.
 
-To include:
+An evaluation function in Risk is provided by (Johansson & Olsson 2006), and in more detail in (Olsson 2005), to calculate the value of a single territory.  This territory value is meant to approximate how desirable an enemy territory is to a player during gameplay.  The evaluation function is a sum of different sub-components, each measuring a unique situation in the game.  Advantageous situations are given positive values and disadvantageous situations are given negative values.  For example, it is desirable to have more friendly neighbours around a territory, thus the number of friendly neighbours to a territory is a sub-component that contribute positively to the value of this territory.
+We adopted this evaluation function to measure the value of an entire draft to a particular player.  The territory values given by the evaluation function for all territories owned by the player are added together, creating a draft evaluation function.  However, we have to make changes to Johansson & Olsson’s territory evaluation function (from here on referred to as JO) since some sub-components are not longer valid with our new intended purpose:
 \begin{itemize}
-	\item Mention the evaluation function provided in \cite{RiskBots}, its intended purpose (\cite{RiskBots} (and in more detail in \cite{Ols2005}) use a hand-crafted territory value function to determine the desirability of conquering each of the enemy territories.  This was used to determine whether or not to continue to attack, and if so, which of the territories to attack), our modifications, and experiments to test if it will be good as an estimate of the reward signal.
-	\item Experiments involving MaxN-MC using this evaluation function versus hard-coded Lux agents (namely just EvilPixie).  Note that the post-draft strategies are identical among all players.
-\end{itemize}
+JO gives a value of 0.05 for each army in a friendly neighbour and -0.03 for each army in an enemy neighbour.  Since we are evaluating a complete draft before the post-draft play (where the placing of armies occur), these two components do not apply to us.
+JO gives a value of 20 for owning the whole continent except this territory.  Thus this territory has a high value to the player.  Such a territory is highly desirable since obtaining an entire continent provides a bonus to armies.  In our case, we only give the same value for actually owning the whole continent, since in a final draft all territory ownerships are determined.
+JO gives a value of 4 if an enemy owns the whole continent. In such cases, conquering this enemy territory is desirable since it prevents the enemy from getting the continent army bonus.  In our case, if an enemy owns a continent in the final draft, then it is disadvantageous for the player, so a value of -4 is given.
+\end{itemize}	
+	
 
 \subsection{Analyzing Evaluation Function}
 
-Before we committed to using the evaluation function as it is listed in the paper, we needed to test how well it worked at predicting completed draft states. To test this, we created 6 random draft configurations. These were created by having three agents randomly pick a territory, and then storing the values chosen by each so that they could be recreated later. Therefore, each draft configuration was made up of three sets of draft picks, one for each of the three players (agents). An example map is shown in Figure~\ref{fig:random}. We had a 7th draft configuration where one agent owns an entire continent, in this case Australia, which is shown in Figure~\ref{fig:continent}. 
+Before we committed to using the new evaluation function as we modified from the paper, we needed to test how well it worked at predicting completed draft states. To test this, we created 6 random draft configurations. These were created by having three agents randomly pick a territory, and then storing the values chosen by each so that they could be recreated later. Therefore, each draft configuration was made up of three sets of draft picks, one for each of the three players (agents). An example map is shown in Figure~\ref{fig:random}. We had a 7th draft configuration where one agent owns an entire continent, in this case Australia, which is shown in Figure~\ref{fig:continent}. 
 
 Next, we computed the evaluation function for each set of picks in each draft. From there, each draft was used to play two sets of 1000 games. The first 1000 games were played such that each agent chose their draft picks based on their turn order, so whichever agent went first on each game chose from set 0. The second set of 1000 games were played such that each agent always choose the same draft picks regardless of order, ie one agent always choose from set 0, one from set 1 and the third from set 2. The number of games each set won for each draft are presented in Table~\ref{tab:results}.
 
@@ -244,7 +247,7 @@ The results show that there are draft combinations that the evaluation function 
 \begin{table}[]
 %\begin{center}
 %\centering      % used for centering table 
-\begin{tabular}{l l r r r}  % centered columns (4 columns) 
+\begin{tabular}{l l r r r}  % centered columns (5 columns) 
 \hline                       %inserts double horizontal lines
 Draft &  & 0 & 1 & 2 \\[0.5ex]% inserts
 \hline                    % inserts single horizontal line
@@ -258,7 +261,34 @@ Draft &  & 0 & 1 & 2 \\[0.5ex]% inserts
 \end{table}
 
 
-Work still to be done:
+\subsection{Evaluating MaxN-MC using Evaluation Function}
+
+We have run experiments to get an idea of the effectiveness of MaxN-MC using our new evaluation function.  The experiments are set up to have three players.  All three players have identical post-draft strategies provided by a hard-coded Lux agent (namely EvilPixie).  The difference is in the strategies employed in the drafting stage.  While Players 1 and 2 use the hard-coded rules of EvilPixie, Player 0 uses MaxN-MC with our new evaluation function.  Six sets of experiments were run on the world map, each set consisting of  $ to # episodes.  An episode is defined as a complete game where each player used their own strategy in the drafting stage then played until a winner is emerged.  
+The results are presented in Table~\ref{tab:experiments}.  MAX_NODES represents the depth in MaxN search where Monte Carlo roll outs take over. NUM_ ROLL_OUTS represents the number of Monte Carlo roll outs that we average over in MaxN-MC, for each leaf node of the MaxN portion of the search.  A different number of episodes were run for each set of experiments because we have constrained each set to a 24-hour period, and having a larger MAX_NODES or a larger NUM_ ROLL_OUTS means that each episode will take longer time.  All experiments show promising results that Player 0 has won a higher number of episodes than the other two players.  Because these results are still preliminary, no conclusions can yet be made.
+
+\begin{table}[]
+%\begin{center}
+%\centering      % used for centering table 
+\begin{tabular}{r r r r r r}  % centered columns (6 columns) 
+\hline                       %inserts double horizontal lines
+MAX_NODES & NUM_ ROLL_OUTS & Total episodes & Player 0 winning rate & Player 1 winning rate & Player 2 winning rate \\[0.5ex]% inserts
+\hline                    % inserts single horizontal line
+1000&10&190&0.468&0.274&0.258\\
+5000&10&216&0.384&0.361&0.255\\
+10000&10&134&0.425&0.291&0.284\\
+100&100&241&0.432&0.266&0.303\\
+500&100&156&0.423&0.346&0.231\\
+1000&100&63&0.460&0.206&0.333\\
+[1ex]
+\hline     %inserts single line 
+\end{tabular} 
+%\label{table:nonlin}  % is used to refer this table in the text 
+%\end{center}
+\caption{\label{tab:experiments} Results of experiments comparing drafting strategies of MaxN-MC with EvilPixie}
+\end{table}
+
+\subsection{Work still to be done:}
+
 \begin{itemize}
 	\item Build a heuristic function for the KthBestPick algorithm using RL.
 	\item Run experiments for the KthBestPick algorithm.  Compare the heuristics: MaxN-MC, RL (see above point), and perhaps some further modification of the evaluation function in \cite{RiskBots}.
