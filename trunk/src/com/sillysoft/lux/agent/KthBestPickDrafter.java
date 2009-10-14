@@ -22,7 +22,7 @@ public class KthBestPickDrafter extends SmartDrafter
     /**
      * The heuristic function to use
      */
-    final Heuristic HEURISTIC_FUNCTION = Heuristic.RANDOM;
+    final Heuristic HEURISTIC_FUNCTION = Heuristic.LEARNED;
 
     /**
      * The opponent models to use
@@ -34,17 +34,18 @@ public class KthBestPickDrafter extends SmartDrafter
     /**
      * The different types of heuristic functions that kthBestPick will accept
      */
-    private enum Heuristic
+    protected enum Heuristic
     {
         MAX_N_MC,
         DUMB,
-        RANDOM
+        RANDOM,
+        LEARNED
     }
 
     /**
      * The different opponent models that kthBestPick can use
      */
-    private enum OpponentModel
+    protected enum OpponentModel
     {
         KTH_BEST_PICK
     }
@@ -63,8 +64,6 @@ public class KthBestPickDrafter extends SmartDrafter
         // Check the Hashtable to see if we've already called the algorithm
         // on this state with this many picks considered
         int terr = -1;
-        String s = getDraftStateIndex(draftState);
-        s += "" + MAX_NUM_PICKS_CONSIDERED;
 
         terr = kthBestPick(draftState, unownedCountries, ID, MAX_NUM_PICKS_CONSIDERED);
 
@@ -90,6 +89,7 @@ public class KthBestPickDrafter extends SmartDrafter
         numPicksToConsider = Math.min(numPicksToConsider, maxNumPicksToConsider);
 
         // Now rank the available picks
+        // TODO: rggibson - How to handle tie-breaks?
         int[] topPicks = getTopPicks(draftState, unownedCountries, activePlayer, numPicksToConsider);
 
         for (int k = numPicksToConsider - 1; k >= 0; --k)
@@ -141,8 +141,6 @@ public class KthBestPickDrafter extends SmartDrafter
                 {
                     case KTH_BEST_PICK:
                         // Now get the next pick
-                        String s = getDraftStateIndex(draftState);
-                        s += "" + numPicksLeft;
                         nextPick = kthBestPick(draftState, unownedCountries, currentPlayer, numPicksLeft);
                         break;
 
@@ -229,39 +227,7 @@ public class KthBestPickDrafter extends SmartDrafter
             }
 
             // Get the value of this unowned country
-            double valueOfTerr = 0.0;
-            switch(HEURISTIC_FUNCTION)
-            {
-                case MAX_N_MC:
-                    // Call MaxN-MC to get the rank of each pick
-                    int depth = MaxN_MC_Drafter.calculateMaxNSearchDepth(unownedCountries.size());
-                    assert(unownedCountries.contains((Integer) terr));
-                    draftState[terr] = activePlayer;
-                    unownedCountries.remove((Integer) terr);
-
-                    double[] values = MaxN_MC_Drafter.maxNMC(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), board);
-
-                    assert(draftState[terr] != -1);
-                    assert(!unownedCountries.contains((Integer) terr));
-                    draftState[terr] = -1;
-                    unownedCountries.add(terr);
-
-                    valueOfTerr = values[activePlayer];
-                    break;
-
-                case DUMB:
-                    // Do nothing because we're dumb
-                    break;
-
-                case RANDOM:
-                    // Random assign a value between 0 and 1
-                    valueOfTerr = Math.random();
-                    break;
-
-                default:
-                    assert(false);
-                    break;
-            }
+            double valueOfTerr = getValueOfTerr(terr, draftState, unownedCountries, activePlayer);
 
             // Find its rank in the current top picks
             int rank = numPicksToConsider;
@@ -289,30 +255,55 @@ public class KthBestPickDrafter extends SmartDrafter
     }
 
     /**
-     * Returns the index to map the draftState to in the Hashtable
-     * @param draftState The current draft state
-     * @return The String to use as an index
+     * Calls the heuristic function to get the value of the passed in territory
+     * @param terr The territory whose value we want
+     * @param draftState The state of the draft
+     * @param unownedCountries The countries still available to be picked
+     * @param activePlayer The player whose turn it is to pick
+     * @return The value of the passed in territory
      */
-    private String getDraftStateIndex(int[] draftState)
+    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer)
     {
-        String index = "";
+        double valueOfTerr = 0.0;
 
-        for (int i = 0; i < draftState.length; i = i + 3)
+        switch(HEURISTIC_FUNCTION)
         {
-            int num = draftState[i] + 1;
-            if (i + 1 < draftState.length)
-            {
-                num += (board.getNumberOfPlayers() + 1) * (draftState[i+1] + 1);
-            }
-            if (i + 2 < draftState.length)
-            {
-                num += Math.pow(board.getNumberOfPlayers() + 1, 2) * (draftState[i+2] + 1);
-            }
+            case MAX_N_MC:
+                // Call MaxN-MC to get the rank of each pick
+                int depth = MaxN_MC_Drafter.calculateMaxNSearchDepth(unownedCountries.size());
+                assert(unownedCountries.contains((Integer) terr));
+                draftState[terr] = activePlayer;
+                unownedCountries.remove((Integer) terr);
 
-            char c = (char)('A' + num);
-            index += c;
+                double[] values = MaxN_MC_Drafter.maxNMC(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), board);
+
+                assert(draftState[terr] != -1);
+                assert(!unownedCountries.contains((Integer) terr));
+                draftState[terr] = -1;
+                unownedCountries.add(terr);
+
+                valueOfTerr = values[activePlayer];
+                break;
+
+            case DUMB:
+                // Do nothing because we're dumb
+                break;
+
+            case RANDOM:
+                // Random assign a value between 0 and 1
+                valueOfTerr = Math.random();
+                break;
+
+            case LEARNED:
+                // TODO: rggibson - Fill this in
+                assert(false);
+                break;
+
+            default:
+                assert(false);
+                break;
         }
 
-        return index;
+        return valueOfTerr;
     }
 }
