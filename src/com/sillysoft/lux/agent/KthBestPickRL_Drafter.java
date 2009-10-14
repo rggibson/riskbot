@@ -21,12 +21,8 @@ import java.io.FileNotFoundException;
 public class KthBestPickRL_Drafter extends KthBestPickDrafter
 {
     /**
-     * The file to store the heuristic function.
-     */
-    private static String HEURISTIC_DATA_FILENAME = "C:\\Users\\Richard\\Documents\\NetBeansProjects\\LuxSDK\\LuxSDK\\objectData\\learnedHeuristic";
-
-    /**
-     * The initial values in the heuristic function
+     * The initial values in the heuristic function.  Note that this does
+     * nothing if we are loading the heuristic from file.
      */
     final private double INITIAL_VALUE = 0.5;
 
@@ -35,12 +31,6 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
      * Note that this does nothing if we are loading the heuristic from file.
      */
     final private double INITIAL_WEIGHT = 1;
-
-    /**
-     * The Hashtables, one for each territory, that will store the learned
-     * heuristic
-     */
-    public static Hashtable<ArrayList<Integer>,double[]>[] m_heuristic;
 
     /**
      * Keeps track of which states were encountered in the draft, so that we
@@ -65,23 +55,6 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
     {
         super.setPrefs(ID, board);
 
-        // Edit the filename depending on how many players are playing
-        int numPlayers = board.getNumberOfPlayers();
-        if (!HEURISTIC_DATA_FILENAME.contains("" + numPlayers))
-        {
-             HEURISTIC_DATA_FILENAME += "." + numPlayers;
-        }
-
-        // Edit the filename depending on the map being used
-        if (numCountries == 15 && !HEURISTIC_DATA_FILENAME.contains("15"))
-        {
-            HEURISTIC_DATA_FILENAME += ".15.dat";
-        }
-        else if (numCountries == 42 && !HEURISTIC_DATA_FILENAME.contains("42"))
-        {
-            HEURISTIC_DATA_FILENAME += ".42.dat";
-        }
-
         if (m_indicesToUpdate == null)
         {
             m_indicesToUpdate = new ArrayList[board.getNumberOfPlayers()];
@@ -92,22 +65,22 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
             m_indicesToUpdate[ID] = new ArrayList<int[]>();
         }
 
-        if (m_heuristic == null)
+        if (m_learnedHeuristic == null)
         {
             // Construct the heuristic, or grab it from file if it already exists
             try
             {
                 ObjectInputStream in = new ObjectInputStream(new FileInputStream(HEURISTIC_DATA_FILENAME));
-                m_heuristic = (Hashtable<ArrayList<Integer>,double[]>[])in.readObject();
+                m_learnedHeuristic = (Hashtable<ArrayList<Integer>,double[]>[])in.readObject();
                 in.close();
             }
             catch (FileNotFoundException e)
             {
                 // Create a new heuristic
-                m_heuristic = new Hashtable[numCountries];
+                m_learnedHeuristic = new Hashtable[numCountries];
                 for (int i = 0; i < numCountries; ++i)
                 {
-                    m_heuristic[i] = new Hashtable<ArrayList<Integer>,double[]>();
+                    m_learnedHeuristic[i] = new Hashtable<ArrayList<Integer>,double[]>();
                 }
 
                 // First, we will need the number of countries in each continent
@@ -170,7 +143,7 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
 
                                         double[] entry = { INITIAL_VALUE, INITIAL_WEIGHT};
 
-                                        m_heuristic[terr.getCode()].put(index, entry);
+                                        m_learnedHeuristic[terr.getCode()].put(index, entry);
                                     }
                                 }
                             }
@@ -183,112 +156,6 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
                 assert(false);
             }
         }
-    }
-
-    /**
-     * Calls the heuristic function to get the value of the passed in territory
-     * @param terr The territory whose value we want
-     * @param draftState The state of the draft
-     * @param unownedCountries The countries still available to be picked
-     * @param activePlayer The player whose turn it is to pick
-     * @return The value of the passed in territory
-     */
-    @Override
-    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer)
-    {
-        ArrayList<Integer> index = getTerritoryIndex(terr, draftState, activePlayer);
-
-        if (!m_heuristic[terr].containsKey(index))
-        {
-            assert(false);
-        }
-        assert(m_heuristic[terr].containsKey(index));
-
-        double[] value = m_heuristic[terr].get(index);
-
-        return value[0];
-    }
-
-    /**
-     * Retrieves the index into the heuristic function for the current state
-     * of the draft.
-     * @param terr The territory whose value we need
-     * @param draftState The state of the draft
-     * @param activePlayer The player whose turn it is to pick
-     * @return The index into the heuristic function for retrieving the value of terr
-     */
-    protected ArrayList<Integer> getTerritoryIndex(int terr, int[] draftState, int activePlayer)
-    {
-        int numFriends = 0;
-        int numEnemies = 0;
-        int numFriendsInCont = 0;
-        int numEnemiesInCont = 0;
-        int[] enemiesInCont = new int[board.getNumberOfPlayers()];
-
-        // Number of friendly and enemy neighbours
-        int[] neighbours = countries[terr].getAdjoiningCodeList();
-        for (int i = 0; i < neighbours.length; ++i)
-        {
-            int neighbourTerr = neighbours[i];
-            int owner = draftState[neighbourTerr];
-
-            if (owner == activePlayer)
-            {
-                numFriends++;
-            }
-            else if (owner >= 0)
-            {
-                numEnemies++;
-            }
-        }
-
-        // Get all the countries in the continent other than terr
-        int continent = countries[terr].getContinent();
-        ArrayList<Integer> terrsInCont = new ArrayList<Integer>();
-        for (Country country : countries)
-        {
-            if (country.getContinent() == continent && country.getCode() != terr)
-            {
-                terrsInCont.add(country.getCode());
-            }
-        }
-
-        // Number of friends and enemies in continent
-        for (int i = 0; i < terrsInCont.size(); ++i)
-        {
-            int contTerr = terrsInCont.get(i);
-            int owner = draftState[contTerr];
-
-            if (owner == activePlayer)
-            {
-                numFriendsInCont++;
-            }
-            else if (owner >= 0)
-            {
-                numEnemiesInCont++;
-                enemiesInCont[owner]++;
-            }
-        }
-
-        // Max number of enemies in continent owned by one player
-        int numEnemyInCont = enemiesInCont[0];
-        for (int i = 1; i < enemiesInCont.length; ++i)
-        {
-            if (enemiesInCont[i] > numEnemyInCont)
-            {
-                numEnemyInCont = enemiesInCont[i];
-            }
-        }
-
-        // The index
-        ArrayList<Integer> index = new ArrayList<Integer>(5);
-        index.add(numFriends);
-        index.add(numEnemies);
-        index.add(numFriendsInCont);
-        index.add(numEnemiesInCont);
-        index.add(numEnemyInCont);
-
-        return index;
     }
 
     // Update the heuristic function and save it to file
@@ -319,8 +186,8 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
                     index.add(entry[i+1]);
                 }
 
-                assert(m_heuristic[terr].containsKey(index));
-                double[] hashTableEntry = m_heuristic[terr].get(index);
+                assert(m_learnedHeuristic[terr].containsKey(index));
+                double[] hashTableEntry = m_learnedHeuristic[terr].get(index);
                 double oldValue = hashTableEntry[0];
                 double numVisits = hashTableEntry[1] + 1;
 
@@ -328,7 +195,7 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
                 hashTableEntry[0] = oldValue + (1.0 / numVisits)*(newValue - oldValue);
                 hashTableEntry[1] = numVisits;
 
-                m_heuristic[terr].put(index, hashTableEntry);
+                m_learnedHeuristic[terr].put(index, hashTableEntry);
             }
 
             m_indicesToUpdate[player].clear();
@@ -338,7 +205,7 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
         try
         {
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(HEURISTIC_DATA_FILENAME));
-            out.writeObject(m_heuristic);
+            out.writeObject(m_learnedHeuristic);
             out.close();
         }
         catch (Exception e)

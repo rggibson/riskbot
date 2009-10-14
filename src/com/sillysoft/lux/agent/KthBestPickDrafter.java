@@ -5,7 +5,11 @@
 
 package com.sillysoft.lux.agent;
 
+import com.sillysoft.lux.*;
 import java.util.ArrayList;
+import java.util.Hashtable;
+import java.io.ObjectInputStream;
+import java.io.FileInputStream;
 
 /**
  *
@@ -14,15 +18,26 @@ import java.util.ArrayList;
 public class KthBestPickDrafter extends SmartDrafter
 {
     /**
+     * The file to store the heuristic function.
+     */
+    protected static String HEURISTIC_DATA_FILENAME = "C:\\Users\\Richard\\Documents\\NetBeansProjects\\LuxSDK\\LuxSDK\\objectData\\learnedHeuristic";
+
+    /**
      * The maximum number of picks that we will consider looking ahead
      * for the kthBestPick algorithm.
      */
-    final int MAX_NUM_PICKS_CONSIDERED = 5;
+    final protected int MAX_NUM_PICKS_CONSIDERED = 5;
 
     /**
      * The heuristic function to use
      */
-    final Heuristic HEURISTIC_FUNCTION = Heuristic.LEARNED;
+    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.LEARNED;
+
+    /**
+     * The Hashtables, one for each territory, that will store the learned
+     * heuristic (if we are using the learned one)
+     */
+    protected static Hashtable<ArrayList<Integer>,double[]>[] m_learnedHeuristic;
 
     /**
      * The opponent models to use
@@ -54,6 +69,46 @@ public class KthBestPickDrafter extends SmartDrafter
     public KthBestPickDrafter()
     {
         super();
+    }
+
+    @Override
+    public void setPrefs(int ID, Board board )
+    {
+        super.setPrefs(ID, board);
+
+        if (HEURISTIC_FUNCTION == Heuristic.LEARNED && m_learnedHeuristic == null)
+        {
+            // Load the heursitic function up
+
+            // Edit the filename depending on how many players are playing
+            int numPlayers = board.getNumberOfPlayers();
+            if (!HEURISTIC_DATA_FILENAME.contains("" + numPlayers))
+            {
+                 HEURISTIC_DATA_FILENAME += "." + numPlayers;
+            }
+
+            // Edit the filename depending on the map being used
+            if (numCountries == 15 && !HEURISTIC_DATA_FILENAME.contains("15"))
+            {
+                HEURISTIC_DATA_FILENAME += ".15.dat";
+            }
+            else if (numCountries == 42 && !HEURISTIC_DATA_FILENAME.contains("42"))
+            {
+                HEURISTIC_DATA_FILENAME += ".42.dat";
+            }
+
+            // Grab it from file
+            try
+            {
+                ObjectInputStream in = new ObjectInputStream(new FileInputStream(HEURISTIC_DATA_FILENAME));
+                m_learnedHeuristic = (Hashtable<ArrayList<Integer>,double[]>[])in.readObject();
+                in.close();
+            }
+            catch (Exception e)
+            {
+                assert(false);
+            }
+        }
     }
 
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
@@ -295,8 +350,11 @@ public class KthBestPickDrafter extends SmartDrafter
                 break;
 
             case LEARNED:
-                // TODO: rggibson - Fill this in
-                assert(false);
+                // Call the heuristic function to get the value of the territory
+                ArrayList<Integer> index = getTerritoryIndex(terr, draftState, activePlayer);
+                assert(m_learnedHeuristic[terr].containsKey(index));
+                double[] value = m_learnedHeuristic[terr].get(index);
+                valueOfTerr = value[0];
                 break;
 
             default:
@@ -305,5 +363,87 @@ public class KthBestPickDrafter extends SmartDrafter
         }
 
         return valueOfTerr;
+    }
+
+    /**
+     * Retrieves the index into the heuristic function for the current state
+     * of the draft.
+     * @param terr The territory whose value we need
+     * @param draftState The state of the draft
+     * @param activePlayer The player whose turn it is to pick
+     * @return The index into the heuristic function for retrieving the value of terr
+     */
+    protected ArrayList<Integer> getTerritoryIndex(int terr, int[] draftState, int activePlayer)
+    {
+        int numFriends = 0;
+        int numEnemies = 0;
+        int numFriendsInCont = 0;
+        int numEnemiesInCont = 0;
+        int[] enemiesInCont = new int[board.getNumberOfPlayers()];
+
+        // Number of friendly and enemy neighbours
+        int[] neighbours = countries[terr].getAdjoiningCodeList();
+        for (int i = 0; i < neighbours.length; ++i)
+        {
+            int neighbourTerr = neighbours[i];
+            int owner = draftState[neighbourTerr];
+
+            if (owner == activePlayer)
+            {
+                numFriends++;
+            }
+            else if (owner >= 0)
+            {
+                numEnemies++;
+            }
+        }
+
+        // Get all the countries in the continent other than terr
+        int continent = countries[terr].getContinent();
+        ArrayList<Integer> terrsInCont = new ArrayList<Integer>();
+        for (Country country : countries)
+        {
+            if (country.getContinent() == continent && country.getCode() != terr)
+            {
+                terrsInCont.add(country.getCode());
+            }
+        }
+
+        // Number of friends and enemies in continent
+        for (int i = 0; i < terrsInCont.size(); ++i)
+        {
+            int contTerr = terrsInCont.get(i);
+            int owner = draftState[contTerr];
+
+            if (owner == activePlayer)
+            {
+                numFriendsInCont++;
+            }
+            else if (owner >= 0)
+            {
+                numEnemiesInCont++;
+                enemiesInCont[owner]++;
+            }
+        }
+
+        // Max number of enemies in continent owned by one player
+        int numEnemyInCont = enemiesInCont[0];
+        for (int i = 1; i < enemiesInCont.length; ++i)
+        {
+            if (enemiesInCont[i] > numEnemyInCont)
+            {
+                numEnemyInCont = enemiesInCont[i];
+            }
+        }
+
+        // The index
+        ArrayList<Integer> index = new ArrayList<Integer>(5);
+        index.add(numFriends);
+        index.add(numEnemies);
+        index.add(numFriendsInCont);
+        index.add(numEnemiesInCont);
+        index.add(numEnemyInCont);
+
+        return index;
     }
 }
