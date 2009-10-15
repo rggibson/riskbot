@@ -8,6 +8,7 @@ package com.sillysoft.lux.agent;
 import com.sillysoft.lux.*;
 import java.util.Hashtable;
 import java.util.ArrayList;
+import java.io.File;
 import java.io.ObjectInputStream;
 import java.io.FileInputStream;
 import java.io.ObjectOutputStream;
@@ -18,7 +19,7 @@ import java.io.FileNotFoundException;
  *
  * @author Richard Gibson, Neesha Desai, Richard Zhao
  */
-public class KthBestPickRL_Drafter extends KthBestPickDrafter
+public class RL_Drafter extends SmartDrafter
 {
     /**
      * The initial values in the heuristic function.  Note that this does
@@ -30,7 +31,12 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
      * The initial number of visits to each value in the heuristic function.
      * Note that this does nothing if we are loading the heuristic from file.
      */
-    final private double INITIAL_WEIGHT = 1;
+    final private double INITIAL_WEIGHT = 1.0;
+
+    /**
+     * Exploration parameter
+     */
+    final private double c = 0.5;
 
     /**
      * Keeps track of which states were encountered in the draft, so that we
@@ -41,13 +47,21 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
     private static ArrayList<int[]>[] m_indicesToUpdate;
 
     /**
+     * How often we capture the heuristic function by saving it to file
+     */
+    private static final int CAPTURE_AFTER_EVERY = 2500;
+
+    /**
+     * Keep track of the number of games we've played
+     */
+    protected static Integer m_numGamesPlayed = 0;
+
+    /**
      * Constructor
      */
-    public KthBestPickRL_Drafter()
+    public RL_Drafter()
     {
         super();
-
-        assert(HEURISTIC_FUNCTION == KthBestPickDrafter.Heuristic.LEARNED);
     }
 
     @Override
@@ -164,6 +178,8 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
     {
         String message = super.youWon();
 
+        m_numGamesPlayed++;
+
         // Make the updates to the heuristic function
         for (int player = 0; player < m_indicesToUpdate.length; ++player)
         {
@@ -201,16 +217,28 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
             m_indicesToUpdate[player].clear();
         }
 
-        // Now save the heuristic function to file
-        try
+        // Check if we should capture this heuristic function
+        if ((m_numGamesPlayed % CAPTURE_AFTER_EVERY) == 0)
         {
-            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(HEURISTIC_DATA_FILENAME));
-            out.writeObject(m_learnedHeuristic);
-            out.close();
-        }
-        catch (Exception e)
-        {
-            assert(false);
+            // Create the file name
+            String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
+            fileName += "" + m_numGamesPlayed + ".dat";
+
+            // Check to make sure that the file does not already exist
+            boolean exists = (new File(fileName)).exists();
+            assert(!exists);
+
+            // Save the heuristic to this file
+            try
+            {
+                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName));
+                out.writeObject(m_learnedHeuristic);
+                out.close();
+            }
+            catch (Exception e)
+            {
+                assert(false);
+            }
         }
 
         return message;
@@ -219,10 +247,52 @@ public class KthBestPickRL_Drafter extends KthBestPickDrafter
     @Override
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
-        int pick = super.getPick(draftState, unownedCountries);
+        // Here, we are going to "almost" greedily pick the best looking terr,
+        // but with an exploration term, and we always explore never-before tried
+        // picks.
 
-        // TODO: rggibson - Store the index somewhere so we don't have to recompute it here
-        ArrayList<Integer> index = getTerritoryIndex(pick, draftState, ID);
+        int pick = -1;
+        double valueOfPick = -Double.MAX_VALUE;
+        ArrayList<Integer> index = null;
+
+        Hashtable<Integer,double[]> values = new Hashtable<Integer,double[]>(unownedCountries.size());
+        Hashtable<Integer,ArrayList<Integer>> indexes = new Hashtable<Integer,ArrayList<Integer>>(unownedCountries.size());
+
+        // First, calculate how many times we have been to this state
+        int numVisits = 0;
+        for (int terr : unownedCountries)
+        {
+            ArrayList<Integer> tempIndex = getTerritoryIndex(terr, draftState, ID);
+            indexes.put(terr, tempIndex);
+            assert(m_learnedHeuristic[terr].containsKey(tempIndex));
+            double[] terrValue = m_learnedHeuristic[terr].get(tempIndex);
+            values.put(terr, terrValue);
+            numVisits += (int)(terrValue[1] - INITIAL_WEIGHT);
+        }
+
+        // Now find the best valued territory
+        for (int terr : unownedCountries)
+        {
+            double[] terrValue = values.get(terr);
+            if (terrValue[1] == INITIAL_WEIGHT)
+            {
+                // Explore a never-chosen option
+                pick = terr;
+                valueOfPick = Double.MAX_VALUE;
+                index = indexes.get(terr);
+            }
+            else
+            {
+                double value = terrValue[0] + c * Math.sqrt(Math.log(numVisits) / (terrValue[1] - INITIAL_WEIGHT));
+                if (value > valueOfPick)
+                {
+                    // Choose this one
+                    pick = terr;
+                    valueOfPick = value;
+                    index = indexes.get(terr);
+                }
+            }
+        }
 
         // Total hack so that we can store the territory with the index
         int[] entry = new int[index.size() + 1];

@@ -5,11 +5,7 @@
 
 package com.sillysoft.lux.agent;
 
-import com.sillysoft.lux.*;
 import java.util.ArrayList;
-import java.util.Hashtable;
-import java.io.ObjectInputStream;
-import java.io.FileInputStream;
 
 /**
  *
@@ -18,26 +14,32 @@ import java.io.FileInputStream;
 public class KthBestPickDrafter extends SmartDrafter
 {
     /**
-     * The file to store the heuristic function.
-     */
-    protected static String HEURISTIC_DATA_FILENAME = "C:\\Users\\Richard\\Documents\\NetBeansProjects\\LuxSDK\\LuxSDK\\objectData\\learnedHeuristic";
-
-    /**
      * The maximum number of picks that we will consider looking ahead
      * for the kthBestPick algorithm.
      */
-    final protected int MAX_NUM_PICKS_CONSIDERED = 5;
+    final protected int MAX_NUM_PICKS_CONSIDERED = 2;
 
     /**
      * The heuristic function to use
      */
-    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.LEARNED;
+    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.MAX_N_MC;
 
     /**
-     * The Hashtables, one for each territory, that will store the learned
-     * heuristic (if we are using the learned one)
+     * When use MaxN-MC as the heuristic, this is the max branching factor
      */
-    protected static Hashtable<ArrayList<Integer>,double[]>[] m_learnedHeuristic;
+    final protected int MAX_BRANCHING_FACTOR = Integer.MAX_VALUE;
+
+    /**
+     * When using MaxN-MC as the heuristic, this is the number of MC roll outs
+     * to perform at each leaf node
+     */
+    final protected int NUM_MC_ROLL_OUTS = 1;
+
+    /**
+     * When using MaxN-MC as the heuristic, this is the maximum number of leaves
+     * to have in the MaxN portion of the search.
+     */
+    final protected int MAX_NUM_LEAVES = 1;
 
     /**
      * The opponent models to use
@@ -69,46 +71,6 @@ public class KthBestPickDrafter extends SmartDrafter
     public KthBestPickDrafter()
     {
         super();
-    }
-
-    @Override
-    public void setPrefs(int ID, Board board )
-    {
-        super.setPrefs(ID, board);
-
-        if (HEURISTIC_FUNCTION == Heuristic.LEARNED && m_learnedHeuristic == null)
-        {
-            // Load the heursitic function up
-
-            // Edit the filename depending on how many players are playing
-            int numPlayers = board.getNumberOfPlayers();
-            if (!HEURISTIC_DATA_FILENAME.contains("" + numPlayers))
-            {
-                 HEURISTIC_DATA_FILENAME += "." + numPlayers;
-            }
-
-            // Edit the filename depending on the map being used
-            if (numCountries == 15 && !HEURISTIC_DATA_FILENAME.contains("15"))
-            {
-                HEURISTIC_DATA_FILENAME += ".15.dat";
-            }
-            else if (numCountries == 42 && !HEURISTIC_DATA_FILENAME.contains("42"))
-            {
-                HEURISTIC_DATA_FILENAME += ".42.dat";
-            }
-
-            // Grab it from file
-            try
-            {
-                ObjectInputStream in = new ObjectInputStream(new FileInputStream(HEURISTIC_DATA_FILENAME));
-                m_learnedHeuristic = (Hashtable<ArrayList<Integer>,double[]>[])in.readObject();
-                in.close();
-            }
-            catch (Exception e)
-            {
-                assert(false);
-            }
-        }
     }
 
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
@@ -187,11 +149,6 @@ public class KthBestPickDrafter extends SmartDrafter
                 currentPlayer = (currentPlayer + 1) % board.getNumberOfPlayers();
 
                 // Find the next pick according to the opponent model
-                // TODO: rggibson - If the current player is the active player,
-                // we could just consider picking from our list of better picks
-                // to perhaps reduce the amount of recursion.  However, this could
-                // end up being both complicated and more work if we want to consider
-                // EVERY possible choice from this list.
                 switch(OPPONENT_MODELS[currentPlayer])
                 {
                     case KTH_BEST_PICK:
@@ -255,61 +212,6 @@ public class KthBestPickDrafter extends SmartDrafter
     }
 
     /**
-     * Returns the top ranked picks, in order (i.e. pick at index 0 is best)
-     * @param draftState The current state of the draft
-     * @param unownedCountries The available picks
-     * @param activePlayer The player whose turn it is to pick
-     * @param numPicksToConsider The number of top picks to find
-     * @return The top picks, which has length numPicksToConsider
-     */
-    private int[] getTopPicks(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int numPicksToConsider)
-    {
-        int[] topPicks = new int[numPicksToConsider];
-        double[] valuesOfTopPicks = new double[numPicksToConsider];
-        for (int i = 0; i < numPicksToConsider; ++i)
-        {
-            // Initialize
-            topPicks[i] = -1;
-            valuesOfTopPicks[i] = -Double.MAX_VALUE;
-        }
-        for (int terr = 0; terr < draftState.length; ++terr)
-        {
-            // Only consider unowned territories
-            if (draftState[terr] != -1)
-            {
-                assert(!unownedCountries.contains((Integer) terr));
-                continue;
-            }
-
-            // Get the value of this unowned country
-            double valueOfTerr = getValueOfTerr(terr, draftState, unownedCountries, activePlayer);
-
-            // Find its rank in the current top picks
-            int rank = numPicksToConsider;
-            while (rank > 0 && valuesOfTopPicks[rank - 1] < valueOfTerr)
-            {
-                rank--;
-            }
-
-            // Adjust the top picks to make room for the new territory
-            for (int j = numPicksToConsider - 2; j >= rank; --j)
-            {
-                topPicks[j+1] = topPicks[j];
-                valuesOfTopPicks[j+1] = valuesOfTopPicks[j];
-            }
-
-            // Put the territory into place
-            if (rank < numPicksToConsider)
-            {
-                topPicks[rank] = terr;
-                valuesOfTopPicks[rank] = valueOfTerr;
-            }
-        }
-
-        return topPicks;
-    }
-
-    /**
      * Calls the heuristic function to get the value of the passed in territory
      * @param terr The territory whose value we want
      * @param draftState The state of the draft
@@ -317,6 +219,7 @@ public class KthBestPickDrafter extends SmartDrafter
      * @param activePlayer The player whose turn it is to pick
      * @return The value of the passed in territory
      */
+    @Override
     protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer)
     {
         double valueOfTerr = 0.0;
@@ -325,12 +228,12 @@ public class KthBestPickDrafter extends SmartDrafter
         {
             case MAX_N_MC:
                 // Call MaxN-MC to get the rank of each pick
-                int depth = MaxN_MC_Drafter.calculateMaxNSearchDepth(unownedCountries.size());
+                int depth = calculateMaxNSearchDepth(unownedCountries.size(), MAX_BRANCHING_FACTOR, MAX_NUM_LEAVES);
                 assert(unownedCountries.contains((Integer) terr));
                 draftState[terr] = activePlayer;
                 unownedCountries.remove((Integer) terr);
 
-                double[] values = MaxN_MC_Drafter.maxNMC(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), board);
+                double[] values = maxNMC(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), MAX_BRANCHING_FACTOR, NUM_MC_ROLL_OUTS);
 
                 assert(draftState[terr] != -1);
                 assert(!unownedCountries.contains((Integer) terr));
@@ -351,6 +254,7 @@ public class KthBestPickDrafter extends SmartDrafter
 
             case LEARNED:
                 // Call the heuristic function to get the value of the territory
+                assert(m_learnedHeuristic != null);
                 ArrayList<Integer> index = getTerritoryIndex(terr, draftState, activePlayer);
                 assert(m_learnedHeuristic[terr].containsKey(index));
                 double[] value = m_learnedHeuristic[terr].get(index);
@@ -363,87 +267,5 @@ public class KthBestPickDrafter extends SmartDrafter
         }
 
         return valueOfTerr;
-    }
-
-    /**
-     * Retrieves the index into the heuristic function for the current state
-     * of the draft.
-     * @param terr The territory whose value we need
-     * @param draftState The state of the draft
-     * @param activePlayer The player whose turn it is to pick
-     * @return The index into the heuristic function for retrieving the value of terr
-     */
-    protected ArrayList<Integer> getTerritoryIndex(int terr, int[] draftState, int activePlayer)
-    {
-        int numFriends = 0;
-        int numEnemies = 0;
-        int numFriendsInCont = 0;
-        int numEnemiesInCont = 0;
-        int[] enemiesInCont = new int[board.getNumberOfPlayers()];
-
-        // Number of friendly and enemy neighbours
-        int[] neighbours = countries[terr].getAdjoiningCodeList();
-        for (int i = 0; i < neighbours.length; ++i)
-        {
-            int neighbourTerr = neighbours[i];
-            int owner = draftState[neighbourTerr];
-
-            if (owner == activePlayer)
-            {
-                numFriends++;
-            }
-            else if (owner >= 0)
-            {
-                numEnemies++;
-            }
-        }
-
-        // Get all the countries in the continent other than terr
-        int continent = countries[terr].getContinent();
-        ArrayList<Integer> terrsInCont = new ArrayList<Integer>();
-        for (Country country : countries)
-        {
-            if (country.getContinent() == continent && country.getCode() != terr)
-            {
-                terrsInCont.add(country.getCode());
-            }
-        }
-
-        // Number of friends and enemies in continent
-        for (int i = 0; i < terrsInCont.size(); ++i)
-        {
-            int contTerr = terrsInCont.get(i);
-            int owner = draftState[contTerr];
-
-            if (owner == activePlayer)
-            {
-                numFriendsInCont++;
-            }
-            else if (owner >= 0)
-            {
-                numEnemiesInCont++;
-                enemiesInCont[owner]++;
-            }
-        }
-
-        // Max number of enemies in continent owned by one player
-        int numEnemyInCont = enemiesInCont[0];
-        for (int i = 1; i < enemiesInCont.length; ++i)
-        {
-            if (enemiesInCont[i] > numEnemyInCont)
-            {
-                numEnemyInCont = enemiesInCont[i];
-            }
-        }
-
-        // The index
-        ArrayList<Integer> index = new ArrayList<Integer>(5);
-        index.add(numFriends);
-        index.add(numEnemies);
-        index.add(numFriendsInCont);
-        index.add(numEnemiesInCont);
-        index.add(numEnemyInCont);
-
-        return index;
     }
 }
