@@ -41,6 +41,31 @@ public abstract class SmartDrafter extends SmartAgentBase
      */
     protected static Hashtable<ArrayList<Integer>,double[]>[] m_learnedHeuristic;
 
+    /**
+     * Stores the efforts of UCT search
+     */
+    protected Hashtable<ArrayList<Integer>,double[]> m_uctTree;
+
+    /**
+     * Exploration parameter in UCT (usually known as c)
+     */
+    protected final double epsilon = 0.25;
+
+    /**
+     * Stores the resulting selections of the draft
+     */
+    protected static int[] outcomeOfDraft;
+
+    /**
+     * Cumulative results of all the games played
+     */
+    protected static Hashtable<String,Double> scoreboard;
+
+    /**
+     * Number of games played
+     */
+    protected static int numGamesPlayed = 0;
+
     public SmartDrafter()
     {
         super();
@@ -52,11 +77,33 @@ public abstract class SmartDrafter extends SmartAgentBase
         // Call SmartAgentBase's setPrefs method
         super.setPrefs(ID, board);
 
+        if (outcomeOfDraft == null)
+        {
+            outcomeOfDraft = new int[countries.length];
+        }
+        if (scoreboard == null)
+        {
+            scoreboard = new Hashtable<String,Double>();
+            for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+            {
+                scoreboard.put(board.getPlayerName(i), 0.0);
+            }
+        }
+
         // Create the post-draft player
         m_postDraftPlayer = board.getAgentInstance(POST_DRAFT_PLAYER_NAME);
         assert(m_postDraftPlayer != null);
         m_postDraftPlayer.setPrefs(ID, board);
         super.setPrefs(ID, board);
+
+        if (m_uctTree == null)
+        {
+            m_uctTree = new Hashtable<ArrayList<Integer>,double[]>();
+        }
+        else
+        {
+            m_uctTree.clear();
+        }
 
         if (m_learnedHeuristic == null)
         {
@@ -111,6 +158,22 @@ public abstract class SmartDrafter extends SmartAgentBase
 
     public String youWon()
     {
+        // When playing fantasy risk, we need to evaluate the match here.
+        numGamesPlayed++;
+        double[] scores = evaluationFunction(outcomeOfDraft);
+        for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+        {
+            double currentScore = scoreboard.get(board.getPlayerName(i));
+            scoreboard.put(board.getPlayerName(i), currentScore + scores[i]);
+        }
+
+        System.out.println("\n\nThe current score after " + numGamesPlayed + " games:");
+        for (String key : scoreboard.keySet())
+        {
+            System.out.println(key + ": " + scoreboard.get(key));
+        }
+        System.out.print("\n\n");
+
         return "Ha Ha.  I out-drafted you.";
     }
 
@@ -170,7 +233,9 @@ public abstract class SmartDrafter extends SmartAgentBase
         // There is redundency in the parameters here, but it is useful to pass
         // in the unownedCountries so that we don't have to go through and find
         // the available picks every time.
-        return getPick(draftState, unownedCountries);
+        int pick = getPick(draftState, unownedCountries);
+        outcomeOfDraft[pick] = ID;
+        return pick;
     }
 
     /**
@@ -179,9 +244,10 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param unownedCountries The available picks
      * @param activePlayer The player whose turn it is to pick
      * @param numPicksToConsider The number of top picks to find
+     * @param selfish Whether or not to use a selfish evaluation
      * @return The top picks, which has length numPicksToConsider
      */
-    protected int[] getTopPicks(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int numPicksToConsider)
+    protected int[] getTopPicks(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int numPicksToConsider, boolean selfish)
     {
         int[] topPicks = new int[numPicksToConsider];
         double[] valuesOfTopPicks = new double[numPicksToConsider];
@@ -201,7 +267,7 @@ public abstract class SmartDrafter extends SmartAgentBase
             }
 
             // Get the value of this unowned country
-            double valueOfTerr = getValueOfTerr(terr, draftState, unownedCountries, activePlayer);
+            double valueOfTerr = getValueOfTerr(terr, draftState, unownedCountries, activePlayer, selfish);
 
             // Find its rank in the current top picks
             int rank = numPicksToConsider;
@@ -311,20 +377,22 @@ public abstract class SmartDrafter extends SmartAgentBase
     }
 
     /**
-     * The recursive portion of MaxN-MC.
+     * The recursive portion of MaxN-UCT.
      * @param draftState The current assignment of territories in the draft
      * @param unownedCountries The list of territories to choose from
      * @param player The player whose turn it is
      * @param depth How much further we need to go before MC roll outs take over
-     * @param numPlayers The number of players playing in the draft
+     * @param maxBranching The maximum number of branches to expand in the MaxN portion
+     * @param numRolls The number of UCT roll outs to perform at each leaf
+     * @param selfish Whether or not to evaluate selfishly
      * @return The value of this state for each player
      */
-    public double[] maxNMC(int[] draftState, ArrayList<Integer> unownedCountries, int player, int depth, int numPlayers, int maxBranching, int numRolls)
+    protected double[] maxN_Uct(int[] draftState, ArrayList<Integer> unownedCountries, int player, int depth, int maxBranching, int numRolls, boolean selfish)
     {
         // Evaluate this state if it is terminal (i.e. all territories owned)
         if (unownedCountries.size() == 0)
         {
-            return evaluationFunction(draftState, numPlayers, board);
+            return evaluationFunction(draftState);
         }
 
         if (depth > 0)
@@ -335,8 +403,7 @@ public abstract class SmartDrafter extends SmartAgentBase
             ArrayList<Integer> picksToConsider = new ArrayList<Integer>();
             if (maxBranching < unownedCountries.size())
             {
-                int[] picks = getTopPicks(draftState, unownedCountries, ID, maxBranching);
-                picksToConsider = new ArrayList<Integer>(picks.length);
+                int[] picks = getTopPicks(draftState, unownedCountries, ID, maxBranching, selfish);
                 for (int i = 0; i < picks.length; ++i)
                 {
                     picksToConsider.add(picks[i]);
@@ -360,7 +427,7 @@ public abstract class SmartDrafter extends SmartAgentBase
                 draftState[countryIndex] = player; // Pick the country
                 unownedCountries.remove((Integer) countryIndex);
 
-                double[] valuesOfThisMove = maxNMC(draftState, unownedCountries, (player + 1) % numPlayers, depth - 1, numPlayers, maxBranching, numRolls);
+                double[] valuesOfThisMove = maxN_Uct(draftState, unownedCountries, (player + 1) % board.getNumberOfPlayers(), depth - 1, maxBranching, numRolls, selfish);
 
                 // Undo the pick
                 assert(draftState[countryIndex] != -1);
@@ -381,69 +448,171 @@ public abstract class SmartDrafter extends SmartAgentBase
         }
         else
         {
-            // We are in the MC portion of the algorithm
+            // We are in the UCT portion of the algorithm
 
-            // This will store the cumulative average of the roll outs
-            double[] valuesOfNode = new double[numPlayers];
-            for (int i = 0; i < valuesOfNode.length; ++i)
+            ArrayList<Integer> state = new ArrayList<Integer>(draftState.length);
+            for (int i = 0; i < draftState.length; ++i)
             {
-                valuesOfNode[i] = 0.0;
+                state.add(draftState[i]);
             }
 
-            // Get the roll outs and iteratively update the cumulative average
-            for (int i = 0; i < numRolls; ++i)
+            double numVisitsAlready = 0;
+            if (m_uctTree.containsKey(state))
             {
-                double[] rollOutValues = monteCarloRollOut(draftState, unownedCountries, player, numPlayers);
-                for (int j = 0; j < valuesOfNode.length; ++j)
-                {
-                    valuesOfNode[j] += (1.0 / (i + 1))*(rollOutValues[j] - valuesOfNode[j]);
-                }
+                numVisitsAlready = (m_uctTree.get(state))[0];
+            }
+            for (int i = (int)numVisitsAlready; i < numRolls; ++i)
+            {
+                uctRollOut(state, unownedCountries, player, true, selfish);
+            }
+
+            // Find the value of this node
+            double[] valuesOfNode = new double[board.getNumberOfPlayers()];
+            assert(m_uctTree.containsKey(state));
+            double[] entry = m_uctTree.get(state);
+            assert(entry.length == valuesOfNode.length + 1);
+            // Assume we are storing the number of visits in the first spot
+            for (int i = 0; i < valuesOfNode.length; ++i)
+            {
+                valuesOfNode[i] = entry[i+1];
             }
 
             return valuesOfNode;
         }
     }
 
-
     /**
-     * From the passed in draft state, randomly picks countries for each player
-     * until all countries are owned.  The value of the final state is then
-     * calculated.
-     * @param draftState The current assignment of countries to players, or unowned
-     * @param player The player whose pick it currently is
-     * @param unownedCountries The countries available to be picked by the players
-     * @return The values of the final state reached via the roll outs.
+     * Carries out a uct roll out from the passed in state.
+     * @param state The state of the draft
+     * @param unownedCountries The territories to choose from
+     * @param player The player whose turn it is
+     * @param selfish Whether or not to evaluate selfishly
+     * @return The value of this state in the roll out
      */
-    private double[] monteCarloRollOut(int[] draftState, ArrayList<Integer> unownedCountries, int player, int numPlayers)
+    protected double[] uctRollOut(ArrayList<Integer> state, ArrayList<Integer> unownedCountries, int player, boolean updateTree, boolean selfish)
     {
-        // If this is a terminal node, then evaluate
         if (unownedCountries.size() == 0)
         {
-            return evaluationFunction(draftState, numPlayers, board);
+            // Terminal node
+            int[] finalDraftState = new int[state.size()];
+            for (int i = 0; i < finalDraftState.length; ++i)
+            {
+                finalDraftState[i] = state.get(i);
+            }
+            if (selfish)
+            {
+                return evaluationFunctionSelfish(finalDraftState);
+            }
+            else
+            {
+                return evaluationFunction(finalDraftState);
+            }
         }
 
-        // Otherwise, pick a country at random and evaluate
-        int randomCountryIndex = (int) (Math.random()*unownedCountries.size());
-        int randomCountry = unownedCountries.get(randomCountryIndex);
-        unownedCountries.remove(randomCountryIndex);
-        assert(draftState[randomCountry] == -1);
-        draftState[randomCountry] = player; // Pick country
+        double[] stateEntry = null;
+        if (m_uctTree.containsKey(state))
+        {
+            stateEntry = m_uctTree.get(state);
+        }
+        else
+        {
+            // The first entry is the number of visits to this state
+            stateEntry = new double[board.getNumberOfPlayers() + 1];
+        }
 
-        double[] values = monteCarloRollOut(draftState, unownedCountries, (player + 1) % numPlayers, numPlayers);
+        // First, get the number of visits to this state.
+        // This is "equal" to the number of visits to each of the children, for
+        // the purposes of what we need the number of visits here for
+        double numVisits = 0.0;
+        for (int terr : unownedCountries)
+        {
+            state.set(terr, player);
+            if (m_uctTree.containsKey(state))
+            {
+                numVisits += (m_uctTree.get(state))[0];
+            }
+            state.set(terr, -1);
+        }
 
-        draftState[randomCountry] = -1; // Undo the pick... is this necessary?
-        unownedCountries.add(randomCountry);
+        // Pick a territory to simulate draft
+        ArrayList<Integer> picks = new ArrayList<Integer>();
+        double valueOfPick = -Double.MAX_VALUE;
+        for (int terr : unownedCountries)
+        {
+            assert(state.get(terr) == -1);
 
-        return values;
+            // Get the value of this terr
+            state.set(terr, player);
+            double valueOfTerr = Double.MAX_VALUE;
+            if (m_uctTree.containsKey(state))
+            {
+                double[] terrVals = m_uctTree.get(state);
+                valueOfTerr = terrVals[player + 1]; // Because the first entry is the numVisits
+                assert(terrVals[0] > 0);
+                assert(numVisits > 0);
+                valueOfTerr += epsilon * Math.sqrt(Math.log(numVisits) / terrVals[0]);
+            }
+            state.set(terr, -1);
+
+            if (valueOfTerr > valueOfPick)
+            {
+                // New best pick
+                picks.clear();
+                picks.add(terr);
+                valueOfPick = valueOfTerr;
+            }
+            else if (valueOfTerr == valueOfPick)
+            {
+                // A tie
+                picks.add(terr);
+            }
+        }
+
+        if (picks.isEmpty())
+        {
+            assert(false);
+        }
+
+        // Make the pick
+        int pick = picks.get((int)(Math.random()*picks.size()));
+        boolean updateTree_r = (updateTree && m_uctTree.containsKey(state)); // Only add the top-most new state to the tree per roll out
+        state.set(pick, player);
+        unownedCountries.remove((Integer) pick);
+        double[] evaluatePick = uctRollOut(state, unownedCountries, (player + 1) % board.getNumberOfPlayers(), updateTree_r, selfish);
+        assert(state.get(pick) == player);
+        assert(!unownedCountries.contains((Integer) pick));
+        unownedCountries.add(pick);
+        state.set(pick, -1);
+
+        if (updateTree)
+        {
+            // Update the tree
+            stateEntry[0] = stateEntry[0] + 1;
+            assert(evaluatePick.length + 1 == stateEntry.length);
+            for (int i = 0; i < evaluatePick.length; ++i)
+            {
+                stateEntry[i+1] = stateEntry[i+1] + (1.0 / stateEntry[0])*(evaluatePick[i] - stateEntry[i+1]);
+            }
+            ArrayList<Integer> copyOfState = new ArrayList<Integer>(state.size());
+            for (int i = 0; i < state.size(); ++i)
+            {
+                copyOfState.add(state.get(i));
+            }
+            m_uctTree.put(copyOfState, stateEntry);
+        }
+
+        // And recurse back up the tree
+        return evaluatePick;
     }
 
     /**
      * Our evaluation function for determining how good a final draft state is
-     * for each player.
+     * for each player.  By slefish, we mean that we ignore the evaluation of the
+     * other players and just try to maximize our own.
      * @param finalDraftState The final assignment of countries to the players
      * @return An array of length numPlayers denoting how much each player likes this state
      */
-    private static double[] evaluationFunction(int[] finalDraftState, int numPlayers, Board board)
+    private double[] evaluationFunctionSelfish(int[] finalDraftState)
     {
         // Check to make sure that this is a terminal state
         for (int i = 0; i < finalDraftState.length; i++)
@@ -451,31 +620,295 @@ public abstract class SmartDrafter extends SmartAgentBase
             assert(finalDraftState[i] != -1);
         }
 
+        // Only works on the classic map
+        assert(board.getNumberOfCountries() == 42);
+
+        double[] values = new double[board.getNumberOfPlayers()];
+        for (int player = 0; player < board.getNumberOfPlayers(); ++player)
+        {
+            // Figure out how much of each continent this player has,
+            // as well as the number of enemy neighbours
+            int[] numInCont = new int[board.getNumberOfContinents()];
+            ArrayList<Integer> enemyNeighbours = new ArrayList<Integer>();
+            for (Country country : countries)
+            {
+                int terr = country.getCode();
+                if (finalDraftState[terr] != player)
+                {
+                    // Only care about territories we own
+                    continue;
+                }
+
+                numInCont[country.getContinent()]++;
+                for (int enemy : country.getAdjoiningCodeList())
+                {
+                    if (finalDraftState[enemy] != player && !enemyNeighbours.contains((Integer) enemy))
+                    {
+                        enemyNeighbours.add((Integer) enemy);
+                    }
+                }
+            }
+
+            values[player] = getMachineLearnedValue(numInCont, enemyNeighbours.size());
+        }
+
+        return values;
+
         // MARS evaluation function
 
+//
+//        double playerValue[] = new double[board.getNumberOfPlayers()];
+//        double totalValue = 0;
+//
+//        // Calculate the cumulative values of all territories for each player
+//        for (int i = 0; i < board.getNumberOfPlayers(); i++)
+//        {
+//        	for (int j = 0; j < finalDraftState.length; j++)
+//        	{
+//        		playerValue[i] += territoryValueForEvalFunc(j, i, finalDraftState);
+//        	}
+//        	totalValue = totalValue + playerValue[i];
+//        }
+//
+//        // Convert values to probabilities of winning
+//        for (int i = 0; i < board.getNumberOfPlayers(); i++)
+//        {
+//            if (totalValue > 0)
+//            {
+//        	playerValue[i] = playerValue[i] / totalValue;
+//            }
+//        }
+//        return playerValue;
+    }
 
-        double playerValue[] = new double[numPlayers];
-        double totalValue = 0;
+    /**
+     * Our evaluation function for playing fantasy risk
+     * @param finalDraftState The final state of the draft (who owns what)
+     * @return The value of the state to each player
+     */
+    protected double[] evaluationFunction(int[] finalDraftState)
+    {
+        double[] values = evaluationFunctionSelfish(finalDraftState);
 
-        // Calculate the cumulative values of all territories for each player
-        for (int i = 0; i < numPlayers; i++)
+        // Normalize the values into winning percentages
+        double sum = 0.0;
+        for (double value : values)
         {
-        	for (int j = 0; j < finalDraftState.length; j++)
-        	{
-        		playerValue[i] += territoryValueForEvalFunc(j, i, finalDraftState, board);
-        	}
-        	totalValue = totalValue + playerValue[i];
+            assert(value >= 0.0);
+            sum += value;
+        }
+        for (int i = 0; i < values.length; ++i)
+        {
+            values[i] = values[i] / sum;
         }
 
-        // Convert values to probabilities of winning
-        for (int i = 0; i < numPlayers; i++)
+        return values;
+    }
+
+    /**
+     * Calculates the (supervised) machine-learned value for the given state.
+     * @param numInCont numInCon[i] == number of terrs owned in continent i
+     * @param numEnemyNeighbours The number of enemy neighbours
+     * @return The value for this state
+     */
+    protected double getMachineLearnedValue(int[] numInCont, int numEnemyNeighbours)
+    {
+        // Below is 408200.txt:
+        double value = 0.1831 - 0.0047 * numEnemyNeighbours;
+
+        // Australia
+        switch (numInCont[0])
         {
-            if (totalValue > 0)
-            {
-        	playerValue[i] = playerValue[i] / totalValue;
-            }
+            case 0:
+                value += 0.0188;
+                break;
+            case 1:
+                value += 0;
+                break;
+            case 2:
+                value += 0.0188 + 0.0461;
+                break;
+            case 3:
+                value += 0.0188 + 0.0461 + 0.0085;
+                break;
+            case 4:
+                value += 0.0188 + 0.0461 + 0.0085 + 0.0545;
+                break;
+            default:
+                assert(false);
+                break;
         }
-        return playerValue;
+
+        // South America
+        switch (numInCont[1])
+        {
+            case 0:
+                value += 0.0054 + 0.02 - 0.0215;
+                break;
+            case 1:
+                value += 0.0054;
+                break;
+            case 2:
+                value += 0.0054 + 0.02;
+                break;
+            case 3:
+                value += 0;
+                break;
+            case 4:
+                value += 0.0054 + 0.02 - 0.0215 + 0.0891;
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        // Africa
+        switch (numInCont[2])
+        {
+            case 0:
+                value += 0.0013 + 0.0618 + 0.0246 + 0.0187 + 0.0262 - 0.0009;
+                break;
+            case 1:
+                value += 0.0013 + 0.0618 + 0.0246 + 0.0187;
+                break;
+            case 2:
+                value += 0.0013 + 0.0618 + 0.0246;
+                break;
+            case 3:
+                value += 0.0013 + 0.0618;
+                break;
+            case 4:
+                value += 0.0013;
+                break;
+            case 5:
+                value += 0;
+                break;
+            case 6:
+                value += 0.0013 + 0.0618 + 0.0246 + 0.0187 + 0.0262;
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        // North America
+        switch (numInCont[3])
+        {
+            case 0:
+                value += 0.0029 + 0.0112 + 0.0078;
+                break;
+            case 1:
+                value += 0;
+                break;
+            case 2:
+                value += 0.0029;
+                break;
+            case 3:
+                value += 0.0029 + 0.0112;
+                break;
+            case 4:
+                value += 0.0029 + 0.0112 + 0.0078 + 0.0472;
+                break;
+            case 5:
+                value += 0.0029 + 0.0112 + 0.0078 + 0.0472 + 0.1249;
+                break;
+            case 6:
+                value += 0.0029 + 0.0112 + 0.0078 + 0.0472 + 0.1249 + 0.0453;
+                break;
+            case 7:
+                value += 0.0029 + 0.0112 + 0.0078 + 0.0472 + 0.1249 + 0.0453 + 0.0343;
+                break;
+            case 8:
+                value += 0.0029 + 0.0112 + 0.0078 + 0.0472 + 0.1249 + 0.0453 + 0.0343 - 0.0007;
+                break;
+            case 9:
+                value += 0.0029 + 0.0112 + 0.0078 + 0.0472 + 0.1249 + 0.0453 + 0.0343 - 0.0007 - 0.0026;
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        // Europe
+        switch (numInCont[4])
+        {
+            case 0:
+                value += 0.009 - 0.0012 + 0.0062 + 0.0419 - 0.0303;
+                break;
+            case 1:
+                value += 0.009 - 0.0012 + 0.0062;
+                break;
+            case 2:
+                value += 0.009 - 0.0012;
+                break;
+            case 3:
+                value += 0.009;
+                break;
+            case 4:
+                value += 0;
+                break;
+            case 5:
+                value += 0.009 - 0.0012 + 0.0062 + 0.0419 - 0.0303 + 0.0391;
+                break;
+            case 6:
+                value += 0.009 - 0.0012 + 0.0062 + 0.0419;
+                break;
+            case 7:
+                value += 0.009 - 0.0012 + 0.0062 + 0.0419 - 0.0303 + 0.0391 + 0.0984;
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        // Asia
+        switch (numInCont[3])
+        {
+            case 0:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296 + 0.0077 + 0.0015 + 0.0075 + 0.0102 + 0.0329;
+                break;
+            case 1:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296 + 0.0077 + 0.0015 + 0.0075 + 0.0102;
+                break;
+            case 2:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296 + 0.0077 + 0.0015 + 0.0075;
+                break;
+            case 3:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296 + 0.0077 + 0.0015;
+                break;
+            case 4:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296 + 0.0077;
+                break;
+            case 5:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422;
+                break;
+            case 6:
+                value += 0.0235 + 0.0163;
+                break;
+            case 7:
+                value += 0;
+                break;
+            case 8:
+                value += 0.0235;
+                break;
+            case 9:
+                value += 0.0235 + 0.0163 + 0.0053;
+                break;
+            case 10:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296;
+                break;
+            case 11:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135;
+                break;
+            case 12:
+                value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031;
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        return value;
     }
 
     /**
@@ -484,7 +917,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param playerNum The player number
      * @return A value for this territory
      */
-    private static double territoryValueForEvalFunc(int territoryNum, int playerNum, int[] finalDraftState, Board board)
+    private double territoryValueForEvalFunc(int territoryNum, int playerNum, int[] finalDraftState)
     {
 
     	// Constants
@@ -586,6 +1019,145 @@ public abstract class SmartDrafter extends SmartAgentBase
     }
 
     /**
+     * Finds the pick which increases the "temporary evaluation function" the
+     * most.
+     * @param draftState The state of the draft
+     * @param unownedCountries The territories remaining to be picked
+     * @param player The player whose turn it is to pick
+     * @param selfish Whether to evaluate selfishly or not
+     * @return The greedy pick
+     */
+    protected int getGreedyPick(int[] draftState, ArrayList<Integer> unownedCountries, int player, boolean selfish)
+    {
+        // First, figure out how much of each continent each player has, as well
+        // as the enemy neighbours for each player
+        int[][] numInCont = new int[board.getNumberOfPlayers()][board.getNumberOfContinents()];
+        ArrayList<Integer>[] enemyNeighbours = new ArrayList[board.getNumberOfPlayers()];
+        for (int i = 0; i < enemyNeighbours.length; ++i)
+        {
+            enemyNeighbours[i] = new ArrayList<Integer>();
+        }
+        ArrayList<Integer> unownedNeighbours = new ArrayList<Integer>();
+
+        for (int terr = 0; terr < draftState.length; ++terr)
+        {
+            int owner = draftState[terr];
+            if (owner == -1)
+            {
+                // Don't care about unowned terrs
+                continue;
+            }
+
+            // Increment continent count for the owner
+            numInCont[owner][countries[terr].getContinent()]++;
+
+            // Search for additional enemy neighbours to add
+            for (int neighbour : countries[terr].getAdjoiningCodeList())
+            {
+                if (draftState[neighbour] != owner && draftState[neighbour] != -1 && !enemyNeighbours[owner].contains((Integer) neighbour))
+                {
+                    enemyNeighbours[owner].add((Integer) neighbour);
+                }
+                else if (owner == player && draftState[neighbour] == -1 && !unownedNeighbours.contains((Integer)neighbour))
+                {
+                    unownedNeighbours.add((Integer)neighbour);
+                }
+            }
+        }
+
+        // Now find the greedy pick
+        ArrayList<Integer> picks = new ArrayList<Integer>();
+        double valueOfPicks = -Double.MAX_VALUE;
+        int tieBreakerValue = Integer.MAX_VALUE;
+
+        for (Integer terr : unownedCountries)
+        {
+            // Consider picking this terr
+            int[] numEnemies = new int[board.getNumberOfPlayers()];
+            for (int i = 0; i < numEnemies.length; ++i)
+            {
+                numEnemies[i] = enemyNeighbours[i].size();
+            }
+
+            // Any additional enemy neighbours with this pick?
+            int[] additionalEnemy = new int[board.getNumberOfPlayers()];
+            for (int neighbour : countries[terr].getAdjoiningCodeList())
+            {
+                int neighbourOwner = draftState[neighbour];
+                if (neighbourOwner != -1 && neighbourOwner != player)
+                {
+                    // A new enemy for the neighbour owner
+                    additionalEnemy[neighbourOwner] = 1;
+                    if (!enemyNeighbours[player].contains((Integer) neighbour))
+                    {
+                        // A new enemy for this player also
+                        numEnemies[player]++;
+                    }
+                }
+            }
+
+            // Calculate the value of picking this terr
+            numInCont[player][countries[terr].getContinent()]++;
+            double value = -Double.MAX_VALUE;
+            if (selfish)
+            {
+                value = getMachineLearnedValue(numInCont[player], numEnemies[player]);
+            }
+            else
+            {
+                double sum = 0.0;
+                for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+                {
+                    if (i == player)
+                    {
+                        value = getMachineLearnedValue(numInCont[player], numEnemies[player]);
+                        sum += value;
+                    }
+                    else
+                    {
+                        sum += getMachineLearnedValue(numInCont[i], numEnemies[i] + additionalEnemy[i]);
+                    }
+                }
+                assert(sum > 0);
+                value = value / sum;
+            }
+            numInCont[player][countries[terr].getContinent()]--;
+
+            // Calculate the tie-breaker value, which is the new number of unowned
+            // neighbours
+            int numUnownedNeighbours = unownedNeighbours.size();
+            if (unownedNeighbours.contains((Integer)terr))
+            {
+                numUnownedNeighbours--;
+            }
+            for (Integer neighbour : countries[terr].getAdjoiningCodeList())
+            {
+                if (draftState[neighbour] == -1 && !unownedNeighbours.contains((Integer)neighbour))
+                {
+                    numUnownedNeighbours++;
+                }
+            }
+
+            // Is this the new best pick?
+            if (value > valueOfPicks || (value == valueOfPicks && numUnownedNeighbours < tieBreakerValue))
+            {
+                picks.clear();
+                picks.add(terr);
+                valueOfPicks = value;
+                tieBreakerValue = numUnownedNeighbours;
+            }
+            else if (value == valueOfPicks && numUnownedNeighbours == tieBreakerValue)
+            {
+                picks.add(terr);
+            }
+        }
+
+        // Make a pick at random from the best ones found
+        assert(picks.size() > 0);
+        return picks.get((int)(Math.random()*picks.size()));
+    }
+
+    /**
      * Calculate the depth to which we can do a MaxN search
      * @param numUnownedCountries The number of unowned territories
      * @param maxNumNodesToExpand The maximum number of nodes we are allowed to expand in the search
@@ -625,12 +1197,62 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param draftState The state of the draft
      * @param unownedCountries The countries still available to be picked
      * @param activePlayer The player whose turn it is to pick
+     * @param selfish Whether or not to evaluate selfishly
      * @return The value of the passed in territory
      */
-    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer)
+    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, boolean selfish)
     {
         // Do nothing by default
         return 0.0;
+    }
+
+    /**
+     * Removes all of the entries in the uct tree that are unreachable from this state
+     * @param draftState The current state of the draft
+     * @param unownedCountries The picks still available
+     * @param player The player whose turn it is
+     */
+    protected void cleanUpUctTree(int[] draftState, int player)
+    {
+        Hashtable<ArrayList<Integer>,double[]> newUctTree = new Hashtable<ArrayList<Integer>,double[]>();
+
+        ArrayList<Integer> state = new ArrayList<Integer>(draftState.length);
+        for (int i = 0; i < draftState.length; ++i)
+        {
+            state.add(draftState[i]);
+        }
+        cleanUpUctTree_r(state, player, newUctTree);
+
+        m_uctTree.clear();
+        m_uctTree = newUctTree;
+    }
+
+    private void cleanUpUctTree_r(ArrayList<Integer> state, int player, Hashtable<ArrayList<Integer>,double[]> newUctTree)
+    {
+        // Put this state into the new tree, if it was in the old one
+        if (!m_uctTree.containsKey(state))
+        {
+            return;
+        }
+
+        ArrayList<Integer> keeperState = new ArrayList<Integer>(state.size());
+        for (int i = 0; i < state.size(); ++i)
+        {
+            keeperState.add(state.get(i));
+        }
+        newUctTree.put(keeperState, m_uctTree.get(state));
+        for (int terr = 0; terr < state.size(); ++terr)
+        {
+            // Only consider possible picks
+            if (state.get(terr) != -1)
+            {
+                continue;
+            }
+
+            state.set(terr, player);
+            cleanUpUctTree_r(state, (player + 1) % board.getNumberOfPlayers(), newUctTree);
+            state.set(terr, -1);
+        }
     }
 }
 

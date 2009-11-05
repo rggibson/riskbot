@@ -17,15 +17,15 @@ public class KthBestPickDrafter extends SmartDrafter
      * The maximum number of picks that we will consider looking ahead
      * for the kthBestPick algorithm.
      */
-    final protected int MAX_NUM_PICKS_CONSIDERED = 2;
+    final protected int MAX_NUM_PICKS_CONSIDERED = 3;
 
     /**
      * The heuristic function to use
      */
-    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.MAX_N_MC;
+    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.MAX_N_UCT;
 
     /**
-     * When use MaxN-MC as the heuristic, this is the max branching factor
+     * When use MaxN-UCT as the heuristic, this is the max branching factor
      */
     final protected int MAX_BRANCHING_FACTOR = Integer.MAX_VALUE;
 
@@ -33,7 +33,7 @@ public class KthBestPickDrafter extends SmartDrafter
      * When using MaxN-MC as the heuristic, this is the number of MC roll outs
      * to perform at each leaf node
      */
-    final protected int NUM_MC_ROLL_OUTS = 1;
+    final protected int NUM_MC_ROLL_OUTS = 1000;
 
     /**
      * When using MaxN-MC as the heuristic, this is the maximum number of leaves
@@ -49,11 +49,17 @@ public class KthBestPickDrafter extends SmartDrafter
                                                 OpponentModel.KTH_BEST_PICK };
 
     /**
+     * Whether we are selfish or not (we assume the opponents selfishness matches
+     * our own).
+     */
+    final boolean SELFISH = false;
+
+    /**
      * The different types of heuristic functions that kthBestPick will accept
      */
     protected enum Heuristic
     {
-        MAX_N_MC,
+        MAX_N_UCT,
         DUMB,
         RANDOM,
         LEARNED
@@ -64,7 +70,10 @@ public class KthBestPickDrafter extends SmartDrafter
      */
     protected enum OpponentModel
     {
-        KTH_BEST_PICK
+        KTH_BEST_PICK,
+        RANDOM,
+        UCT,
+        GREEDY
     }
 
     // Constructor
@@ -73,16 +82,35 @@ public class KthBestPickDrafter extends SmartDrafter
         super();
     }
 
+    @Override
+    public String name()
+    {
+        if (SELFISH)
+        {
+            return "KthBestPickDrafter-Selfish";
+        }
+        else
+        {
+            return "KthBestPickDrafter";
+        }
+    }
+
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         // Make sure we have the right number of opponent models
-         assert(board.getNumberOfPlayers() == OPPONENT_MODELS.length);
+        assert(board.getNumberOfPlayers() == OPPONENT_MODELS.length);
 
-        // Check the Hashtable to see if we've already called the algorithm
-        // on this state with this many picks considered
+        // Clean up the UCT tree if we are using it
+        if (HEURISTIC_FUNCTION == Heuristic.MAX_N_UCT)
+        {
+            cleanUpUctTree(draftState, ID);
+        }
+
         int terr = -1;
 
         terr = kthBestPick(draftState, unownedCountries, ID, MAX_NUM_PICKS_CONSIDERED);
+
+        assert(terr != -1);
 
         return terr;
     }
@@ -90,11 +118,10 @@ public class KthBestPickDrafter extends SmartDrafter
     /**
      * The KthBestPick algorithm
      * @param draftState The current state of the draft
-     * @param h The heurstic used to rank picks
-     * @param m The opponent models of the opponent players
      * @param unownedCountries A list of all countries to pick from
      * @param activePlayer The player whose turn it is to pick
      * @param maxNumPicksToConsider The cap for how badly ranked a territory we will consider
+     * @param selfish Whether to use a selfish evaluation or not.
      * @return The territory to pick, as given by the KthBestPick algorithm
      */
     private int kthBestPick(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int maxNumPicksToConsider)
@@ -107,7 +134,7 @@ public class KthBestPickDrafter extends SmartDrafter
 
         // Now rank the available picks
         // TODO: rggibson - How to handle tie-breaks?
-        int[] topPicks = getTopPicks(draftState, unownedCountries, activePlayer, numPicksToConsider);
+        int[] topPicks = getTopPicks(draftState, unownedCountries, activePlayer, numPicksToConsider, SELFISH);
 
         for (int k = numPicksToConsider - 1; k >= 0; --k)
         {
@@ -154,6 +181,38 @@ public class KthBestPickDrafter extends SmartDrafter
                     case KTH_BEST_PICK:
                         // Now get the next pick
                         nextPick = kthBestPick(draftState, unownedCountries, currentPlayer, numPicksLeft);
+                        break;
+
+                    case RANDOM:
+                        nextPick = unownedCountries.get((int)(Math.random()*unownedCountries.size()));
+                        break;
+
+                    case GREEDY:
+                        // TODO: We can model whether a greedy opponent is selfish or not
+                        nextPick = getGreedyPick(draftState, unownedCountries, currentPlayer, SELFISH);
+                        break;
+
+                    case UCT:
+                        maxN_Uct(draftState, unownedCountries, currentPlayer, 0, Integer.MAX_VALUE, NUM_MC_ROLL_OUTS, SELFISH);
+                        ArrayList<Integer> picks = new ArrayList<Integer>();
+                        double valueOfPicks = -Double.MAX_VALUE;
+                        for (int terr : unownedCountries)
+                        {
+                            double value = getValueOfTerrFromUctTree(terr, draftState, currentPlayer, SELFISH);
+                            if (value > valueOfPicks)
+                            {
+                                // New best pick
+                                picks.clear();
+                                picks.add(terr);
+                                valueOfPicks = value;
+                            }
+                            else if (value == valueOfPicks)
+                            {
+                                picks.add(terr);
+                            }
+                        }
+                        assert(!picks.isEmpty());
+                        nextPick = picks.get((int)(Math.random()*picks.size()));
                         break;
 
                     default:
@@ -217,30 +276,41 @@ public class KthBestPickDrafter extends SmartDrafter
      * @param draftState The state of the draft
      * @param unownedCountries The countries still available to be picked
      * @param activePlayer The player whose turn it is to pick
+     * @param selfish Whether or not to use the selfish evaluation function
      * @return The value of the passed in territory
      */
     @Override
-    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer)
+    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, boolean selfish)
     {
         double valueOfTerr = 0.0;
 
         switch(HEURISTIC_FUNCTION)
         {
-            case MAX_N_MC:
+            case MAX_N_UCT:
                 // Call MaxN-MC to get the rank of each pick
                 int depth = calculateMaxNSearchDepth(unownedCountries.size(), MAX_BRANCHING_FACTOR, MAX_NUM_LEAVES);
-                assert(unownedCountries.contains((Integer) terr));
-                draftState[terr] = activePlayer;
-                unownedCountries.remove((Integer) terr);
+                if (depth <= 0)
+                {
+                    // Just run UCT right away from the current state
+                    maxN_Uct(draftState, unownedCountries, ID, depth, MAX_BRANCHING_FACTOR, NUM_MC_ROLL_OUTS, selfish);
 
-                double[] values = maxNMC(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth, board.getNumberOfPlayers(), MAX_BRANCHING_FACTOR, NUM_MC_ROLL_OUTS);
+                    valueOfTerr = getValueOfTerrFromUctTree(terr, draftState, activePlayer, selfish);
+                }
+                else
+                {
+                    assert(unownedCountries.contains((Integer) terr));
+                    draftState[terr] = activePlayer;
+                    unownedCountries.remove((Integer) terr);
 
-                assert(draftState[terr] != -1);
-                assert(!unownedCountries.contains((Integer) terr));
-                draftState[terr] = -1;
-                unownedCountries.add(terr);
+                    double[] values = maxN_Uct(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth - 1, MAX_BRANCHING_FACTOR, NUM_MC_ROLL_OUTS, selfish);
 
-                valueOfTerr = values[activePlayer];
+                    assert(draftState[terr] != -1);
+                    assert(!unownedCountries.contains((Integer) terr));
+                    draftState[terr] = -1;
+                    unownedCountries.add(terr);
+
+                    valueOfTerr = values[activePlayer];
+                }
                 break;
 
             case DUMB:
@@ -267,5 +337,28 @@ public class KthBestPickDrafter extends SmartDrafter
         }
 
         return valueOfTerr;
+    }
+
+    /**
+     * Calls up the UCT tree to get the value of making this pick
+     * @param terr The territory in question
+     * @param draftState The state of the draft
+     * @param activePlayer The player whose turn it is to pick
+     * @param selfish Whether to evaluate selfishly or not
+     * @return The value of making this pick
+     */
+    protected double getValueOfTerrFromUctTree(int terr, int[] draftState, int activePlayer, boolean selfish)
+    {
+        ArrayList<Integer> state = new ArrayList<Integer>(draftState.length);
+        for (int i = 0; i < draftState.length; ++i)
+        {
+            state.add(draftState[i]);
+        }
+
+        // Now get the value of the territory
+        assert(state.get(terr) == -1);
+        state.set(terr, ID);
+        assert(m_uctTree.containsKey(state));
+        return (m_uctTree.get(state))[ID + 1]; // First index is reserved for num visits
     }
 }

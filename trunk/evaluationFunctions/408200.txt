@@ -1,0 +1,70 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.LinearRegression -S 1 -R 1.0E-8
+Relation:     risk-weka.filters.unsupervised.instance.Randomize-S42-weka.filters.unsupervised.attribute.Remove-R8-weka.filters.unsupervised.instance.RemovePercentage-P20
+Instances:    408200
+Attributes:   8
+              Aus
+              SA
+              Afr
+              NA
+              Eur
+              Asia
+              numEnemies
+              value
+Test mode:    10-fold cross-validation
+
+=== Classifier model (full training set) ===
+
+
+Linear Regression Model
+
+value =
+
+      0.0188 * Aus=0,2,3,4 +
+      0.0461 * Aus=2,3,4 +
+      0.0085 * Aus=3,4 +
+      0.0545 * Aus=4 +
+      0.0054 * SA=1,2,0,4 +
+      0.02   * SA=2,0,4 +
+     -0.0215 * SA=0,4 +
+      0.0891 * SA=4 +
+      0.0013 * Afr=4,3,2,1,6,0 +
+      0.0618 * Afr=3,2,1,6,0 +
+      0.0246 * Afr=2,1,6,0 +
+      0.0187 * Afr=1,6,0 +
+      0.0262 * Afr=6,0 +
+     -0.0009 * Afr=0 +
+      0.0029 * NA=2,3,0,4,5,6,7,8,9 +
+      0.0112 * NA=3,0,4,5,6,7,8,9 +
+      0.0078 * NA=0,4,5,6,7,8,9 +
+      0.0472 * NA=4,5,6,7,8,9 +
+      0.1249 * NA=5,6,7,8,9 +
+      0.0453 * NA=6,7,8,9 +
+      0.0343 * NA=7,8,9 +
+     -0.0007 * NA=8,9 +
+     -0.0026 * NA=9 +
+      0.009  * Eur=3,2,1,6,0,5,7 +
+     -0.0012 * Eur=2,1,6,0,5,7 +
+      0.0062 * Eur=1,6,0,5,7 +
+      0.0419 * Eur=6,0,5,7 +
+     -0.0303 * Eur=0,5,7 +
+      0.0391 * Eur=5,7 +
+      0.0984 * Eur=7 +
+      0.0235 * Asia=8,6,9,11,5,12,10,4,3,2,1,0 +
+      0.0163 * Asia=6,9,11,5,12,10,4,3,2,1,0 +
+      0.0053 * Asia=9,11,5,12,10,4,3,2,1,0 +
+     -0.0135 * Asia=11,5,12,10,4,3,2,1,0 +
+      0.0422 * Asia=5,12,10,4,3,2,1,0 +
+     -0.031  * Asia=12,10,4,3,2,1,0 +
+      0.0296 * Asia=10,4,3,2,1,0 +
+      0.0077 * Asia=4,3,2,1,0 +
+      0.0015 * Asia=3,2,1,0 +
+      0.0075 * Asia=2,1,0 +
+      0.0102 * Asia=1,0 +
+      0.0329 * Asia=0 +
+     -0.0047 * numEnemies +
+      0.1831
+
+Time taken to build model: 31.49 seconds
+
