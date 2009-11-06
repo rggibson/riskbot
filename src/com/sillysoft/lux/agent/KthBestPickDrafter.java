@@ -14,26 +14,14 @@ import java.util.ArrayList;
 public class KthBestPickDrafter extends SmartDrafter
 {
     /**
-     * The maximum number of picks that we will consider looking ahead
-     * for the kthBestPick algorithm.
-     */
-    final protected int MAX_NUM_PICKS_CONSIDERED = 3;
-
-    /**
      * The heuristic function to use
      */
-    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.MAX_N_UCT;
+    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.RANDOM;
 
     /**
      * When use MaxN-UCT as the heuristic, this is the max branching factor
      */
     final protected int MAX_BRANCHING_FACTOR = Integer.MAX_VALUE;
-
-    /**
-     * When using MaxN-MC as the heuristic, this is the number of MC roll outs
-     * to perform at each leaf node
-     */
-    final protected int NUM_MC_ROLL_OUTS = 1000;
 
     /**
      * When using MaxN-MC as the heuristic, this is the maximum number of leaves
@@ -42,14 +30,27 @@ public class KthBestPickDrafter extends SmartDrafter
     final protected int MAX_NUM_LEAVES = 1;
 
     /**
+     * Factors in to how many roll outs we do, according to how much time we have.
+     * The bigger the number, the fewer numbero f roll outs we'll perform.
+     */
+    final protected int MILLSECS_PER_ROLL_OUT = 6;
+
+    /**
+     * Current number of simulations we are allowing
+     */
+    protected int m_numSimulations;
+
+    /**
      * The opponent models to use
+     * TODO: These need to be dependent on the player's name, not ID, if we are
+     * sticking with random turn order.
      */
     final OpponentModel[] OPPONENT_MODELS = {   OpponentModel.KTH_BEST_PICK,
                                                 OpponentModel.KTH_BEST_PICK,
                                                 OpponentModel.KTH_BEST_PICK };
 
     /**
-     * Whether we are selfish or not (we assume the opponents selfishness matches
+     * Whether we are selfish or not (we assume the opponents' selfishnesses match
      * our own).
      */
     final boolean SELFISH = false;
@@ -97,6 +98,8 @@ public class KthBestPickDrafter extends SmartDrafter
 
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
+        long alarm = System.currentTimeMillis() + PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size();
+
         // Make sure we have the right number of opponent models
         assert(board.getNumberOfPlayers() == OPPONENT_MODELS.length);
 
@@ -107,10 +110,44 @@ public class KthBestPickDrafter extends SmartDrafter
         }
 
         int terr = -1;
+        int nextPick = -1;
+        int maxNumPicksConsidered = 1;
 
-        terr = kthBestPick(draftState, unownedCountries, ID, MAX_NUM_PICKS_CONSIDERED);
+        // If we are using UCT as the heuristic
+        m_numSimulations = PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size() / MILLSECS_PER_ROLL_OUT;
 
-        assert(terr != -1);
+        // With the time constraint, we are going to iterate over the maximum number
+        // of picks to consider
+        do
+        {
+            nextPick = kthBestPick(draftState, unownedCountries, ID, maxNumPicksConsidered, alarm, true);
+            maxNumPicksConsidered++;
+
+            if (nextPick != -1)
+            {
+                terr = nextPick;
+            }
+
+            // How many picks do we have left in the draft?
+            int numPicksToConsider = (int)Math.ceil((double)unownedCountries.size() / board.getNumberOfPlayers());
+
+            System.out.println("Num picks to consider = " + numPicksToConsider);
+
+            if (numPicksToConsider < maxNumPicksConsidered)
+            {
+                // Done
+                break;
+            }
+                
+        }
+        while (nextPick != -1 && System.currentTimeMillis() < alarm);
+
+        if (terr == -1)
+        {
+            assert(false);
+        }
+
+        System.out.println("\n\nMaxNumPicksConsidered = " + (maxNumPicksConsidered - 1) + "\n");
 
         return terr;
     }
@@ -122,22 +159,25 @@ public class KthBestPickDrafter extends SmartDrafter
      * @param activePlayer The player whose turn it is to pick
      * @param maxNumPicksToConsider The cap for how badly ranked a territory we will consider
      * @param selfish Whether to use a selfish evaluation or not.
+     * @param alarm If the current time exceeds the alarm, it is time to stop and return -1.
+     * @param firstCall True if this is the first (i.e. non-recursive) call
      * @return The territory to pick, as given by the KthBestPick algorithm
      */
-    private int kthBestPick(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int maxNumPicksToConsider)
+    private int kthBestPick(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int numPicksToConsider, long alarm, boolean firstCall)
     {
-        // How many picks do we have left in the draft?
-        int numPicksToConsider = (int)Math.ceil((double)unownedCountries.size() / board.getNumberOfPlayers());
-
-        // We truncate the number of picks we are considering
-        numPicksToConsider = Math.min(numPicksToConsider, maxNumPicksToConsider);
-
-        // Now rank the available picks
+        // Rank the available picks
         // TODO: rggibson - How to handle tie-breaks?
         int[] topPicks = getTopPicks(draftState, unownedCountries, activePlayer, numPicksToConsider, SELFISH);
+        int minRank = firstCall ? numPicksToConsider - 1 : 0;
 
-        for (int k = numPicksToConsider - 1; k >= 0; --k)
+        for (int k = numPicksToConsider - 1; k >= minRank; --k)
         {
+            // Alarm check
+            if (System.currentTimeMillis() >= alarm)
+            {
+                return -1;
+            }
+
             // Consider the pick of rank k
             int pick = topPicks[k];
             ArrayList<Integer> betterPicks = new ArrayList<Integer>();
@@ -159,6 +199,12 @@ public class KthBestPickDrafter extends SmartDrafter
             int numPicksLeft = numPicksToConsider;
             while (betterPicks.size() > 0)
             {
+                // Alarm check
+                if (System.currentTimeMillis() >= alarm)
+                {
+                    return -1;
+                }
+
                 // We decrement the number of picks left when we pass the original player.
                 // This effectively truncates the game after numPicksToConsider many picks
                 // for the original player, including the original one we are considering
@@ -180,7 +226,7 @@ public class KthBestPickDrafter extends SmartDrafter
                 {
                     case KTH_BEST_PICK:
                         // Now get the next pick
-                        nextPick = kthBestPick(draftState, unownedCountries, currentPlayer, numPicksLeft);
+                        nextPick = kthBestPick(draftState, unownedCountries, currentPlayer, numPicksLeft, alarm, false);
                         break;
 
                     case RANDOM:
@@ -193,7 +239,7 @@ public class KthBestPickDrafter extends SmartDrafter
                         break;
 
                     case UCT:
-                        maxN_Uct(draftState, unownedCountries, currentPlayer, 0, Integer.MAX_VALUE, NUM_MC_ROLL_OUTS, SELFISH);
+                        this.maxN_Uct(draftState, unownedCountries, currentPlayer, 0, Integer.MAX_VALUE, m_numSimulations, SELFISH);
                         ArrayList<Integer> picks = new ArrayList<Integer>();
                         double valueOfPicks = -Double.MAX_VALUE;
                         for (int terr : unownedCountries)
@@ -218,6 +264,15 @@ public class KthBestPickDrafter extends SmartDrafter
                     default:
                         assert(false);
                         break;
+                }
+
+                if (nextPick == -1)
+                {
+                    if (System.currentTimeMillis() < alarm)
+                    {
+                        assert(false);
+                    }
+                    return -1;
                 }
 
                 // Should we continue checking more picks?
@@ -265,8 +320,7 @@ public class KthBestPickDrafter extends SmartDrafter
             }
         }
 
-        // Should never get here
-        assert(false);
+        // Should only get here if firstCall == true and the one pick failed
         return -1;
     }
 
@@ -292,7 +346,7 @@ public class KthBestPickDrafter extends SmartDrafter
                 if (depth <= 0)
                 {
                     // Just run UCT right away from the current state
-                    maxN_Uct(draftState, unownedCountries, ID, depth, MAX_BRANCHING_FACTOR, NUM_MC_ROLL_OUTS, selfish);
+                    maxN_Uct(draftState, unownedCountries, ID, depth, MAX_BRANCHING_FACTOR, m_numSimulations, selfish);
 
                     valueOfTerr = getValueOfTerrFromUctTree(terr, draftState, activePlayer, selfish);
                 }
@@ -302,7 +356,7 @@ public class KthBestPickDrafter extends SmartDrafter
                     draftState[terr] = activePlayer;
                     unownedCountries.remove((Integer) terr);
 
-                    double[] values = maxN_Uct(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth - 1, MAX_BRANCHING_FACTOR, NUM_MC_ROLL_OUTS, selfish);
+                    double[] values = maxN_Uct(draftState, unownedCountries, (activePlayer + 1) % board.getNumberOfPlayers(), depth - 1, MAX_BRANCHING_FACTOR, m_numSimulations, selfish);
 
                     assert(draftState[terr] != -1);
                     assert(!unownedCountries.contains((Integer) terr));

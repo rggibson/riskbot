@@ -66,6 +66,15 @@ public abstract class SmartDrafter extends SmartAgentBase
      */
     protected static int numGamesPlayed = 0;
 
+    /**
+     * How much time, in milliseconds, the "thinkers" get to think, which we
+     * multiply by the number of unowned territories.
+     * Note that each agent needs to handle the time constraints themselves;
+     * i.e. the code here is written to trust the agent to abide by the time
+     * restriction.
+     */
+    protected final static int PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR = 100;
+
     public SmartDrafter()
     {
         super();
