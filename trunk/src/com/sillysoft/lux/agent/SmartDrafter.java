@@ -623,10 +623,21 @@ public abstract class SmartDrafter extends SmartAgentBase
      */
     private double[] evaluationFunctionSelfish(int[] finalDraftState)
     {
-        // Check to make sure that this is a terminal state
+        // Check to make sure that this is a terminal state, and that each player
+        // made the correct number of picks.
+        int[] numPicksPerPlayer = new int[board.getNumberOfPlayers()];
         for (int i = 0; i < finalDraftState.length; i++)
         {
-            assert(finalDraftState[i] != -1);
+            assert(finalDraftState[i] >= 0 && finalDraftState[i] < board.getNumberOfPlayers());
+            numPicksPerPlayer[finalDraftState[i]]++;
+        }
+
+        // Note that this assertion only applies if we are expecting each player
+        // to receive the same number of picks; just comment this out if this
+        // is not the case
+        for (int i = 1; i < numPicksPerPlayer.length; ++i)
+        {
+            assert(numPicksPerPlayer[0] == numPicksPerPlayer[i]);
         }
 
         // Only works on the classic map
