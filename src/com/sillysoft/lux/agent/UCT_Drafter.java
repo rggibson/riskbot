@@ -14,11 +14,6 @@ import java.util.*;
  */
 public class UCT_Drafter extends SmartDrafter
 {
-    /**
-     * The maximum number of leaves we want to have on our MaxN portion of the
-     * search
-     */
-    private final int MAX_NUM_LEAVES = 1;
 
     /**
      * The number of roll outs that we perform for each level of UCT
@@ -26,15 +21,10 @@ public class UCT_Drafter extends SmartDrafter
     private final int MAX_ROLL_OUTS = 3000;
     private final int DS_LENGTH = 42;
     /*
-     *  The constant value used in formula
+     *  The constant exploration value used in formula
      */
-    private final double CONSTANT = 0.25;
+    private final double CONSTANT = 0.1;
 
-    /**
-     * A cap on how big the branching factor can be.  When there are more branches,
-     * we use the passed in heuristic to reduce the branching down to our max.
-     */
-    private final int MAX_BRANCHING_FACTOR = 15;
 
     private Node tree = null;
     
@@ -66,7 +56,7 @@ public class UCT_Drafter extends SmartDrafter
     			 afterPlayer = playerNum+1;
     		 }
 
-     		//System.out.println("Creating first tree node for Player " + playerNum);
+     		System.out.println("Creating first tree node for Player " + playerNum);
     	} else {
     		// set tree to current parent
     		moveTreeToParent(draftState);
@@ -80,12 +70,19 @@ public class UCT_Drafter extends SmartDrafter
     		//if (count % 500 == 0)
     			//System.out.println(playerNum + " is trying node " + x.getDraftNumber() + " rollout " + count);
     		int[] xds = x.getDraftState();
-    		ArrayList unowned = new ArrayList();
+    		ArrayList<Integer> unowned = new ArrayList();
     		for (int i = 0; i < draftState.length; i++) {
     			if (xds[i] == -1)
     				unowned.add(i);
     		}
-    		double[] results = monteCarloRollOut(x.getDraftState(), unowned, playerNum, board.getNumberOfPlayers());
+    		int nextPlayer = 0;
+    		if (x.getOwner() == 0) {
+    			nextPlayer = 1;
+    		} else if (x.getOwner() == 1) {
+    			nextPlayer = 2;
+    		}
+    		
+    		double[] results = monteCarloRollOut(x.getDraftState(), unowned, nextPlayer, board.getNumberOfPlayers());
     		x.setValue(results[playerNum]);
     		propagateValue(x.getParent());
     	}
@@ -103,24 +100,6 @@ public class UCT_Drafter extends SmartDrafter
     		
 //        return bestPick;
     }
-    
-    /*
-     * Find the newest parent node in tree
-     */
-    private Node newParent() {
-    	return null;
-    }
-    
-    /*
-     * average all the values of the children nodes and propagate up until node has no parent
-     */
-    private void updateValue(Node n) {
-    	
-    	if (n.getParent() != null) {
-    		updateValue(n.getParent());
-    	}
-    }
-
     
     
     private Node addNewNode(Node parent, int[] draftState, int draftNumber, int owner) {
@@ -205,12 +184,19 @@ public class UCT_Drafter extends SmartDrafter
         	}
         	bestNode.incrementNumVisits();
         	int nextPlayer = 0;
-        	if (player < 2) {
-        		player++;
-        	} else if (player == 2) {
-        		player = 0;
+        	if (parent.getOwner() == 0) {
+        		nextPlayer = 1;
+        	} else if (parent.getOwner() == 1) {
+        		nextPlayer = 2;
+        	} else {
+        		nextPlayer = 0;
         	}
-        
+//        	if (player < 2) {
+//        		player++;
+//        	} else if (player == 2) {
+//        		player = 0;
+//        	}
+//        	System.out.println("parent " + parent.getOwner() + " and child " + nextPlayer);
         	return findNextMove(bestNode, nextPlayer);
     	} else {
     		if (parent.getNumChildren() == 0) {
@@ -241,6 +227,7 @@ public class UCT_Drafter extends SmartDrafter
     		
     		int draftNumber = (Integer) l.get(0);
     		ds2[draftNumber] = player;
+//    		System.out.println("parent is " + parent.getOwner() + " new child is " + player);
     		return addNewNode(parent, ds2, draftNumber, player);
     		
     	}
