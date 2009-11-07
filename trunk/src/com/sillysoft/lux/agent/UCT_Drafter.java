@@ -50,24 +50,6 @@ public class UCT_Drafter extends SmartDrafter
 
     }
 
-    /**
-     * Calls the heuristic function to get the value of the passed in territory
-     * @param terr The territory whose value we want
-     * @param draftState The state of the draft
-     * @param unownedCountries The countries still available to be picked
-     * @param activePlayer The player whose turn it is to pick
-     * @return The value of the passed in territory
-     */
-    @Override
-    protected double getValueOfTerr(int terr, int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer)
-    {
-        // Call the heuristic function to get the value of the territory
-        ArrayList<Integer> index = getTerritoryIndex(terr, draftState, activePlayer);
-        assert(m_learnedHeuristic != null);
-        assert(m_learnedHeuristic[terr].containsKey(index));
-        double[] value = m_learnedHeuristic[terr].get(index);
-        return value[0];
-    }
 
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {

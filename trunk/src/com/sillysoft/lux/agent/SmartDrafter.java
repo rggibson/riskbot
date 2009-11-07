@@ -1263,5 +1263,43 @@ public abstract class SmartDrafter extends SmartAgentBase
             state.set(terr, -1);
         }
     }
+    
+    /**
+     * From the passed in draft state, randomly picks countries for each player
+     * until all countries are owned.  The value of the final state is then
+     * calculated.
+     * @param draftState The current assignment of countries to players, or unowned
+     * @param player The player whose pick it currently is
+     * @param unownedCountries The countries available to be picked by the players
+     * @return The values of the final state reached via the roll outs.
+     */
+    public double[] monteCarloRollOut(int[] draftState, ArrayList<Integer> unownedCountries, int player, int numPlayers)
+    {
+        // If this is a terminal node, then evaluate
+        if (unownedCountries.size() == 0)
+        {
+            return evaluationFunction(draftState);
+        }
+
+        // Otherwise, pick a country at random and evaluate
+        int randomCountryIndex = (int) (Math.random()*unownedCountries.size());
+        int randomCountry = unownedCountries.get(randomCountryIndex);
+        unownedCountries.remove(randomCountryIndex);
+        assert(draftState[randomCountry] == -1);
+        draftState[randomCountry] = player; // Pick country
+
+        double[] values = monteCarloRollOut(draftState, unownedCountries, (player + 1) % numPlayers, numPlayers);
+
+        draftState[randomCountry] = -1; // Undo the pick... is this necessary?
+        unownedCountries.add(randomCountry);
+
+        return values;
+    }
+
+	protected double getValueOfTerr(int terr, int[] draftState,
+			ArrayList<Integer> unownedCountries, int activePlayer) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }
 
