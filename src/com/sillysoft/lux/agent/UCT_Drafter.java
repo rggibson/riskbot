@@ -23,12 +23,12 @@ public class UCT_Drafter extends SmartDrafter
     /**
      * The number of roll outs that we perform for each level of UCT
      */
-    private final int MAX_ROLL_OUTS = 5000;
+    private final int MAX_ROLL_OUTS = 3000;
     private final int DS_LENGTH = 42;
     /*
      *  The constant value used in formula
      */
-    private final double CONSTANT = 0.3;
+    private final double CONSTANT = 0.25;
 
     /**
      * A cap on how big the branching factor can be.  When there are more branches,
@@ -50,7 +50,6 @@ public class UCT_Drafter extends SmartDrafter
 
     }
 
-
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
     	if (tree == null) {
@@ -67,7 +66,7 @@ public class UCT_Drafter extends SmartDrafter
     			 afterPlayer = playerNum+1;
     		 }
 
-     		System.out.println("Creating first tree node for Player " + playerNum);
+     		//System.out.println("Creating first tree node for Player " + playerNum);
     	} else {
     		// set tree to current parent
     		moveTreeToParent(draftState);
@@ -78,8 +77,8 @@ public class UCT_Drafter extends SmartDrafter
     	for (int count = 0; count < MAX_ROLL_OUTS; count++) {
     		// cycle through children and use formula to make decision on which to select next
     		Node x = findNextMove(tree, playerNum);
-    		if (count % 500 == 0)
-    			System.out.println(playerNum + " is trying node " + x.getDraftNumber() + " rollout " + count);
+    		//if (count % 500 == 0)
+    			//System.out.println(playerNum + " is trying node " + x.getDraftNumber() + " rollout " + count);
     		int[] xds = x.getDraftState();
     		ArrayList unowned = new ArrayList();
     		for (int i = 0; i < draftState.length; i++) {
@@ -91,8 +90,15 @@ public class UCT_Drafter extends SmartDrafter
     		propagateValue(x.getParent());
     	}
     	
+    	if (unownedCountries.size() <= 3) {
+    		// this is the last draft pick for this player, 
+    		// so reset Tree to null 
+    		// and call System.gc and hope for garbage collection
+    		tree = null;
+    		System.gc();
+    	}
+    	
     	// check all children and find best value - send as best pick
-
     	return (findBestMove(tree)).getDraftNumber();
     		
 //        return bestPick;
@@ -129,7 +135,7 @@ public class UCT_Drafter extends SmartDrafter
     		}
     	}
     	n.setNumChildren(countChild);
-    	System.out.println("Node " + draftNumber + " has " + countChild + " children");
+    	//System.out.println("Node " + draftNumber + " has " + countChild + " children");
     	n.setNumVisits(1);
     	n.setValue(0);
     	n.setOwner(owner);
@@ -156,7 +162,7 @@ public class UCT_Drafter extends SmartDrafter
     			}
     		}
     	}
-    	System.out.println("first move is " + firstMove + " and second move is " + secondMove);
+    	//System.out.println("first move is " + firstMove + " and second move is " + secondMove);
     	Iterator<Node> iter = tree.getChildren().iterator();
     	while (iter.hasNext()) {
     		Node child = iter.next();
@@ -179,10 +185,10 @@ public class UCT_Drafter extends SmartDrafter
      * Find next move by examining children
      */
     private Node findNextMove(Node parent, int player) {
-    	System.out.println("finding next move for " + parent.getDraftNumber());
+    	//System.out.println("finding next move for " + parent.getDraftNumber());
     	// first see if we've visited all children before - if not, return an unvisited child
     	if (parent.getChildren().size() == parent.getNumChildren()) {
-    		System.out.println("All children have been visted at least once, use formula");
+    		//System.out.println("All children have been visted at least once, use formula");
         	Iterator<Node> iter = parent.getChildren().iterator();
         	double bestValue = 0;
         	Node bestNode = null;
@@ -207,6 +213,10 @@ public class UCT_Drafter extends SmartDrafter
         
         	return findNextMove(bestNode, nextPlayer);
     	} else {
+    		if (parent.getNumChildren() == 0) {
+    			return parent;
+    		}
+    		
     		// return unvisited child
     		
     		int[] draftState = new int[DS_LENGTH];
@@ -223,6 +233,7 @@ public class UCT_Drafter extends SmartDrafter
     				s.add(i);
     			}
     		}
+    		
     		List l = new ArrayList(s);
     		Collections.shuffle(l);
     		int[] ds2 =  new int[DS_LENGTH];
@@ -238,16 +249,16 @@ public class UCT_Drafter extends SmartDrafter
     }
  
     private Node findBestMove(Node parent) {
-    	System.out.println("finding next move for " + parent.getDraftNumber());
+    	//System.out.println("finding next move for " + parent.getDraftNumber());
     	// first see if we've visited all children before - if not, return an unvisited child
     	
-    		System.out.println("All children have been visted at least once, use formula");
+    		//System.out.println("All children have been visted at least once, use formula");
         	Iterator<Node> iter = parent.getChildren().iterator();
         	double bestValue = 0;
         	Node bestNode = null;
         	while (iter.hasNext()) {
         		Node child = iter.next();
-        		double value = child.getValue() + CONSTANT * Math.sqrt(Math.log(parent.getNumVisits()) / child.getNumVisits());
+        		double value = child.getValue(); // + CONSTANT * Math.sqrt(Math.log(parent.getNumVisits()) / child.getNumVisits());
 //        		System.out.println(child.getDraftNumber() + " value is " + value);
         		if (value > bestValue) {
         			bestValue = value;
