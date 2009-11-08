@@ -243,6 +243,12 @@ public abstract class SmartDrafter extends SmartAgentBase
         // in the unownedCountries so that we don't have to go through and find
         // the available picks every time.
         int pick = getPick(draftState, unownedCountries);
+
+        if (draftState[pick] != -1)
+        {
+            assert(false);
+        }
+
         outcomeOfDraft[pick] = ID;
         return pick;
     }
@@ -637,7 +643,10 @@ public abstract class SmartDrafter extends SmartAgentBase
         // is not the case
         for (int i = 1; i < numPicksPerPlayer.length; ++i)
         {
-            assert(numPicksPerPlayer[0] == numPicksPerPlayer[i]);
+            if (numPicksPerPlayer[0] != numPicksPerPlayer[i])
+            {
+                assert(false);
+            }
         }
 
         // Only works on the classic map
