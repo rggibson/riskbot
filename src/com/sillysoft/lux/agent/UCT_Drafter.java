@@ -43,30 +43,63 @@ public class UCT_Drafter extends SmartDrafter
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
     	if (tree == null) {
-    		tree = addNewNode(null, draftState, -1, -1);
-    		 playerNum = (ID + 1) % board.getNumberOfPlayers();
-    		 if (playerNum + 1 == board.getNumberOfPlayers()) {
-    			 beforePlayer = playerNum-1;
+    		int treeOwner = 0;
+    		playerNum = ID; // (ID + 1) % board.getNumberOfPlayers();
+    		if (playerNum == 2) {
+    			 beforePlayer = 1;
     			 afterPlayer = 0;
-    		 } else if (playerNum == 0) {
-    			 beforePlayer = board.getNumberOfPlayers();
-    			 afterPlayer = playerNum + 1;
-    		 } else {
-    			 beforePlayer = playerNum-1;
-    			 afterPlayer = playerNum+1;
-    		 }
-
+    			 treeOwner = 1;
+    		} else if (playerNum == 0) {
+    			 beforePlayer = 2;
+    			 afterPlayer = 1;
+    			 treeOwner = -1;
+    		} else {
+    			 beforePlayer = 0;
+    			 afterPlayer = 2;
+    			 treeOwner = 0;
+    		}
+   		
+    		int val = -1;
+    		if (treeOwner >= 0) {
+    			for (int i = 0; i < draftState.length; i++) {
+//    				if (draftState[i] != -1) 
+//    					System.out.println("found assignment in tree of country " + i + " to player " + draftState[i]);
+    				if (draftState[i] == treeOwner) 
+    					val = i;
+    				
+    			}
+    		}
+//    		System.out.println("First node is " + val + " owner " + treeOwner);
+    		tree = addNewNode(null, draftState, val, treeOwner);
+     		
      		System.out.println("Creating first tree node for Player " + playerNum);
     	} else {
     		// set tree to current parent
     		moveTreeToParent(draftState);
     	}
     	
+//    	int[] pCount = new int[3];
+////		System.out.println("Current draft state, with owner " + owner + " choosing " + draftNumber);
+//		for (int i = 0; i < draftState.length; i++) {
+//			if (draftState[i] == 0) {
+//				pCount[0]++;
+//			}
+//			if (draftState[i] == 1) {
+//				pCount[1]++;
+//			}
+//			if (draftState[i] == 2) {
+//				pCount[2]++;
+//			}
+//			
+//		}
+//		System.out.println("0 = " + pCount[0]);
+//		System.out.println("1 = " + pCount[1]);
+//		System.out.println("2 = " + pCount[2]);
     	
     	// search MAX_ROLL_OUTS times
     	for (int count = 0; count < MAX_ROLL_OUTS; count++) {
     		// cycle through children and use formula to make decision on which to select next
-    		Node x = findNextMove(tree, playerNum);
+    		Node x = findNextMove(tree);
     		//if (count % 500 == 0)
     			//System.out.println(playerNum + " is trying node " + x.getDraftNumber() + " rollout " + count);
     		int[] xds = x.getDraftState();
@@ -80,23 +113,29 @@ public class UCT_Drafter extends SmartDrafter
     			nextPlayer = 1;
     		} else if (x.getOwner() == 1) {
     			nextPlayer = 2;
+    		} else {
+    			nextPlayer = 0;
     		}
     		
     		double[] results = monteCarloRollOut(x.getDraftState(), unowned, nextPlayer, board.getNumberOfPlayers());
+    		
     		x.setValue(results[playerNum]);
     		propagateValue(x.getParent());
     	}
     	
+    	Node pick = findBestMove(tree);
+//    	System.out.println("Our pick is " + pick.getOwner() + " draft " + pick.getDraftNumber());
     	if (unownedCountries.size() <= 3) {
     		// this is the last draft pick for this player, 
     		// so reset Tree to null 
     		// and call System.gc and hope for garbage collection
+    		System.out.println("Last draft pick, reset tree");
     		tree = null;
     		System.gc();
     	}
     	
     	// check all children and find best value - send as best pick
-    	return (findBestMove(tree)).getDraftNumber();
+    	return pick.getDraftNumber();
     		
 //        return bestPick;
     }
@@ -104,6 +143,7 @@ public class UCT_Drafter extends SmartDrafter
     
     private Node addNewNode(Node parent, int[] draftState, int draftNumber, int owner) {
     	Node n = new Node();
+    	
     	n.setParent(parent);
     	n.setDraftState(draftState);
     	n.setDraftNumber(draftNumber);
@@ -128,44 +168,85 @@ public class UCT_Drafter extends SmartDrafter
      * move tree forward 2 moves
      */
     private void moveTreeToParent(int[] draftState) {
+
+//    	System.out.println("MOVE tree owner is now " + tree.getOwner() + " and draftNumber is " + tree.getDraftNumber());
     	int firstMove = 0;
     	int secondMove = 0;
+    	int thirdMove = 0;
     	int[] ds2 = tree.getDraftState();
     	for (int i = 0; i < draftState.length; i++) {
     		if (ds2[i] != draftState[i]) {
+//    			System.out.println("found difference in draftState");
     			if (draftState[i] == beforePlayer) {
-    				secondMove = i;
+    				thirdMove = i;
+//    				System.out.println("happened to before player " + i);
     			}
     			if (draftState[i] == afterPlayer) {
+    				secondMove = i;
+//    				System.out.println("happened to after player " + i);
+    			}
+    			if (draftState[i] == playerNum) {
     				firstMove = i;
+//    				System.out.println("happened to player " + i);
     			}
     		}
     	}
     	//System.out.println("first move is " + firstMove + " and second move is " + secondMove);
     	Iterator<Node> iter = tree.getChildren().iterator();
-    	while (iter.hasNext()) {
-    		Node child = iter.next();
-    		if (child.getDraftNumber() == firstMove) {
-    			Iterator<Node> iter2 = child.getChildren().iterator();
-    	    	while (iter.hasNext()) {
-    	    		Node child2 = iter.next();
-    	    		if (child2.getDraftNumber() == secondMove) {
-    	    			child2.setParent(null);
-    	    			tree = child2;
-    	    		}
-    	    		break;
-    	    	}
-    		}
-    	}
+    	search:
+	    	while (iter.hasNext()) {
+	    		Node child = iter.next();
+//	    		System.out.println("child draft " + child.getDraftNumber());
+	    		if (child.getDraftNumber() == firstMove) {
+//	    			System.out.println("FOUND FIRST MOVE CHILD");
+	    			Iterator<Node> iter2 = child.getChildren().iterator();
+	    	    	while (iter2.hasNext()) {
+	    	    		Node child2 = iter2.next();
+
+//	    	    		System.out.println("child2 draft " + child2.getDraftNumber());
+	    	    		if (child2.getDraftNumber() == secondMove) {
+//	    	    			System.out.println("FOUND SECOND MOVE CHILD");
+	    	    			Iterator<Node> iter3 = child2.getChildren().iterator();
+	    	    			while (iter3.hasNext()) {
+	    	    				Node child3 = iter3.next();
+
+//	    	    	    		System.out.println("child3 draft " + child3.getDraftNumber());
+	    	    				if (child3.getDraftNumber() == thirdMove) {
+	    	    	    			child3.setParent(null);
+//	    	    	    			System.out.println("MOVING TREE");
+	    	    	    			tree = child3;
+	    	    	    			break search;
+	    	    				}
+	    	    			}
+	    	    		}
+	    	    	}
+	    		}
+	    	}
+
+//    	System.out.println("tree owner is now " + tree.getOwner() + " and draftNumber is " + tree.getDraftNumber());
     	
     }
     
     /*
      * Find next move by examining children
      */
-    private Node findNextMove(Node parent, int player) {
+    private Node findNextMove(Node parent) {
     	//System.out.println("finding next move for " + parent.getDraftNumber());
     	// first see if we've visited all children before - if not, return an unvisited child
+//    	System.out.println("findNextMove " + parent.getOwner() + " " + parent.getDraftNumber());
+    	int nextPlayer = 0;
+    	if (parent.getOwner() == 0) {
+    		nextPlayer = 1;
+    	} else if (parent.getOwner() == 1) {
+    		nextPlayer = 2;
+    	} else {
+    		nextPlayer = 0;
+    	}
+    	
+    	if (parent.getNumChildren() == 0) {
+			return parent;
+		}
+    	
     	if (parent.getChildren().size() == parent.getNumChildren()) {
     		//System.out.println("All children have been visted at least once, use formula");
         	Iterator<Node> iter = parent.getChildren().iterator();
@@ -183,25 +264,25 @@ public class UCT_Drafter extends SmartDrafter
         		
         	}
         	bestNode.incrementNumVisits();
-        	int nextPlayer = 0;
-        	if (parent.getOwner() == 0) {
-        		nextPlayer = 1;
-        	} else if (parent.getOwner() == 1) {
-        		nextPlayer = 2;
-        	} else {
-        		nextPlayer = 0;
-        	}
+        	
+        	
+//        	if (bestNode.getOwner() == nextPlayer) {
+//        		System.out.println("find next move best node is being passed with own owner value");
+//        	} else if (parent.getOwner() == nextPlayer) {
+//        		System.out.println("find next move best node is being passed with parent owner");
+//        	} else {
+//        		System.out.println("next player equals nothing");
+//        	}
+//        	System.out.println("Best node owner " + bestNode.getOwner() + " and next player " + nextPlayer);
 //        	if (player < 2) {
 //        		player++;
 //        	} else if (player == 2) {
 //        		player = 0;
 //        	}
 //        	System.out.println("parent " + parent.getOwner() + " and child " + nextPlayer);
-        	return findNextMove(bestNode, nextPlayer);
+        	return findNextMove(bestNode);
     	} else {
-    		if (parent.getNumChildren() == 0) {
-    			return parent;
-    		}
+    		
     		
     		// return unvisited child
     		
@@ -226,9 +307,10 @@ public class UCT_Drafter extends SmartDrafter
     		System.arraycopy(parent.getDraftState(), 0, ds2, 0, DS_LENGTH);
     		
     		int draftNumber = (Integer) l.get(0);
-    		ds2[draftNumber] = player;
+    		ds2[draftNumber] = nextPlayer;
 //    		System.out.println("parent is " + parent.getOwner() + " new child is " + player);
-    		return addNewNode(parent, ds2, draftNumber, player);
+//    		System.out.println("makeNew " + nextPlayer + " " + draftNumber);
+    		return addNewNode(parent, ds2, draftNumber, nextPlayer);
     		
     	}
     	
@@ -239,7 +321,7 @@ public class UCT_Drafter extends SmartDrafter
     	//System.out.println("finding next move for " + parent.getDraftNumber());
     	// first see if we've visited all children before - if not, return an unvisited child
     	
-    		//System.out.println("All children have been visted at least once, use formula");
+    		//System.out.println("All children have been visited at least once, use formula");
         	Iterator<Node> iter = parent.getChildren().iterator();
         	double bestValue = 0;
         	Node bestNode = null;
