@@ -215,15 +215,35 @@ public class UCT_Drafter extends SmartDrafter
 	    	    	    			child3.setParent(null);
 //	    	    	    			System.out.println("MOVING TREE");
 	    	    	    			tree = child3;
+	    	    	    		
 	    	    	    			break search;
 	    	    				}
 	    	    			}
+	    	    			// did not find third child - node may not have been created yet
+	    	    			// add child node
+	    	    			int[] newDraftState = new int[DS_LENGTH];
+	    	        		System.arraycopy(child2.getDraftState(), 0, newDraftState, 0, DS_LENGTH);
+
+	    	        		for (int i = 0; i < newDraftState.length; i++) {
+	    	        			if (newDraftState[i] != draftState[i] && i != thirdMove) {
+	    	        				System.out.println("OH NO - Does not match");
+	    	        			}
+	    	        		}
+	    	        		
+//	    	        		int draftNumber = (Integer) l.get(0);
+	    	        		newDraftState[thirdMove] = beforePlayer;
+//	    	        		System.out.println("parent is " + parent.getOwner() + " new child is " + player);
+//	    	        		System.out.println("makeNew " + nextPlayer + " " + draftNumber);
+//	    	        		System.out.println("adding new node to search tree for third move");
+	    	        		tree =  addNewNode(child2, newDraftState, thirdMove, beforePlayer);
+	    	        		tree.setParent(null);
+	    	        		break search;
 	    	    		}
 	    	    	}
 	    		}
 	    	}
 
-//    	System.out.println("tree owner is now " + tree.getOwner() + " and draftNumber is " + tree.getDraftNumber());
+//    	System.out.println("MOVED tree owner is now " + tree.getOwner() + " and draftNumber is " + tree.getDraftNumber());
     	
     }
     
