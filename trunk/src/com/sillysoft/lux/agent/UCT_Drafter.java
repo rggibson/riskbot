@@ -23,7 +23,7 @@ public class UCT_Drafter extends SmartDrafter
     /*
      *  The constant exploration value used in formula
      */
-    private final double CONSTANT = 0.1;
+    private final double CONSTANT = 0.5;
 
 
     private Node tree = null;
@@ -119,7 +119,7 @@ public class UCT_Drafter extends SmartDrafter
     		
     		double[] results = monteCarloRollOut(x.getDraftState(), unowned, nextPlayer, board.getNumberOfPlayers());
     		
-    		x.setValue(results[playerNum]);
+    		x.setValue(results);
     		propagateValue(x.getParent());
     	}
     	
@@ -156,7 +156,8 @@ public class UCT_Drafter extends SmartDrafter
     	n.setNumChildren(countChild);
     	//System.out.println("Node " + draftNumber + " has " + countChild + " children");
     	n.setNumVisits(1);
-    	n.setValue(0);
+    	double[] values = {0,0,0};
+    	n.setValue(values);
     	n.setOwner(owner);
     	if (parent != null) 
     		parent.addChild(n);
@@ -274,7 +275,7 @@ public class UCT_Drafter extends SmartDrafter
         	Node bestNode = null;
         	while (iter.hasNext()) {
         		Node child = iter.next();
-        		double value = child.getValue() + CONSTANT * Math.sqrt(Math.log(parent.getNumVisits()) / child.getNumVisits());
+        		double value = (child.getValue())[child.getOwner()] + CONSTANT * Math.sqrt(Math.log(parent.getNumVisits()) / child.getNumVisits());
 //        		System.out.println(child.getDraftNumber() + " value is " + value);
         		if (value > bestValue) {
         			bestValue = value;
@@ -347,7 +348,7 @@ public class UCT_Drafter extends SmartDrafter
         	Node bestNode = null;
         	while (iter.hasNext()) {
         		Node child = iter.next();
-        		double value = child.getValue(); // + CONSTANT * Math.sqrt(Math.log(parent.getNumVisits()) / child.getNumVisits());
+        		double value = (child.getValue())[child.getOwner()]; // + CONSTANT * Math.sqrt(Math.log(parent.getNumVisits()) / child.getNumVisits());
 //        		System.out.println(child.getDraftNumber() + " value is " + value);
         		if (value > bestValue) {
         			bestValue = value;
@@ -359,19 +360,25 @@ public class UCT_Drafter extends SmartDrafter
         	bestNode.incrementNumVisits();
         	return bestNode;
     }
+    
     private void propagateValue(Node node) {
     	if (node == null) {
     		return;
     	}
     	Iterator<Node> iter = node.getChildren().iterator();
     	int count = 0;
-    	double total = 0;
+    	double[] total = {0,0,0};
     	while (iter.hasNext()) {
     		Node child = iter.next();
-    		total = total + child.getValue();
+    		total[0] = total[0] + child.getValue()[0];
+    		total[1] = total[1] + child.getValue()[1];
+    		total[2] = total[2] + child.getValue()[2];
     		count++;
     	}
-    	double result = total / count;
+    	double[] result = new double[3];
+    	result[0] = total[0] / count;
+    	result[1] = total[1] / count;
+    	result[2] = total[2] / count;
     	node.setValue(result);
     	propagateValue(node.getParent());
     	
