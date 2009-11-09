@@ -51,6 +51,12 @@ public class RL_Action_Drafter extends SmartDrafter
 	private HashMap<String, Boolean> states = new HashMap<String, Boolean>();
 
 	/**
+	 * (Previous) Abstract Binary States
+	 */
+	private HashMap<String, Boolean> prevStates = new HashMap<String, Boolean>();
+
+
+	/**
 	 * Feature Vector with Q values
 	 */
 	private HashMap<String, Double> features = new HashMap<String, Double>();
@@ -84,7 +90,7 @@ public class RL_Action_Drafter extends SmartDrafter
 	/**
 	 * How often we capture the heuristic function by saving it to file
 	 */
-	private static final int CAPTURE_AFTER_EVERY = 2500;
+	private static final int CAPTURE_AFTER_EVERY = 100;
 
 	/**
 	 * Keep track of the number of games we've played
@@ -124,7 +130,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 		// RL parameters
 
-		// set of actions
+		// set of actions and their current total values from features
 		actions.put("ChooseMostEmpty", 0.0);
 		actions.put("ChooseLeastEmpty", 0.0);
 		actions.put("ChooseMostMyTerritory", 0.0);
@@ -135,20 +141,30 @@ public class RL_Action_Drafter extends SmartDrafter
 		actions.put("ChooseLeastAccessPoints", 0.0);        
 		//actions.add("ChooseRandom");
 
+
+		// set of previous states
+		prevStates.put("SoleOwnerOfContinent", false);
+		prevStates.put("InControlOfContinent", false);
+		prevStates.put("OpponentControlContinent", false);
+		prevStates.put("EmptyContinent", false);
+		prevStates.put("Constant", true);
+
 		// set of states
 		states.put("SoleOwnerOfContinent", false);
 		states.put("InControlOfContinent", false);
 		states.put("OpponentControlContinent", false);
 		states.put("EmptyContinent", false);
+		states.put("Constant", true);
 
-		// feature vector
 
+		// feature vector containing set of features and their weights
 		Iterator<String> actionIter = actions.keySet().iterator();
-		Iterator<String> stateIter = states.keySet().iterator();
 
 		while (actionIter.hasNext())
 		{
 			String action = actionIter.next();
+
+			Iterator<String> stateIter = states.keySet().iterator();
 
 			while (stateIter.hasNext())
 			{
@@ -159,171 +175,67 @@ public class RL_Action_Drafter extends SmartDrafter
 		}
 
 
-		//        if (m_indicesToUpdate[ID] == null)
-		//        {
-		//            m_indicesToUpdate[ID] = new ArrayList<int[]>();
-		//        }
-		//
-		//        if (m_learnedHeuristic == null)
-		//        {
-		//            // Construct the heuristic, or grab it from file if it already exists
-		//            try
-		//            {
-		//                ObjectInputStream in = new ObjectInputStream(new FileInputStream(HEURISTIC_DATA_FILENAME));
-		//                m_learnedHeuristic = (Hashtable<ArrayList<Integer>,double[]>[])in.readObject();
-		//                in.close();
-		//            }
-		//            catch (FileNotFoundException e)
-		//            {
-		//                // Create a new heuristic
-		//                m_learnedHeuristic = new Hashtable[numCountries];
-		//                for (int i = 0; i < numCountries; ++i)
-		//                {
-		//                    m_learnedHeuristic[i] = new Hashtable<ArrayList<Integer>,double[]>();
-		//                }
-		//
-		//                // First, we will need the number of countries in each continent
-		//                int[] numTerrsInCont = new int[board.getNumberOfContinents()];
-		//                for (Country terr : countries)
-		//                {
-		//                    numTerrsInCont[terr.getContinent()]++;
-		//                }
-		//
-		//                for (Country terr : countries)
-		//                {
-		//                    // Initialize the entries in the heuristic
-		//
-		//                    // Some numbers we will need for indexing
-		//                    int numNeighbours = terr.getNumberNeighbors();
-		//                    Country[] neighbours = terr.getAdjoiningList();
-		//                    int numNeighboursInCont = 0;
-		//                    for (Country neighbour : neighbours)
-		//                    {
-		//                        if (terr.getContinent() == neighbour.getContinent())
-		//                        {
-		//                            numNeighboursInCont++;
-		//                        }
-		//                    }
-		//
-		//                    // Begin indexing:
-		//                    // First, number of friendly neighbours
-		//                    for (int numFriends = 0; numFriends <= numNeighbours; ++numFriends)
-		//                    {
-		//                        // Next, number of enemy neighbours
-		//                        for (int numEnemies = 0; numEnemies <= numNeighbours - numFriends; ++numEnemies)
-		//                        {
-		//                            // Number of territories in continent we own
-		//                            int maxNumFriendsInCont = numTerrsInCont[terr.getContinent()] - 1; // Can't include this terr
-		//                            maxNumFriendsInCont -= Math.max(0, numEnemies - (numNeighbours - numNeighboursInCont));
-		//
-		//                            int minNumFriendsInCont = Math.max(0, numFriends - (numNeighbours - numNeighboursInCont));
-		//
-		//                            for (int numFriendsInCont = minNumFriendsInCont; numFriendsInCont <= maxNumFriendsInCont; ++numFriendsInCont)
-		//                            {
-		//                                // Number of territories in continent owned by enemies
-		//                                int maxNumEnemiesInCont = numTerrsInCont[terr.getContinent()] - 1 - numFriendsInCont;
-		//                                int minNumEnemiesInCont = Math.max(0, numEnemies - (numNeighbours - numNeighboursInCont));
-		//
-		//                                for (int numEnemiesInCont = minNumEnemiesInCont; numEnemiesInCont <= maxNumEnemiesInCont; ++numEnemiesInCont)
-		//                                {
-		//                                    // Max number of territories in continent owned by one enemy
-		//                                    int minNumEnemyInCont = numEnemiesInCont == 0 ? 0 : ((numEnemiesInCont - 1) / (board.getNumberOfPlayers() - 1)) + 1;
-		//                                    int maxNumEnemyInCont = numEnemiesInCont;
-		//
-		//                                    for (int numEnemyInCont = minNumEnemyInCont; numEnemyInCont <= maxNumEnemyInCont; ++numEnemyInCont)
-		//                                    {
-		//                                        // Entry
-		//                                        ArrayList<Integer> index = new ArrayList<Integer>(5);
-		//                                        index.add(numFriends);
-		//                                        index.add(numEnemies);
-		//                                        index.add(numFriendsInCont);
-		//                                        index.add(numEnemiesInCont);
-		//                                        index.add(numEnemyInCont);
-		//
-		//                                        double[] entry = { INITIAL_VALUE, INITIAL_WEIGHT};
-		//
-		//                                        m_learnedHeuristic[terr.getCode()].put(index, entry);
-		//                                    }
-		//                                }
-		//                            }
-		//                        }
-		//                    }
-		//                }
-		//            }
-		//            catch (Exception e)
-		//            {
-		//                assert(false);
-		//            }
-		//        }
 	}
 
 	// Update the heuristic function and save it to file
 	@Override
 	public String youWon()
 	{
-		String message = super.youWon();
+		super.youWon();
+		
+		String message = "Ha Ha.  I out-drafted you again!";
 
 		m_numGamesPlayed++;
 
-//		// Make the updates to the heuristic function
-//		for (int player = 0; player < m_indicesToUpdate.length; ++player)
-//		{
-//			if (m_indicesToUpdate[player] == null)
-//			{
-//				// This player is not an RL drafter
-//				continue;
-//			}
-//
-//			double newValue = (player == ID) ? 1.0 : 0.0;
-//
-//			for (int[] entry : m_indicesToUpdate[player])
-//			{
-//				// Retrieve the index and territory from the entry (see the hack
-//				// in getPick())
-//				int terr = entry[0];
-//				ArrayList<Integer> index = new ArrayList<Integer>(entry.length - 1);
-//				for (int i = 0; i < entry.length - 1; ++i)
-//				{
-//					index.add(entry[i+1]);
-//				}
-//
-//				assert(m_learnedHeuristic[terr].containsKey(index));
-//				double[] hashTableEntry = m_learnedHeuristic[terr].get(index);
-//				double oldValue = hashTableEntry[0];
-//				double numVisits = hashTableEntry[1] + 1;
-//
-//				// Average of values seen
-//				hashTableEntry[0] = oldValue + (1.0 / numVisits)*(newValue - oldValue);
-//				hashTableEntry[1] = numVisits;
-//
-//				m_learnedHeuristic[terr].put(index, hashTableEntry);
-//			}
-//
-//			m_indicesToUpdate[player].clear();
-//		}
 
 		// Check if we should capture this heuristic function
 		if ((m_numGamesPlayed % CAPTURE_AFTER_EVERY) == 0)
 		{
 			// Create the file name
-			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
-			fileName += "" + m_numGamesPlayed + ".dat";
+			
 
-			// Check to make sure that the file does not already exist
-			boolean exists = (new File(fileName)).exists();
-			assert(!exists);
+//			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
+//			fileName += "" + m_numGamesPlayed + ".dat";			
+//
+//			// Check to make sure that the file does not already exist
+//			boolean exists = (new File(fileName)).exists();
+//			assert(!exists);
 
 			// Save the heuristic to this file
-			try
-			{
-				ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName));
-				out.writeObject(m_learnedHeuristic);
-				out.close();
-			}
-			catch (Exception e)
-			{
-				assert(false);
-			}
+//			try
+//			{
+//				FileOutputStream fos =  new FileOutputStream(fileName);
+				//ObjectOutputStream out = new ObjectOutputStream(fos);
+
+				// print out the feature vector
+				Iterator<String> actionIter = actions.keySet().iterator();
+
+				while (actionIter.hasNext())
+				{
+					String action = actionIter.next();
+
+					Iterator<String> stateIter = states.keySet().iterator();
+
+					while (stateIter.hasNext())
+					{
+						String state = stateIter.next();
+						
+						System.out.println(features.get(action + "+" + state).toString());
+//						fos.write(features.get(action + "+" + state).toString().getBytes());
+//						fos.write(" ".getBytes());
+
+					}
+
+//					fos.write("\n".getBytes());
+				}
+
+
+//				fos.close();
+//			}
+//			catch (Exception e)
+//			{
+//				assert(false);
+//			}
 		}
 
 		return message;
@@ -340,7 +252,7 @@ public class RL_Action_Drafter extends SmartDrafter
 		// Get reward    	
 		// reward is calculated using the evaluation function
 		// the difference in value from previous state to current state is the reward
-		double[] current_world_values = evaluationFunction(draftState, 0, board);
+		double[] current_world_values = myOwnEvaluationFunction(draftState);
 
 		current_world_value = current_world_values[0];    	     	 
 		double reward = current_world_value - previous_world_value;    	
@@ -368,10 +280,17 @@ public class RL_Action_Drafter extends SmartDrafter
 	protected void UpdateCurrentStates(int[] draftState)
 	{
 
+		prevStates.put("SoleOwnerOfContinent", states.get("SoleOwnerOfContinent"));
+		prevStates.put("InControlOfContinent", states.get("InControlOfContinent"));
+		prevStates.put("OpponentControlContinent", states.get("OpponentControlContinent"));
+		prevStates.put("EmptyContinent", states.get("EmptyContinent"));
+		prevStates.put("Constant", true);
+
 		states.put("SoleOwnerOfContinent", false);
 		states.put("InControlOfContinent", false);
 		states.put("OpponentControlContinent", false);
 		states.put("EmptyContinent", false);
+		states.put("Constant", true);
 
 
 		int numContinents = board.getNumberOfContinents();
@@ -440,18 +359,18 @@ public class RL_Action_Drafter extends SmartDrafter
 
 		String chosenAction = "";
 
-		Iterator<String> featureIter = features.keySet().iterator();
 
 		Iterator<String> actionIter = actions.keySet().iterator();    		
 
-
-		// reset all action values
+		// reset all action total values
 		while (actionIter.hasNext())
 		{
 			String action = actionIter.next();
-			features.put(action, Double.valueOf(0.0));
+			actions.put(action, Double.valueOf(0.0));
 
 		}
+
+		Iterator<String> featureIter = features.keySet().iterator();
 
 		// calculate the current action values
 		while (featureIter.hasNext())
@@ -460,15 +379,24 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			actionIter = actions.keySet().iterator();    		
 
+			// sum the values of actions
 			while (actionIter.hasNext())
 			{	
-
 				String action = actionIter.next();
 
 				if (feature.indexOf(action) != -1) {
-					double value = actions.get(action).doubleValue();
-					double previousValue = features.get(feature).doubleValue();
-					features.put(feature, Double.valueOf(value + previousValue));
+
+					// get the state
+					String stateInFeature = feature.substring( feature.indexOf("+")+1 );
+					// if state is true
+					
+					//System.out.println("@" + stateInFeature + "@");
+					if (states.get(stateInFeature) == true)
+					{
+						double sumValue = actions.get(action).doubleValue();
+						double featureValue = features.get(feature).doubleValue();
+						actions.put(action, Double.valueOf(sumValue + featureValue));
+					}
 				}
 			}
 
@@ -480,6 +408,9 @@ public class RL_Action_Drafter extends SmartDrafter
 		Random generator = new Random();
 		double policyValue = generator.nextDouble();
 
+		//System.out.println("policyvalue: " + policyValue);
+		
+		
 		if (policyValue > EPSILON)
 		{
 			// exploit
@@ -492,7 +423,7 @@ public class RL_Action_Drafter extends SmartDrafter
 			{
 				String action = actionIter.next();
 
-				if (actions.get(action).doubleValue() > maxActionValue)
+				if (actions.get(action).doubleValue() >= maxActionValue)
 				{
 					if (IsActionAvailable(action))
 					{	
@@ -537,47 +468,51 @@ public class RL_Action_Drafter extends SmartDrafter
 	protected Boolean IsActionAvailable(String action)
 	{
 
-		if (action == "ChooseMostEmpty")
-		{
-			return true;
-		}
-		else if (action == "ChooseLeastEmpty")
-		{
-			return true;
-		}
-		else if (action == "ChooseMostMyTerritory")
-		{
-			return true;
-		}
-		else if (action == "ChooseLeastMyTerritory")
-		{
-			return true;
-		}
-		else if (action == "ChooseSmallest")
-		{
-			return true;
-		}
-		else if (action == "ChooseLargest")
-		{
-			return true;
-		}
-		else if (action == "ChooseMostAccessPoints")
-		{
-			return true;
-		}
-		else if (action == "ChooseLeastAccessPoints")
-		{
-			return true;
-		}
-		return false;
+		// action is always available
+		return true;
+
+		//		if (action == "ChooseMostEmpty")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseLeastEmpty")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseMostMyTerritory")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseLeastMyTerritory")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseSmallest")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseLargest")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseMostAccessPoints")
+		//		{
+		//			return true;
+		//		}
+		//		else if (action == "ChooseLeastAccessPoints")
+		//		{
+		//			return true;
+		//		}
+		//		return false;
 	}
 
 
 	protected void UpdateQvalue(double reward, String action)
 	{    	
-		Iterator<String> stateIter = states.keySet().iterator();    		
 
+		// List of active state variables
 		ArrayList<String> statesList = new ArrayList<String>();
+		Iterator<String> stateIter = states.keySet().iterator();
 
 		while (stateIter.hasNext())
 		{
@@ -589,12 +524,45 @@ public class RL_Action_Drafter extends SmartDrafter
 		}
 
 
-		// Q(s,a) = Q(s,a) + alpha[r+gamma * Q(s',a') - Q(s,a)]
+		// List of previous active state variables
+		ArrayList<String> prevStatesList = new ArrayList<String>();
+		Iterator<String> presStateIter = prevStates.keySet().iterator();
+
+		while (presStateIter.hasNext())
+		{
+			String state = presStateIter.next();
+			if (prevStates.get(state) == true)
+			{
+				prevStatesList.add(state);
+			}
+		}
+
+		double prevQvalue = 0.0;
+		if (previous_action != "")
+		{
+			for (int i=0; i<prevStatesList.size(); i++)				
+			{
+				//System.out.println("!" + previous_action  + "!");
+				//System.out.println("!" + prevStatesList.get(i) + "!");
+						
+				prevQvalue += features.get(previous_action + "+" + prevStatesList.get(i)).doubleValue();
+			}
+		}
+
+		// Q(s,a) = Q(s,a) + alpha * delta
+		// where delta = [r + gamma * Q(s',a') - Q(s,a)]		
 		for (int i=0; i<statesList.size(); i++)
 		{
-			double Qvalue = features.get(action + statesList.get(i)).doubleValue();
 
-			features.put(action + statesList.get(i), Qvalue + ALPHA *(reward/statesList.size()));
+			//System.out.println("%" + action + "%");
+			//System.out.println("%" + statesList.get(i) + "%");
+			//System.out.println("%" + action + "+" + statesList.get(i) + "%");
+			
+			double Qvalue = features.get(action + "+" + statesList.get(i)).doubleValue();
+
+			double delta = reward/statesList.size() + GAMMA * prevQvalue - Qvalue;
+
+			features.put(action + "+" + statesList.get(i), Qvalue + ALPHA * delta);			
 
 		}
 
@@ -642,7 +610,7 @@ public class RL_Action_Drafter extends SmartDrafter
 					{
 						if (border[j].getContinent() != curContinent)
 						{
-							numBorders[numContinents]++;
+							numBorders[curContinent]++;
 						}
 					}
 				}
@@ -657,15 +625,12 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
 				if (numEmpty[curContinent] > mostEmpty)
 				{
 					mostEmpty = numEmpty[curContinent];
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseLeastEmpty")
@@ -675,15 +640,12 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
-				if (numEmpty[curContinent] < leastEmpty)
+				if (numEmpty[curContinent] < leastEmpty && numEmpty[curContinent] > 0)
 				{
 					leastEmpty = numEmpty[curContinent];
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseMostMyTerritory")
@@ -693,15 +655,12 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
-				if (numOwned[0][curContinent] > mostMy)
+				if (numOwned[0][curContinent] > mostMy && numEmpty[curContinent] > 0)
 				{
 					mostMy = numOwned[0][curContinent];
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseLeastMyTerritory")
@@ -711,15 +670,12 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
-				if (numOwned[0][curContinent] < leastMy)
+				if (numOwned[0][curContinent] < leastMy && numEmpty[curContinent] > 0)
 				{
 					leastMy = numOwned[0][curContinent];
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseSmallest")
@@ -729,16 +685,14 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
 				int contiSize = numOwned[0][curContinent]+numOwned[1][curContinent]+numOwned[2][curContinent]+ numEmpty[curContinent];
-				if (contiSize < smallest)
+
+				if (contiSize < smallest && numEmpty[curContinent] > 0)
 				{
 					smallest = contiSize;
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseLargest")
@@ -748,16 +702,14 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
 				int contiSize = numOwned[0][curContinent]+numOwned[1][curContinent]+numOwned[2][curContinent]+ numEmpty[curContinent];
-				if (contiSize > largest)
+
+				if (contiSize > largest && numEmpty[curContinent] > 0)
 				{
 					largest = contiSize;
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseMostAccessPoints")
@@ -767,15 +719,12 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
-				if (numBorders[curContinent] > mostAccess)
+				if (numBorders[curContinent] > mostAccess && numEmpty[curContinent] > 0)
 				{
 					mostAccess = numBorders[curContinent];
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 		else if (action == "ChooseLeastAccessPoints")
@@ -785,15 +734,12 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-
-				if (numBorders[curContinent] < leastAccess)
+				if (numBorders[curContinent] < leastAccess && numEmpty[curContinent] > 0)
 				{
 					leastAccess = numBorders[curContinent];
 					chosenContinent = curContinent;
 				}
-
 			}
-
 			return pickCountryInContinent(chosenContinent);
 		}
 
@@ -803,7 +749,6 @@ public class RL_Action_Drafter extends SmartDrafter
 
 
 	// return an unowned country-code in <continent>, preferably near others we own
-	// If there are no countries left in the given continent then pick a country touching us.
 	protected int pickCountryInContinent(int continent)
 	{
 		CountryIterator continentIter = new ContinentIterator(continent, countries);
@@ -818,6 +763,8 @@ public class RL_Action_Drafter extends SmartDrafter
 		continentIter = new ContinentIterator(continent, countries);
 		int bestCode = -1;
 		int fewestNeib = 1000000;
+
+		continentIter = new ContinentIterator(continent, countries);		
 		while (continentIter.hasNext())
 		{
 			Country c = continentIter.next();
@@ -830,12 +777,44 @@ public class RL_Action_Drafter extends SmartDrafter
 
 		if (bestCode == -1)
 		{
-			// There are no unowned countries in this continent.
-			return pickCountryTouchingUs();
+			System.out.println("BUG: This should not happen.");
 		}
 
 		return bestCode;
 	}
 
+
+	public double[] myOwnEvaluationFunction(int[] draft)
+	{
+
+		double playerValue[] = new double[board.getNumberOfPlayers()];
+		double totalValue = 0;
+
+		// Calculate the cumulative values of all territories for each player
+		for (int i = 0; i < board.getNumberOfPlayers(); i++)
+		{
+			for (int j = 0; j < draft.length; j++)
+			{
+				playerValue[i] += territoryValueForEvalFunc(j, i, draft);
+			}
+			totalValue = totalValue + playerValue[i];
+		}
+
+		// Convert values to probabilities of winning
+		for (int i = 0; i < board.getNumberOfPlayers(); i++)
+		{
+			if (totalValue > 0)
+			{
+				playerValue[i] = playerValue[i] / totalValue;
+			}
+		}
+		return playerValue;
+	}
+
+
+	public String name()
+	{
+		return "RL_Action_Drafter";
+	}
 
 }

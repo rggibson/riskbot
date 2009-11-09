@@ -946,7 +946,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param playerNum The player number
      * @return A value for this territory
      */
-    private double territoryValueForEvalFunc(int territoryNum, int playerNum, int[] finalDraftState)
+    protected double territoryValueForEvalFunc(int territoryNum, int playerNum, int[] finalDraftState)
     {
 
     	// Constants
