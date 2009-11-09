@@ -9,7 +9,7 @@ public class Node {
 	Node parent;
 	int numVisits;
 	HashSet<Node> children = new HashSet();
-	double value;
+	double[] value;
 	int[] draftState;
 	int numChildren;
 	int draftNumber;
@@ -56,10 +56,10 @@ public class Node {
 	public void setChildren(HashSet children) {
 		this.children = children;
 	}
-	public double getValue() {
+	public double[] getValue() {
 		return value;
 	}
-	public void setValue(double value) {
+	public void setValue(double[] value) {
 		this.value = value;
 	}
 	public int getDraftNumber() {
