@@ -6,6 +6,7 @@
 package com.sillysoft.lux.agent;
 
 import java.util.ArrayList;
+import com.sillysoft.lux.*;
 
 /**
  *
@@ -16,7 +17,7 @@ public class KthBestPickDrafter extends SmartDrafter
     /**
      * The heuristic function to use
      */
-    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.RANDOM;
+    final protected Heuristic HEURISTIC_FUNCTION = Heuristic.UCT;
 
     /**
      * When use MaxN-UCT as the heuristic, this is the max branching factor
@@ -41,6 +42,11 @@ public class KthBestPickDrafter extends SmartDrafter
     protected int m_numSimulations;
 
     /**
+     * Need this if we are using UCT as heuristic or opponent model
+     */
+    protected UCT_Drafter2 m_uctDrafter;
+
+    /**
      * The opponent models to use
      * TODO: These need to be dependent on the player's name, not ID, if we are
      * sticking with random turn order.
@@ -63,7 +69,8 @@ public class KthBestPickDrafter extends SmartDrafter
         MAX_N_UCT,
         DUMB,
         RANDOM,
-        LEARNED
+        LEARNED,
+        UCT
     }
 
     /**
@@ -81,6 +88,24 @@ public class KthBestPickDrafter extends SmartDrafter
     public KthBestPickDrafter()
     {
         super();
+    }
+
+    @Override
+    public void setPrefs(int ID, Board board)
+    {
+        super.setPrefs(ID, board);
+
+        if (HEURISTIC_FUNCTION == Heuristic.UCT)
+        {
+            if (SELFISH)
+            {
+                m_uctDrafter = (UCT_Drafter2) board.getAgentInstance("UCT_Drafter2 - Selfish");
+            }
+            else
+            {
+                m_uctDrafter = (UCT_Drafter2) board.getAgentInstance("UCT_Drafter2");
+            }
+        }
     }
 
     @Override

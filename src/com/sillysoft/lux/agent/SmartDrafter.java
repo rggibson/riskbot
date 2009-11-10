@@ -73,7 +73,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * i.e. the code here is written to trust the agent to abide by the time
      * restriction.
      */
-    protected final static int PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR = 100;
+    protected final static int PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR = 500;
 
     public SmartDrafter()
     {
