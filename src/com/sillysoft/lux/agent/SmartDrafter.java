@@ -90,6 +90,11 @@ public abstract class SmartDrafter extends SmartAgentBase
         {
             outcomeOfDraft = new int[countries.length];
         }
+        for (int i = 0; i < outcomeOfDraft.length; ++i)
+        {
+            outcomeOfDraft[i] = -1;
+        }
+        
         if (scoreboard == null)
         {
             scoreboard = new Hashtable<String,Double>();
@@ -242,7 +247,17 @@ public abstract class SmartDrafter extends SmartAgentBase
         // There is redundency in the parameters here, but it is useful to pass
         // in the unownedCountries so that we don't have to go through and find
         // the available picks every time.
-        int pick = getPick(draftState, unownedCountries);
+        int pick = -1;
+        if (unownedCountries.size() == 1)
+        {
+            pick = unownedCountries.get(0);
+        }
+        else
+        {
+            pick = getPick(draftState, unownedCountries);
+        }
+
+        assert(pick != -1);
 
         if (draftState[pick] != -1)
         {
@@ -622,12 +637,12 @@ public abstract class SmartDrafter extends SmartAgentBase
 
     /**
      * Our evaluation function for determining how good a final draft state is
-     * for each player.  By slefish, we mean that we ignore the evaluation of the
+     * for each player.  By selfish, we mean that we ignore the evaluation of the
      * other players and just try to maximize our own.
      * @param finalDraftState The final assignment of countries to the players
      * @return An array of length numPlayers denoting how much each player likes this state
      */
-    private double[] evaluationFunctionSelfish(int[] finalDraftState)
+    protected double[] evaluationFunctionSelfish(int[] finalDraftState)
     {
         // Check to make sure that this is a terminal state, and that each player
         // made the correct number of picks.
@@ -1282,38 +1297,6 @@ public abstract class SmartDrafter extends SmartAgentBase
             cleanUpUctTree_r(state, (player + 1) % board.getNumberOfPlayers(), newUctTree);
             state.set(terr, -1);
         }
-    }
-    
-    /**
-     * From the passed in draft state, randomly picks countries for each player
-     * until all countries are owned.  The value of the final state is then
-     * calculated.
-     * @param draftState The current assignment of countries to players, or unowned
-     * @param player The player whose pick it currently is
-     * @param unownedCountries The countries available to be picked by the players
-     * @return The values of the final state reached via the roll outs.
-     */
-    public double[] monteCarloRollOut(int[] draftState, ArrayList<Integer> unownedCountries, int player, int numPlayers)
-    {
-        // If this is a terminal node, then evaluate
-        if (unownedCountries.size() == 0)
-        {
-            return evaluationFunction(draftState);
-        }
-
-        // Otherwise, pick a country at random and evaluate
-        int randomCountryIndex = (int) (Math.random()*unownedCountries.size());
-        int randomCountry = unownedCountries.get(randomCountryIndex);
-        unownedCountries.remove(randomCountryIndex);
-        assert(draftState[randomCountry] == -1);
-        draftState[randomCountry] = player; // Pick country
-
-        double[] values = monteCarloRollOut(draftState, unownedCountries, (player + 1) % numPlayers, numPlayers);
-
-        draftState[randomCountry] = -1; // Undo the pick... is this necessary?
-        unownedCountries.add(randomCountry);
-
-        return values;
     }
 
 	protected double getValueOfTerr(int terr, int[] draftState,

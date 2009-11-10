@@ -36,7 +36,7 @@ public class RL_Drafter extends SmartDrafter
     /**
      * Exploration parameter
      */
-    final private double c = 0.5;
+    final private double c = 0.1;
 
     /**
      * Keeps track of which states were encountered in the draft, so that we
@@ -54,7 +54,7 @@ public class RL_Drafter extends SmartDrafter
     /**
      * Keep track of the number of games we've played
      */
-    protected static Integer m_numGamesPlayed = 0;
+    protected static Integer m_numGamesPlayed = 42500;
 
     /**
      * Constructor
@@ -62,6 +62,12 @@ public class RL_Drafter extends SmartDrafter
     public RL_Drafter()
     {
         super();
+    }
+
+    @Override
+    public String name()
+    {
+        return "RL_Drafter";
     }
 
     @Override

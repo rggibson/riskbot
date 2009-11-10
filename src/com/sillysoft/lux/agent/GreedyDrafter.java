@@ -43,6 +43,7 @@ public class GreedyDrafter extends SmartDrafter
      * @param unownedCountries The territories left to be picked
      * @return The index of the territory to pick
      */
+    @Override
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         return getGreedyPick(draftState, unownedCountries, ID, SELFISH);

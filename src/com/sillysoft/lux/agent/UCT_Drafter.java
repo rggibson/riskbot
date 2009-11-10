@@ -23,7 +23,7 @@ public class UCT_Drafter extends SmartDrafter
     /*
      *  The constant exploration value used in formula
      */
-    private final double CONSTANT = 0.5;
+    private final double CONSTANT = 0.1;
 
 
     private Node tree = null;
@@ -117,7 +117,7 @@ public class UCT_Drafter extends SmartDrafter
     			nextPlayer = 0;
     		}
     		
-    		double[] results = monteCarloRollOut(x.getDraftState(), unowned, nextPlayer, board.getNumberOfPlayers());
+    		double[] results = monteCarloRollOut(x.getDraftState(), unowned, nextPlayer);
     		
     		x.setValue(results);
     		propagateValue(x.getParent());
@@ -382,5 +382,37 @@ public class UCT_Drafter extends SmartDrafter
     	node.setValue(result);
     	propagateValue(node.getParent());
     	
+    }
+
+    /**
+     * From the passed in draft state, randomly picks countries for each player
+     * until all countries are owned.  The value of the final state is then
+     * calculated.
+     * @param draftState The current assignment of countries to players, or unowned
+     * @param player The player whose pick it currently is
+     * @param unownedCountries The countries available to be picked by the players
+     * @return The values of the final state reached via the roll outs.
+     */
+    public double[] monteCarloRollOut(int[] draftState, ArrayList<Integer> unownedCountries, int player)
+    {
+        // If this is a terminal node, then evaluate
+        if (unownedCountries.size() == 0)
+        {
+            return evaluationFunction(draftState);
+        }
+
+        // Otherwise, pick a country at random and evaluate
+        int randomCountryIndex = (int) (Math.random()*unownedCountries.size());
+        int randomCountry = unownedCountries.get(randomCountryIndex);
+        unownedCountries.remove(randomCountryIndex);
+        assert(draftState[randomCountry] == -1);
+        draftState[randomCountry] = player; // Pick country
+
+        double[] values = monteCarloRollOut(draftState, unownedCountries, (player + 1) % board.getNumberOfPlayers());
+
+        draftState[randomCountry] = -1; // Undo the pick
+        unownedCountries.add(randomCountry);
+
+        return values;
     }
 }
