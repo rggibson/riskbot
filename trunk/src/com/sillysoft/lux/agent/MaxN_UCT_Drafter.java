@@ -23,7 +23,7 @@ public class MaxN_UCT_Drafter extends SmartDrafter
      * The number of Monte Carlo roll outs that we average over in MaxNMC, for
      * each leaf node of the MaxN portion of the search.
      */
-    private final int NUM_MC_ROLL_OUTS = 3000;
+    private final int NUM_MC_ROLL_OUTS = 1000;
 
     /**
      * Should we use the selfish evaluation function?
@@ -76,6 +76,7 @@ public class MaxN_UCT_Drafter extends SmartDrafter
 //        return value[0];
 //    }
 
+    @Override
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         // First, clean up the uct tree

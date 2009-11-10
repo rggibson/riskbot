@@ -44,7 +44,7 @@ public class RandomDrafter extends SmartDrafter
     /**
      * Continent which we want to reserve some picks for player 0
      */
-    private static final int RESERVED_CONTINENT = -1; // Asia
+    private static final int RESERVED_CONTINENT = -1; // No reserves
 
     /**
      * Exact number of territories we want player 0 to own from the above cont
@@ -133,6 +133,7 @@ public class RandomDrafter extends SmartDrafter
      * @param unownedCountries The territories left to be picked
      * @return The index of the territory to pick
      */
+    @Override
     protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         int pick = -1;
