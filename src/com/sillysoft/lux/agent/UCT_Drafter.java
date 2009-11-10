@@ -23,7 +23,7 @@ public class UCT_Drafter extends SmartDrafter
     /*
      *  The constant exploration value used in formula
      */
-    private final double CONSTANT = 0.1;
+    private final double CONSTANT = 0.05;
 
 
     private Node tree = null;
@@ -120,7 +120,7 @@ public class UCT_Drafter extends SmartDrafter
     		double[] results = monteCarloRollOut(x.getDraftState(), unowned, nextPlayer);
     		
     		x.setValue(results);
-    		propagateValue(x.getParent());
+    		propagateValue(x.getParent(), results);
     	}
     	
     	Node pick = findBestMove(tree);
@@ -361,7 +361,31 @@ public class UCT_Drafter extends SmartDrafter
         	return bestNode;
     }
     
-    private void propagateValue(Node node) {
+    
+    private void propagateValue(Node node, double[] values) {
+    	if (node == null) {
+    		return;
+    	}
+    	Iterator<Node> iter = node.getChildren().iterator();
+    	int count = 0;
+    	double[] total = {0,0,0};
+    	while (iter.hasNext()) {
+    		Node child = iter.next();
+    		total[0] = total[0] + child.getValue()[0];
+    		total[1] = total[1] + child.getValue()[1];
+    		total[2] = total[2] + child.getValue()[2];
+    		count++;
+    	}
+    	double[] result = node.getValue();
+    	result[0] = result[0] + ( (1 / node.getNumVisits()) * (values[0] - result[0]) );
+    	result[1] = result[1] + ( (1 / node.getNumVisits()) * (values[1] - result[1]) );
+    	result[2] = result[2] + ( (1 / node.getNumVisits()) * (values[2] - result[2]) );
+    	node.setValue(result);
+    	propagateValue(node.getParent(), result);
+    	
+    }
+    
+    private void propagateValueOld(Node node) {
     	if (node == null) {
     		return;
     	}
@@ -380,10 +404,10 @@ public class UCT_Drafter extends SmartDrafter
     	result[1] = total[1] / count;
     	result[2] = total[2] / count;
     	node.setValue(result);
-    	propagateValue(node.getParent());
+    	propagateValueOld(node.getParent());
     	
     }
-
+    
     /**
      * From the passed in draft state, randomly picks countries for each player
      * until all countries are owned.  The value of the final state is then
