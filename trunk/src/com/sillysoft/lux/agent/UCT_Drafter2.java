@@ -20,7 +20,7 @@ public class UCT_Drafter2 extends SmartDrafter
     /**
      * The root of the UCT tree
      */
-    private Node2 root;
+    private Node2 m_root;
 
     /*
      *  The constant exploration value used in formula
@@ -51,7 +51,16 @@ public class UCT_Drafter2 extends SmartDrafter
     @Override
     public String name()
     {
-        return "UCT_Drafter";
+        if (SELFISH)
+        {
+            return "UCT_Drafter2 - Selfish";
+        }
+        return "UCT_Drafter2";
+    }
+
+    public Node2 getRoot()
+    {
+        return m_root;
     }
 
     /**
@@ -70,18 +79,18 @@ public class UCT_Drafter2 extends SmartDrafter
         {
             while (System.currentTimeMillis() < alarm)
             {
-                runUctSimulation(root, draftState);
+                runUctSimulation(m_root, draftState);
             }
         }
         else
         {
            for (int i = 0; i < NUM_SIMULATIONS; ++i)
            {
-               runUctSimulation(root, draftState);
+               runUctSimulation(m_root, draftState);
            }
         }
 
-        int[] bestPick = getNBestPicks(root, 1);
+        int[] bestPick = getNBestPicks(m_root, 1);
 
         return bestPick[0];
     }
@@ -175,15 +184,7 @@ public class UCT_Drafter2 extends SmartDrafter
             }
             
             // Whose turn is it to pick next?
-            int nextPlayer = 0;
-            for (int player = 0; player < board.getNumberOfPlayers() - 1; ++player)
-            {
-                if (numPicksByPlayer[player + 1] < numPicksByPlayer[player])
-                {
-                    nextPlayer = player + 1;
-                    break;
-                }
-            }
+            int nextPlayer = (countries.length - unownedCountries.size()) % board.getNumberOfPlayers();
 
             return monteCarloRollOut(draftState, unownedCountries, nextPlayer);
         }
@@ -255,6 +256,10 @@ public class UCT_Drafter2 extends SmartDrafter
 //            }
 //            else
 //            {
+                if (node == null)
+                {
+                    assert false : "Error: Null node!";
+                }
                 int nextOwner = (node.getOwner() + 1) % board.getNumberOfPlayers();
                 child = new Node2(draftState, nextOwner); //, transposeTable);
                 addToTree = false;
@@ -334,29 +339,31 @@ public class UCT_Drafter2 extends SmartDrafter
     public void updateRoot(int[] draftState)
     {
         boolean firstCheck = true;
-        for (int player = ID; player != ID || firstCheck || root == null; player = (player + 1) % board.getNumberOfPlayers() )
+        for (int player = ID; player != ID || firstCheck || m_root == null; player = (player + 1) % board.getNumberOfPlayers() )
         {
             firstCheck = false;
-            if (root == null)
+            if (m_root == null)
             {
                 // We haven't seen this state before, so create it
-                root = new Node2(draftState, ID); //, transposeTable);
+                m_root = new Node2(draftState, ID); //, transposeTable);
                 break;
             }
 
             // Find the move that player took
-            int[] oldDraftState = root.getDraftState();
+            int[] oldDraftState = m_root.getDraftState();
             for (int terr = 0; terr < oldDraftState.length; ++terr)
             {
                 if (oldDraftState[terr] == -1 && draftState[terr] == player)
                 {
                     // Found the move
-                    assert root.getChildren().containsKey(terr) : "Error: Illegal child!";
-                    root = root.getChildren().get(terr);
+                    assert m_root.getChildren().containsKey(terr) : "Error: Illegal child!";
+                    m_root = m_root.getChildren().get(terr);
                     break;
                 }
             }
         }
+
+        System.gc();
 
         // Index into the transposition table
 //        ArrayList<Integer> state = new ArrayList<Integer>();

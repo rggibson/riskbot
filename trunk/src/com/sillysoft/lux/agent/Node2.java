@@ -1,7 +1,7 @@
 package com.sillysoft.lux.agent;
 
 import java.util.HashMap;
-import java.util.Hashtable;
+//import java.util.Hashtable;
 import java.util.ArrayList;
 
 public class Node2 {
