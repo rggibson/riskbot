@@ -5,7 +5,6 @@
 
 package com.sillysoft.lux.agent;
 
-import java.util.ArrayList;
 import java.util.*;
 
 /**
@@ -31,6 +30,11 @@ public class UCT_Drafter extends SmartDrafter
     private int playerNum = 0;
     private int beforePlayer = 0;
     private int afterPlayer = 0;
+
+    /**
+     * The evaluation function to use
+     */
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
     
     /**
      * Constructor
@@ -40,7 +44,13 @@ public class UCT_Drafter extends SmartDrafter
 
     }
 
-    protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
+    @Override
+    public String name()
+    {
+        return "UCT_Drafter";
+    }
+
+    public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
     	if (tree == null) {
     		int treeOwner = 0;
@@ -422,7 +432,7 @@ public class UCT_Drafter extends SmartDrafter
         // If this is a terminal node, then evaluate
         if (unownedCountries.size() == 0)
         {
-            return evaluationFunction(draftState);
+            return evaluationFunction(draftState, m_evalFunc);
         }
 
         // Otherwise, pick a country at random and evaluate

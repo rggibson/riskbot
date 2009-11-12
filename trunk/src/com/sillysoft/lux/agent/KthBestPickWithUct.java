@@ -21,6 +21,11 @@ public class KthBestPickWithUct extends SmartDrafter
     final protected int MILLSECS_PER_ROLL_OUT = 4;
 
     /**
+     * The evaluation function to use
+     */
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
+
+    /**
      * The maximum number of picks to consider
      * Set to -1 to do as many in time limit
      */
@@ -46,7 +51,7 @@ public class KthBestPickWithUct extends SmartDrafter
      * RandomDrafter: must contain "Random"
      * KthBestPickUct: must contain "KthBestPick"
      */
-    protected final boolean USE_ORACLE_MODELS = false;
+    protected final boolean USE_ORACLE_MODELS = true;
 
     /**
      * Whether we are selfish or not (we assume the opponents' selfishnesses match
@@ -89,7 +94,7 @@ public class KthBestPickWithUct extends SmartDrafter
         }
     }
 
-    protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
+    public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         long alarm = System.currentTimeMillis() + PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size();
         if (MAX_PICKS_CONSIDERED != -1)
@@ -256,7 +261,7 @@ public class KthBestPickWithUct extends SmartDrafter
                     else if (currentPlayerName.contains("Greedy"))
                     {
                         // TODO: We can model whether a greedy opponent is selfish or not
-                        nextPick = getGreedyPick(draftState, unownedCountries, currentPlayer, SELFISH);
+                        nextPick = getGreedyPick(draftState, unownedCountries, currentPlayer, SELFISH, m_evalFunc);
                     }
                     else if (currentPlayerName.contains("UCT"))
                     {

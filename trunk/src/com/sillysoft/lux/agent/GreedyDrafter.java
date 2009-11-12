@@ -19,6 +19,11 @@ public class GreedyDrafter extends SmartDrafter
      */
     private static final boolean SELFISH = false;
 
+    /**
+     * The evaluation function to use
+     */
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
+
     public GreedyDrafter()
     {
         super();
@@ -44,8 +49,8 @@ public class GreedyDrafter extends SmartDrafter
      * @return The index of the territory to pick
      */
     @Override
-    protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
+    public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
-        return getGreedyPick(draftState, unownedCountries, ID, SELFISH);
+        return getGreedyPick(draftState, unownedCountries, ID, SELFISH, m_evalFunc);
     }
 }

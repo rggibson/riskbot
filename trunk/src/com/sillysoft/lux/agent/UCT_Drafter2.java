@@ -36,7 +36,12 @@ public class UCT_Drafter2 extends SmartDrafter
      * The number of simulations to run.
      * Set to -1 to abide by the time limit (located in SmartDrafter).
      */
-    private final int NUM_SIMULATIONS = -1;
+    private final int NUM_SIMULATIONS = 5000;
+
+    /**
+     * The evaluation function to use
+     */
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
 
     /**
      * The transposition table
@@ -53,7 +58,7 @@ public class UCT_Drafter2 extends SmartDrafter
     {
         if (SELFISH)
         {
-            return "UCT_Drafter2 - Selfish";
+            return "UCT_Drafter2-Selfish";
         }
         return "UCT_Drafter2";
     }
@@ -69,7 +74,7 @@ public class UCT_Drafter2 extends SmartDrafter
      * @param unownedCountries The territories left to be picked
      * @return The index of the territory to pick
      */
-    protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
+    public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         long alarm = System.currentTimeMillis() + PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size();
         
@@ -225,9 +230,9 @@ public class UCT_Drafter2 extends SmartDrafter
             // Must be a terminal node, as there are no children
             if (SELFISH)
             {
-                return evaluationFunctionSelfish(node.getDraftState());
+                return evaluationFunctionSelfish(node.getDraftState(), m_evalFunc);
             }
-            return evaluationFunction(node.getDraftState());
+            return evaluationFunction(node.getDraftState(), m_evalFunc);
         }
 
         // Choose a child key at random
@@ -312,9 +317,9 @@ public class UCT_Drafter2 extends SmartDrafter
         {
             if (SELFISH)
             {
-                return evaluationFunctionSelfish(draftState);
+                return evaluationFunctionSelfish(draftState, m_evalFunc);
             }
-            return evaluationFunction(draftState);
+            return evaluationFunction(draftState, m_evalFunc);
         }
 
         // Otherwise, pick a country at random and evaluate
