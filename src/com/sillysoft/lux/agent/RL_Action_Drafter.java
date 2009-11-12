@@ -27,6 +27,7 @@ import java.io.FileNotFoundException;
  */
 public class RL_Action_Drafter extends SmartDrafter
 {
+        protected static String HEURISTIC_DATA_FILENAME;
 
 	/**
 	 * The RL parameters  
@@ -242,7 +243,7 @@ public class RL_Action_Drafter extends SmartDrafter
 	}
 
 	@Override
-	protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
+	public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
 	{
 
 

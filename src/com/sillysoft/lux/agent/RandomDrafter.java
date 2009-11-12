@@ -134,7 +134,7 @@ public class RandomDrafter extends SmartDrafter
      * @return The index of the territory to pick
      */
     @Override
-    protected int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
+    public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         int pick = -1;
         if (ID == 0)
