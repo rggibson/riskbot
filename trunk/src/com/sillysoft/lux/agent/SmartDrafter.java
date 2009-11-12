@@ -303,10 +303,13 @@ public abstract class SmartDrafter extends SmartAgentBase
     }
 
     /**
-     * Calculates the (supervised) machine-learned value for the given state.
-     * @param numInCont numInCon[i] == number of terrs owned in continent i
-     * @param numEnemyNeighbours The number of enemy neighbours
-     * @return The value for this state
+     * Calculates the value of the passed in state to the passed in player, using
+     * the passed in evaluation function.  Given a new evaluation function, just
+     * need to implement a swtich statement case here to get it to work.
+     * @param draftState The current state of the draft (typically a final draft state)
+     * @param player We only evaluate the state in the view of this player
+     * @param eval The evaluation function to execute
+     * @return The value for this state to the passed in player
      */
     protected double getMachineLearnedValue(int[] draftState, int player, EvaluationFunction eval)
     {
