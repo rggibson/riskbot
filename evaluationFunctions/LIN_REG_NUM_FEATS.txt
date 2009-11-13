@@ -1,0 +1,44 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.LinearRegression -S 1 -R 1.0E-8
+Relation:     risk-weka.filters.unsupervised.attribute.Remove-R8
+Instances:    510250
+Attributes:   8
+              Aus
+              SA
+              Afr
+              NA
+              Eur
+              Asia
+              numEnemies
+              value
+Test mode:    10-fold cross-validation
+
+=== Classifier model (full training set) ===
+
+
+Linear Regression Model
+
+value =
+
+      0.0447 * Aus +
+      0.0243 * SA +
+     -0.0099 * Afr +
+      0.0565 * NA +
+      0.0166 * Eur +
+      0.0053 * Asia +
+     -0.011  * numEnemies +
+      0.2787
+
+Time taken to build model: 7.22 seconds
+
+=== Cross-validation ===
+=== Summary ===
+
+Correlation coefficient                  0.1704
+Mean absolute error                      0.4337
+Root mean squared error                  0.4657
+Relative absolute error                 97.0958 %
+Root relative squared error             98.5381 %
+Total Number of Instances           510250     
+

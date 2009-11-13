@@ -1,0 +1,87 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.LinearRegression -S 1 -R 1.0E-8
+Relation:     risk
+Instances:    5133
+Attributes:   29
+              seat
+              Aus
+              SA
+              Afr
+              NA
+              Eur
+              Asia
+              numEnemies
+              numTerrsWithEnemy
+              numFriends
+              AusAfterPlayer
+              SAAfterPlayer
+              AfrAfterPlayer
+              NAAfterPlayer
+              EurAfterPlayer
+              AsiaAfterPlayer
+              numEnemiesAfterPlayer
+              numTerrsWithEnemyAfterPlayer
+              numFriendsAfterPlayer
+              AusBeforePlayer
+              SABeforePlayer
+              AfrBeforePlayer
+              NABeforePlayer
+              EurBeforePlayer
+              AsiaBeforePlayer
+              numEnemiesBeforePlayer
+              numTerrsWithEnemyBeforePlayer
+              numFriendsBeforePlayer
+              value
+Test mode:    10-fold cross-validation
+
+=== Classifier model (full training set) ===
+
+
+Linear Regression Model
+
+value =
+
+      5.577  * seat=1,0 +
+      9.035  * seat=0 +
+      2.2505 * Aus +
+      0.4765 * SA +
+     -2.1602 * Afr +
+      2.0242 * NA +
+     -1.0675 * Eur +
+     -0.7873 * Asia +
+     -1.0463 * numEnemies +
+      0.4221 * numTerrsWithEnemy +
+      0.5093 * numFriends +
+     -0.854  * AusAfterPlayer +
+      0.0936 * SAAfterPlayer +
+      0.6137 * AfrAfterPlayer +
+     -1.0759 * NAAfterPlayer +
+      0.7138 * EurAfterPlayer +
+      0.3612 * AsiaAfterPlayer +
+      0.3218 * numEnemiesAfterPlayer +
+     -0.4234 * numTerrsWithEnemyAfterPlayer +
+     -0.3158 * numFriendsAfterPlayer +
+     -1.3907 * AusBeforePlayer +
+     -0.568  * SABeforePlayer +
+      1.5397 * AfrBeforePlayer +
+     -0.9499 * NABeforePlayer +
+      0.3479 * EurBeforePlayer +
+      0.4266 * AsiaBeforePlayer +
+      0.7245 * numEnemiesBeforePlayer +
+      0.0013 * numTerrsWithEnemyBeforePlayer +
+     -0.1935 * numFriendsBeforePlayer +
+     26.6227
+
+Time taken to build model: 0.31 seconds
+
+=== Cross-validation ===
+=== Summary ===
+
+Correlation coefficient                  0.2751
+Mean absolute error                     28.8301
+Root mean squared error                 33.66  
+Relative absolute error                 93.9422 %
+Root relative squared error             96.1396 %
+Total Number of Instances             5133     
+

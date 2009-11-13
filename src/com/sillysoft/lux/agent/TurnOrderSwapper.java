@@ -18,8 +18,8 @@ public class TurnOrderSwapper extends SmartDrafter
     /**
      * The names of the players that will be drafting
      */
-    protected static final String[] DRAFTERS = {"GreedyDrafter",
-                                                "UCT_Drafter",
+    protected static final String[] DRAFTERS = {"QuoClone",
+                                                "RandomDrafter",
                                                 "UCT_Drafter2"  };
 
     /**
@@ -35,7 +35,8 @@ public class TurnOrderSwapper extends SmartDrafter
     /**
      * The scores for each round
      */
-    protected static ArrayList<Double[]> scores = new ArrayList<Double[]>();
+    protected static ArrayList<Double[]> fantasyScores = new ArrayList<Double[]>();
+    protected static ArrayList<Double[]> actualScores = new ArrayList<Double[]>();
 
     /**
      * The drafter we are currently using
@@ -177,43 +178,56 @@ public class TurnOrderSwapper extends SmartDrafter
         // Store the scores
         if (numGamesPlayed % numOrderings == 0)
         {
-            Double[] newScore = new Double[board.getNumberOfPlayers()];
-            for (int i = 0; i < newScore.length; ++i)
+            Double[] fantasyScore = new Double[board.getNumberOfPlayers()];
+            Double[] actualScore = new Double[board.getNumberOfPlayers()];
+            for (int i = 0; i < board.getNumberOfPlayers(); ++i)
             {
-                newScore[i] = new Double(0.0);
+                fantasyScore[i] = new Double(0.0);
+                actualScore[i] = new Double(0.0);
             }
-            scores.add(newScore);
+            fantasyScores.add(fantasyScore);
+            actualScores.add(actualScore);
         }
-        Double[] currentScoresForRound = scores.get(numGamesPlayed / numOrderings);
+        Double[] currentFanScoresForRound = fantasyScores.get(numGamesPlayed / numOrderings);
+        Double[] currentActualScoresForRound = actualScores.get(numGamesPlayed / numOrderings);
         for (int player = 0; player < board.getNumberOfPlayers(); ++player)
         {
-            // Get the inverse permutation
-            int index = 0;
+            // Get the seat this player is in
+            int seat = 0;
             for (int i = 0; i < board.getNumberOfPlayers(); ++i)
             {
                 if (perm[i] == player)
                 {
-                    index = i;
+                    seat = i;
                     break;
                 }
             }
-            currentScoresForRound[player] += values[index];
+            currentFanScoresForRound[player] += values[seat];
+            currentActualScoresForRound[player] += seat == ID ? 1.0 : 0.0;
         }
-        scores.set(numGamesPlayed / numOrderings, currentScoresForRound);
+        fantasyScores.set(numGamesPlayed / numOrderings, currentFanScoresForRound);
+        actualScores.set(numGamesPlayed / numOrderings, currentActualScoresForRound);
 
         if (numGamesPlayed % numOrderings == numOrderings - 1)
         {
             // Print the results
-            System.out.println("\n\nScores for round " + (numGamesPlayed / numOrderings) + " are:");
+            System.out.println("\n\nFantasy Scores for round " + (numGamesPlayed / numOrderings) + " are:");
             for (int player = 0; player < board.getNumberOfPlayers(); ++player)
             {
-                System.out.println(DRAFTERS[player] + ": " + currentScoresForRound[player]);
+                System.out.println(DRAFTERS[player] + ": " + currentFanScoresForRound[player]);
+            }
+            System.out.println();
+
+            System.out.println("\n\nActual Scores for round " + (numGamesPlayed / numOrderings) + " are:");
+            for (int player = 0; player < board.getNumberOfPlayers(); ++player)
+            {
+                System.out.println(DRAFTERS[player] + ": " + currentActualScoresForRound[player]);
             }
             System.out.println();
 
             // Calculate averages and confidence intervals
             double[] means = new double[board.getNumberOfPlayers()];
-            for (Double[] score : scores)
+            for (Double[] score : fantasyScores)
             {
                 for (int i = 0; i < score.length; ++i)
                 {
@@ -222,11 +236,11 @@ public class TurnOrderSwapper extends SmartDrafter
             }
             for (int i = 0; i < means.length; ++i)
             {
-                means[i] /= scores.size();
+                means[i] /= fantasyScores.size();
             }
 
             double[] standardErrors = new double[board.getNumberOfPlayers()];
-            for (Double[] score : scores)
+            for (Double[] score : fantasyScores)
             {
                 for (int i = 0; i < score.length; ++i)
                 {
@@ -235,15 +249,53 @@ public class TurnOrderSwapper extends SmartDrafter
             }
             for (int i = 0; i < standardErrors.length; ++i)
             {
-                standardErrors[i] /= scores.size();
-                if (scores.size() > 1)
+                standardErrors[i] /= fantasyScores.size();
+                if (fantasyScores.size() > 1)
                 {
-                    standardErrors[i] /= (scores.size() - 1);
+                    standardErrors[i] /= (fantasyScores.size() - 1);
                 }
                 standardErrors[i] = Math.sqrt(standardErrors[i]);
             }
 
-            System.out.println("Average winnings with 95% confidence interval:");
+            System.out.println("Average fantasy winnings with 95% confidence interval:");
+            for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+            {
+                System.out.println(DRAFTERS[i] + ": " + means[i] + " +- " + (1.96 * standardErrors[i]));
+            }
+            System.out.println("\n\n");
+
+            means = new double[board.getNumberOfPlayers()];
+            for (Double[] score : actualScores)
+            {
+                for (int i = 0; i < score.length; ++i)
+                {
+                    means[i] += score[i];
+                }
+            }
+            for (int i = 0; i < means.length; ++i)
+            {
+                means[i] /= actualScores.size();
+            }
+
+            standardErrors = new double[board.getNumberOfPlayers()];
+            for (Double[] score : actualScores)
+            {
+                for (int i = 0; i < score.length; ++i)
+                {
+                    standardErrors[i] += Math.pow(score[i] - means[i], 2);
+                }
+            }
+            for (int i = 0; i < standardErrors.length; ++i)
+            {
+                standardErrors[i] /= actualScores.size();
+                if (actualScores.size() > 1)
+                {
+                    standardErrors[i] /= (actualScores.size() - 1);
+                }
+                standardErrors[i] = Math.sqrt(standardErrors[i]);
+            }
+
+            System.out.println("Average actual winnings with 95% confidence interval:");
             for (int i = 0; i < board.getNumberOfPlayers(); ++i)
             {
                 System.out.println(DRAFTERS[i] + ": " + means[i] + " +- " + (1.96 * standardErrors[i]));

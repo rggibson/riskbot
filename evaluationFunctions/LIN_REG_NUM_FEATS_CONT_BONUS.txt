@@ -1,0 +1,56 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.LinearRegression -S 1 -R 1.0E-8
+Relation:     risk-weka.filters.unsupervised.attribute.Remove-R8-weka.filters.unsupervised.attribute.AddExpression-Ea1/4-NAusAll-weka.filters.unsupervised.attribute.Remove-R9-weka.filters.unsupervised.attribute.AddExpression-Efloor(a1/4)-NAusAll-weka.filters.unsupervised.attribute.AddExpression-Efloor(a2/4)-NSAAll-weka.filters.unsupervised.attribute.AddExpression-Efloor(a3/6)-NSAAll-weka.filters.unsupervised.attribute.Remove-R11-weka.filters.unsupervised.attribute.AddExpression-Efloor(a3/6)-NAfrAll-weka.filters.unsupervised.attribute.AddExpression-Efloor(a4/9)-NNAAll-weka.filters.unsupervised.attribute.AddExpression-Efloor(a5/7)-NEurAll-weka.filters.unsupervised.attribute.AddExpression-Efloor(a6/12)-NAsiaAll-weka.filters.unsupervised.instance.Randomize-S42-weka.filters.unsupervised.attribute.Copy-R8-weka.filters.unsupervised.attribute.Remove-R8-weka.filters.unsupervised.attribute.Discretize-D-B2-M-1.0-R8-13
+Instances:    510250
+Attributes:   14
+              Aus
+              SA
+              Afr
+              NA
+              Eur
+              Asia
+              numEnemies
+              AusAll
+              SAAll
+              AfrAll
+              NAAll
+              EurAll
+              AsiaAll
+              Copy of value
+Test mode:    10-fold cross-validation
+
+=== Classifier model (full training set) ===
+
+
+Linear Regression Model
+
+Copy of value =
+
+      0.0349 * Aus +
+      0.013  * SA +
+     -0.0212 * Afr +
+      0.048  * NA +
+      0.0055 * Eur +
+     -0.0044 * Asia +
+     -0.0103 * numEnemies +
+      0.0062 * AusAll='(0.5-inf)' +
+      0.059  * SAAll='(0.5-inf)' +
+      0.1411 * AfrAll='(0.5-inf)' +
+     -0.0608 * NAAll='(0.5-inf)' +
+      0.1426 * EurAll='(0.5-inf)' +
+     -0.0561 * AsiaAll='(-inf-0.5]' +
+      0.4593
+
+Time taken to build model: 8.83 seconds
+
+=== Cross-validation ===
+=== Summary ===
+
+Correlation coefficient                  0.173 
+Mean absolute error                      0.4333
+Root mean squared error                  0.4655
+Relative absolute error                 97.005  %
+Root relative squared error             98.4923 %
+Total Number of Instances           510250     
+
