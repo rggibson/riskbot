@@ -41,7 +41,7 @@ public class UCT_Drafter2 extends SmartDrafter
     /**
      * The evaluation function to use
      */
-    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_MORE_FEATS;
 
     /**
      * The transposition table

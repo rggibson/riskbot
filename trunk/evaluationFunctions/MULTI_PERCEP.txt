@@ -1,0 +1,559 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.MultilayerPerceptron -L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a -I
+Relation:     risk
+Instances:    5133
+Attributes:   29
+              seat
+              Aus
+              SA
+              Afr
+              NA
+              Eur
+              Asia
+              numEnemies
+              numTerrsWithEnemy
+              numFriends
+              AusAfterPlayer
+              SAAfterPlayer
+              AfrAfterPlayer
+              NAAfterPlayer
+              EurAfterPlayer
+              AsiaAfterPlayer
+              numEnemiesAfterPlayer
+              numTerrsWithEnemyAfterPlayer
+              numFriendsAfterPlayer
+              AusBeforePlayer
+              SABeforePlayer
+              AfrBeforePlayer
+              NABeforePlayer
+              EurBeforePlayer
+              AsiaBeforePlayer
+              numEnemiesBeforePlayer
+              numTerrsWithEnemyBeforePlayer
+              numFriendsBeforePlayer
+              value
+Test mode:    2-fold cross-validation
+
+=== Classifier model (full training set) ===
+
+Linear Node 0
+    Inputs    Weights
+    Threshold    -0.2418952129415528
+    Node 1    0.06842052153706206
+    Node 2    -0.6598817980057807
+    Node 3    -0.2178002305489157
+    Node 4    0.09895477412738435
+    Node 5    0.03533357876814341
+    Node 6    -0.750145628638688
+    Node 7    0.11621985618396947
+    Node 8    -0.03470353295998997
+    Node 9    -0.12467388763657558
+    Node 10    0.0010723498357238911
+    Node 11    -0.734972486896377
+    Node 12    0.11822205746603832
+    Node 13    -0.46910500380200004
+    Node 14    0.23511318626201855
+    Node 15    0.013885868857258144
+Sigmoid Node 1
+    Inputs    Weights
+    Threshold    0.007495805018294353
+    Attrib seat=0    0.02665943178910042
+    Attrib seat=1    0.020520520308640842
+    Attrib seat=2    0.02584445922195377
+    Attrib Aus    0.03977672608302195
+    Attrib SA    0.031308414221551596
+    Attrib Afr    -0.08337261490246663
+    Attrib NA    -0.10138919733305596
+    Attrib Eur    -0.05342847823575684
+    Attrib Asia    -0.05790857862920392
+    Attrib numEnemies    -0.20890702673153638
+    Attrib numTerrsWithEnemy    -0.1203545835183931
+    Attrib numFriends    -0.23372844559015496
+    Attrib AusAfterPlayer    0.026148766058547716
+    Attrib SAAfterPlayer    0.029185503998161715
+    Attrib AfrAfterPlayer    -0.01855629644105996
+    Attrib NAAfterPlayer    0.010060635459723917
+    Attrib EurAfterPlayer    -0.07450027839449815
+    Attrib AsiaAfterPlayer    -0.02937697727473033
+    Attrib numEnemiesAfterPlayer    -0.35391703451621215
+    Attrib numTerrsWithEnemyAfterPlayer    -0.13101160207478277
+    Attrib numFriendsAfterPlayer    -0.08062946253925193
+    Attrib AusBeforePlayer    -0.06701531925013793
+    Attrib SABeforePlayer    -0.03001079885546021
+    Attrib AfrBeforePlayer    -0.010081766560440965
+    Attrib NABeforePlayer    -0.052530456303398226
+    Attrib EurBeforePlayer    -0.08625662058071225
+    Attrib AsiaBeforePlayer    -0.02530335740625531
+    Attrib numEnemiesBeforePlayer    -0.30085585621796884
+    Attrib numTerrsWithEnemyBeforePlayer    -0.18269112007895277
+    Attrib numFriendsBeforePlayer    -0.24142879523947827
+Sigmoid Node 2
+    Inputs    Weights
+    Threshold    -0.00614440745097041
+    Attrib seat=0    -0.042883889348736055
+    Attrib seat=1    0.03433681491812879
+    Attrib seat=2    -0.01641146166870897
+    Attrib Aus    0.03840640234927363
+    Attrib SA    -0.007633610975838743
+    Attrib Afr    -0.14663085775852386
+    Attrib NA    -0.1360040869671424
+    Attrib Eur    0.023796498553584976
+    Attrib Asia    -0.030529463960630065
+    Attrib numEnemies    -0.5121289769753631
+    Attrib numTerrsWithEnemy    -0.31963473038460055
+    Attrib numFriends    -0.3378091794229463
+    Attrib AusAfterPlayer    -0.061422846905285336
+    Attrib SAAfterPlayer    -0.02262221604963264
+    Attrib AfrAfterPlayer    -0.06674604921006363
+    Attrib NAAfterPlayer    -0.04212611392317038
+    Attrib EurAfterPlayer    -0.11297719644064631
+    Attrib AsiaAfterPlayer    -0.08896018158636058
+    Attrib numEnemiesAfterPlayer    -0.6730854420157666
+    Attrib numTerrsWithEnemyAfterPlayer    -0.33419516173076746
+    Attrib numFriendsAfterPlayer    -0.17684686452168108
+    Attrib AusBeforePlayer    -0.026428311648033206
+    Attrib SABeforePlayer    -0.03904762550973825
+    Attrib AfrBeforePlayer    0.04077797276558278
+    Attrib NABeforePlayer    -0.07235614773629646
+    Attrib EurBeforePlayer    -0.10910739237080493
+    Attrib AsiaBeforePlayer    -0.07886253075193926
+    Attrib numEnemiesBeforePlayer    -0.5828114366468097
+    Attrib numTerrsWithEnemyBeforePlayer    -0.3425569174628933
+    Attrib numFriendsBeforePlayer    -0.43251363356684
+Sigmoid Node 3
+    Inputs    Weights
+    Threshold    -0.167032985972557
+    Attrib seat=0    0.01429680851075489
+    Attrib seat=1    -0.04071968889635283
+    Attrib seat=2    -0.11256870066308278
+    Attrib Aus    -0.12140670065645591
+    Attrib SA    -0.2551314244007398
+    Attrib Afr    -0.2504403325088416
+    Attrib NA    -0.4250621674835631
+    Attrib Eur    -0.2818016873252758
+    Attrib Asia    -0.5891834955086478
+    Attrib numEnemies    -3.3807776563159573
+    Attrib numTerrsWithEnemy    -1.8996677176009007
+    Attrib numFriends    -1.6022629183897674
+    Attrib AusAfterPlayer    -0.11350902400767203
+    Attrib SAAfterPlayer    -0.0939689945158336
+    Attrib AfrAfterPlayer    -0.24922666314890513
+    Attrib NAAfterPlayer    -0.4216264584917516
+    Attrib EurAfterPlayer    -0.2890819275314649
+    Attrib AsiaAfterPlayer    -0.6330222754565719
+    Attrib numEnemiesAfterPlayer    -3.2516048994210975
+    Attrib numTerrsWithEnemyAfterPlayer    -1.6125534290269092
+    Attrib numFriendsAfterPlayer    -3.2236379433075193
+    Attrib AusBeforePlayer    -0.3174424514610028
+    Attrib SABeforePlayer    -0.13341355550052428
+    Attrib AfrBeforePlayer    -0.2730827847333513
+    Attrib NABeforePlayer    -0.38184659689194245
+    Attrib EurBeforePlayer    -0.43356660545086284
+    Attrib AsiaBeforePlayer    -0.37970824721096036
+    Attrib numEnemiesBeforePlayer    -3.098716744334666
+    Attrib numTerrsWithEnemyBeforePlayer    -1.8754641194457424
+    Attrib numFriendsBeforePlayer    -1.9085329010153638
+Sigmoid Node 4
+    Inputs    Weights
+    Threshold    -0.04134733494753009
+    Attrib seat=0    -0.045713505206203355
+    Attrib seat=1    -0.03364544709347513
+    Attrib seat=2    0.02836431073866567
+    Attrib Aus    3.299138435571976E-4
+    Attrib SA    0.02034464340679752
+    Attrib Afr    -0.04615364312591966
+    Attrib NA    -0.004144728006437404
+    Attrib Eur    0.040483268496168186
+    Attrib Asia    -0.03362830220645347
+    Attrib numEnemies    -0.07726558575047024
+    Attrib numTerrsWithEnemy    -0.09937722031926903
+    Attrib numFriends    -0.14728548560615984
+    Attrib AusAfterPlayer    -0.020236862602810664
+    Attrib SAAfterPlayer    0.004753102857534769
+    Attrib AfrAfterPlayer    -0.03942131399656699
+    Attrib NAAfterPlayer    0.004063082334757847
+    Attrib EurAfterPlayer    -0.004422948942148155
+    Attrib AsiaAfterPlayer    -0.04112965628905525
+    Attrib numEnemiesAfterPlayer    -0.07408599088078742
+    Attrib numTerrsWithEnemyAfterPlayer    -0.11451748567456908
+    Attrib numFriendsAfterPlayer    -0.061950103106861984
+    Attrib AusBeforePlayer    -0.05919692572132085
+    Attrib SABeforePlayer    0.009787983212353945
+    Attrib AfrBeforePlayer    -0.05305910483232778
+    Attrib NABeforePlayer    0.017525855094363045
+    Attrib EurBeforePlayer    -0.05108635992717039
+    Attrib AsiaBeforePlayer    -0.020415784197735126
+    Attrib numEnemiesBeforePlayer    -0.1282270929520052
+    Attrib numTerrsWithEnemyBeforePlayer    -0.11330906863160232
+    Attrib numFriendsBeforePlayer    -0.06267912562823702
+Sigmoid Node 5
+    Inputs    Weights
+    Threshold    0.030380695641043728
+    Attrib seat=0    -2.2165398848470873E-4
+    Attrib seat=1    0.03410794408863304
+    Attrib seat=2    -0.06656519463440946
+    Attrib Aus    -0.017032970222440557
+    Attrib SA    -0.010684951010433937
+    Attrib Afr    -0.0025722893199184305
+    Attrib NA    0.10720589161178043
+    Attrib Eur    -0.04954898183007297
+    Attrib Asia    -0.07272086611711535
+    Attrib numEnemies    -0.24201170160723684
+    Attrib numTerrsWithEnemy    -0.062257183133716566
+    Attrib numFriends    -0.0020655417016267417
+    Attrib AusAfterPlayer    -0.019694216048470263
+    Attrib SAAfterPlayer    -0.02447815107204546
+    Attrib AfrAfterPlayer    0.01965109127074541
+    Attrib NAAfterPlayer    -0.09748360910864384
+    Attrib EurAfterPlayer    0.04092594985854934
+    Attrib AsiaAfterPlayer    0.0525348589629659
+    Attrib numEnemiesAfterPlayer    -0.012890046991121337
+    Attrib numTerrsWithEnemyAfterPlayer    -0.08855035007944703
+    Attrib numFriendsAfterPlayer    -0.21727241992728513
+    Attrib AusBeforePlayer    -0.04221284598334243
+    Attrib SABeforePlayer    0.028001748767284167
+    Attrib AfrBeforePlayer    -0.0035059675696700737
+    Attrib NABeforePlayer    -0.025612558046783564
+    Attrib EurBeforePlayer    -0.0201476585576776
+    Attrib AsiaBeforePlayer    -0.020594074535596738
+    Attrib numEnemiesBeforePlayer    -0.14157909274775185
+    Attrib numTerrsWithEnemyBeforePlayer    -0.040002045497484075
+    Attrib numFriendsBeforePlayer    -0.24312922914006074
+Sigmoid Node 6
+    Inputs    Weights
+    Threshold    -0.028478869416943622
+    Attrib seat=0    0.00523195069652951
+    Attrib seat=1    -0.032242549918065376
+    Attrib seat=2    0.0030231983892088803
+    Attrib Aus    9.325724166235827E-4
+    Attrib SA    0.021745465796996096
+    Attrib Afr    -0.05155727257980969
+    Attrib NA    -0.01662419840144894
+    Attrib Eur    -0.048213944117202666
+    Attrib Asia    -0.026067876197969155
+    Attrib numEnemies    -0.2541642888714773
+    Attrib numTerrsWithEnemy    -0.13628407963437492
+    Attrib numFriends    -0.12675203440831143
+    Attrib AusAfterPlayer    0.013565182116277143
+    Attrib SAAfterPlayer    -0.023460965294040445
+    Attrib AfrAfterPlayer    -0.03422386652923424
+    Attrib NAAfterPlayer    0.02658067335704684
+    Attrib EurAfterPlayer    -0.03233249673912448
+    Attrib AsiaAfterPlayer    -0.06008416001835134
+    Attrib numEnemiesAfterPlayer    -0.3399854459850948
+    Attrib numTerrsWithEnemyAfterPlayer    -0.19105765778259373
+    Attrib numFriendsAfterPlayer    -0.10195093144340599
+    Attrib AusBeforePlayer    0.019673097512246836
+    Attrib SABeforePlayer    -0.056321065972758884
+    Attrib AfrBeforePlayer    -0.0022359875530551785
+    Attrib NABeforePlayer    -0.04062160331236936
+    Attrib EurBeforePlayer    -0.030285839897230205
+    Attrib AsiaBeforePlayer    -0.05599633343767193
+    Attrib numEnemiesBeforePlayer    -0.299290077488538
+    Attrib numTerrsWithEnemyBeforePlayer    -0.1463835060325342
+    Attrib numFriendsBeforePlayer    -0.22293659045966566
+Sigmoid Node 7
+    Inputs    Weights
+    Threshold    -0.0346637796698109
+    Attrib seat=0    0.005558483484833126
+    Attrib seat=1    0.03802351841541139
+    Attrib seat=2    -0.029660980577792963
+    Attrib Aus    -0.0023427720221000166
+    Attrib SA    -0.0606005514588058
+    Attrib Afr    -0.07762175450169011
+    Attrib NA    -0.11035648689564886
+    Attrib Eur    0.02368963982176262
+    Attrib Asia    -0.02141739778990781
+    Attrib numEnemies    -0.3788862020856001
+    Attrib numTerrsWithEnemy    -0.2206519079901255
+    Attrib numFriends    -0.25251081661599994
+    Attrib AusAfterPlayer    -0.06843222342966485
+    Attrib SAAfterPlayer    -0.03304576592039899
+    Attrib AfrAfterPlayer    -0.03230030752764067
+    Attrib NAAfterPlayer    -0.04964746979720153
+    Attrib EurAfterPlayer    -0.027127433814240653
+    Attrib AsiaAfterPlayer    -0.049327586256961556
+    Attrib numEnemiesAfterPlayer    -0.4427288066224397
+    Attrib numTerrsWithEnemyAfterPlayer    -0.2517338965049665
+    Attrib numFriendsAfterPlayer    -0.19170381173648532
+    Attrib AusBeforePlayer    -0.03933582986871949
+    Attrib SABeforePlayer    -0.04337078699085394
+    Attrib AfrBeforePlayer    0.008408841973261447
+    Attrib NABeforePlayer    -0.06522865067703526
+    Attrib EurBeforePlayer    -0.04901242381706142
+    Attrib AsiaBeforePlayer    -0.050060659418957536
+    Attrib numEnemiesBeforePlayer    -0.4582577941889027
+    Attrib numTerrsWithEnemyBeforePlayer    -0.2022141266092616
+    Attrib numFriendsBeforePlayer    -0.3542047668420444
+Sigmoid Node 8
+    Inputs    Weights
+    Threshold    -0.03750489325189818
+    Attrib seat=0    0.008557666577253676
+    Attrib seat=1    0.0030624412128101427
+    Attrib seat=2    0.07121767636382717
+    Attrib Aus    -0.010981809749478466
+    Attrib SA    -0.006293179100285858
+    Attrib Afr    0.05307241898352077
+    Attrib NA    -0.09214070468342356
+    Attrib Eur    0.010023529794061023
+    Attrib Asia    0.005272612198485238
+    Attrib numEnemies    -0.11036901569561217
+    Attrib numTerrsWithEnemy    -0.11387431561278606
+    Attrib numFriends    -0.29780124450432105
+    Attrib AusAfterPlayer    -0.055916045486288805
+    Attrib SAAfterPlayer    0.028727277026609793
+    Attrib AfrAfterPlayer    0.009756913126612064
+    Attrib NAAfterPlayer    0.04590011248445583
+    Attrib EurAfterPlayer    -0.05889569931610457
+    Attrib AsiaAfterPlayer    -0.06384732327402698
+    Attrib numEnemiesAfterPlayer    -0.2271204150200802
+    Attrib numTerrsWithEnemyAfterPlayer    -0.15596426347849743
+    Attrib numFriendsAfterPlayer    -0.015458817772786002
+    Attrib AusBeforePlayer    -4.1057737479319124E-4
+    Attrib SABeforePlayer    -0.05280665146725816
+    Attrib AfrBeforePlayer    -0.058155646672825786
+    Attrib NABeforePlayer    -0.0441519517014915
+    Attrib EurBeforePlayer    0.029266504331151265
+    Attrib AsiaBeforePlayer    -0.0673293802129938
+    Attrib numEnemiesBeforePlayer    -0.20488035213042924
+    Attrib numTerrsWithEnemyBeforePlayer    -0.11493621893271229
+    Attrib numFriendsBeforePlayer    -0.03475698408771126
+Sigmoid Node 9
+    Inputs    Weights
+    Threshold    -0.2151928975109296
+    Attrib seat=0    0.04208913555276378
+    Attrib seat=1    0.028787835115692925
+    Attrib seat=2    -0.19397464631965694
+    Attrib Aus    -0.19395780191298118
+    Attrib SA    -0.2980804178774181
+    Attrib Afr    -0.31541206671871985
+    Attrib NA    -0.49172893041626775
+    Attrib Eur    -0.32874233730631297
+    Attrib Asia    -0.6507461479997744
+    Attrib numEnemies    -4.416813838517807
+    Attrib numTerrsWithEnemy    -2.478842907751604
+    Attrib numFriends    -2.127545104412884
+    Attrib AusAfterPlayer    -0.13298130181748474
+    Attrib SAAfterPlayer    -0.16349808097084004
+    Attrib AfrAfterPlayer    -0.36029981864057303
+    Attrib NAAfterPlayer    -0.5157743996778758
+    Attrib EurAfterPlayer    -0.3680965301466492
+    Attrib AsiaAfterPlayer    -0.9074432847899924
+    Attrib numEnemiesAfterPlayer    -4.213351011773428
+    Attrib numTerrsWithEnemyAfterPlayer    -2.1203268141842697
+    Attrib numFriendsAfterPlayer    -4.160774284698532
+    Attrib AusBeforePlayer    -0.339779891217095
+    Attrib SABeforePlayer    -0.16923133599066573
+    Attrib AfrBeforePlayer    -0.33807043615958476
+    Attrib NABeforePlayer    -0.5204266571571052
+    Attrib EurBeforePlayer    -0.48846637161450285
+    Attrib AsiaBeforePlayer    -0.47708604135232247
+    Attrib numEnemiesBeforePlayer    -3.9987280888664807
+    Attrib numTerrsWithEnemyBeforePlayer    -2.4846735224918284
+    Attrib numFriendsBeforePlayer    -2.4486902078689248
+Sigmoid Node 10
+    Inputs    Weights
+    Threshold    -0.11479234778806544
+    Attrib seat=0    -0.026236707880119687
+    Attrib seat=1    0.00872713262641691
+    Attrib seat=2    -0.10733187546688847
+    Attrib Aus    -0.13836071173843603
+    Attrib SA    -0.28132298576677006
+    Attrib Afr    -0.2656727097545483
+    Attrib NA    -0.3478262085050718
+    Attrib Eur    -0.21947356443946456
+    Attrib Asia    -0.5499408781130801
+    Attrib numEnemies    -3.2145539262951033
+    Attrib numTerrsWithEnemy    -1.8033870979704596
+    Attrib numFriends    -1.5430551518688964
+    Attrib AusAfterPlayer    -0.09485672719327928
+    Attrib SAAfterPlayer    -0.17821188558411627
+    Attrib AfrAfterPlayer    -0.26685298772796145
+    Attrib NAAfterPlayer    -0.3583355664130087
+    Attrib EurAfterPlayer    -0.2496673889171947
+    Attrib AsiaAfterPlayer    -0.6023818024435087
+    Attrib numEnemiesAfterPlayer    -3.122981596575009
+    Attrib numTerrsWithEnemyAfterPlayer    -1.5993566654219282
+    Attrib numFriendsAfterPlayer    -3.067354677632469
+    Attrib AusBeforePlayer    -0.2723146595546971
+    Attrib SABeforePlayer    -0.14217125394576868
+    Attrib AfrBeforePlayer    -0.22210067322066696
+    Attrib NABeforePlayer    -0.3452148715880099
+    Attrib EurBeforePlayer    -0.35461610276439176
+    Attrib AsiaBeforePlayer    -0.34799175647715014
+    Attrib numEnemiesBeforePlayer    -2.9396731717945275
+    Attrib numTerrsWithEnemyBeforePlayer    -1.7889169235461073
+    Attrib numFriendsBeforePlayer    -1.8159469751387176
+Sigmoid Node 11
+    Inputs    Weights
+    Threshold    -0.02318107582964527
+    Attrib seat=0    -0.01674868474440235
+    Attrib seat=1    -0.04455977511408726
+    Attrib seat=2    -0.044827344065937524
+    Attrib Aus    0.048928757910664894
+    Attrib SA    -0.035900836391524374
+    Attrib Afr    -0.0574166948856441
+    Attrib NA    0.0015535645114028776
+    Attrib Eur    -0.02083876935599458
+    Attrib Asia    -0.011888787630024477
+    Attrib numEnemies    -0.16294957496687842
+    Attrib numTerrsWithEnemy    -0.17039754591558776
+    Attrib numFriends    -0.15455183929795818
+    Attrib AusAfterPlayer    -0.04610923070015959
+    Attrib SAAfterPlayer    0.035560346945334505
+    Attrib AfrAfterPlayer    0.020599759988854147
+    Attrib NAAfterPlayer    -0.029671374941475148
+    Attrib EurAfterPlayer    -0.025905848018722807
+    Attrib AsiaAfterPlayer    -0.03069786966629964
+    Attrib numEnemiesAfterPlayer    -0.25821041152932495
+    Attrib numTerrsWithEnemyAfterPlayer    -0.102527841888514
+    Attrib numFriendsAfterPlayer    -0.046108411859539136
+    Attrib AusBeforePlayer    0.006108934791408337
+    Attrib SABeforePlayer    -0.050622626630332054
+    Attrib AfrBeforePlayer    -0.04779040913302219
+    Attrib NABeforePlayer    -0.03880438879277248
+    Attrib EurBeforePlayer    0.009554761651564716
+    Attrib AsiaBeforePlayer    -0.031294281901650726
+    Attrib numEnemiesBeforePlayer    -0.21999617360783622
+    Attrib numTerrsWithEnemyBeforePlayer    -0.12188862948655604
+    Attrib numFriendsBeforePlayer    -0.1469470603605063
+Sigmoid Node 12
+    Inputs    Weights
+    Threshold    0.004539680153791329
+    Attrib seat=0    -0.011008344578648712
+    Attrib seat=1    -0.04348520953730304
+    Attrib seat=2    -0.0022853783529034983
+    Attrib Aus    -0.017350858529281588
+    Attrib SA    -0.011177835634696225
+    Attrib Afr    -0.014007313963546621
+    Attrib NA    0.021670165181276315
+    Attrib Eur    -0.013803280705404333
+    Attrib Asia    -0.06098880817739927
+    Attrib numEnemies    -0.075380561694964
+    Attrib numTerrsWithEnemy    -0.07811231812629854
+    Attrib numFriends    -0.0769964748920462
+    Attrib AusAfterPlayer    -0.034893338944226235
+    Attrib SAAfterPlayer    -0.037036693482200934
+    Attrib AfrAfterPlayer    -0.02642912015295476
+    Attrib NAAfterPlayer    0.002606906609428166
+    Attrib EurAfterPlayer    -0.0036128962155562235
+    Attrib AsiaAfterPlayer    -0.05868075175098298
+    Attrib numEnemiesAfterPlayer    -0.12087771171398383
+    Attrib numTerrsWithEnemyAfterPlayer    -0.07912619189899232
+    Attrib numFriendsAfterPlayer    -0.022499820470304924
+    Attrib AusBeforePlayer    -0.007320731183588527
+    Attrib SABeforePlayer    -0.04145657234199009
+    Attrib AfrBeforePlayer    -0.013414009212890288
+    Attrib NABeforePlayer    -0.05297797592850818
+    Attrib EurBeforePlayer    -0.05433838132508801
+    Attrib AsiaBeforePlayer    0.026603292491379032
+    Attrib numEnemiesBeforePlayer    -0.12587431623620365
+    Attrib numTerrsWithEnemyBeforePlayer    -0.017345889864388453
+    Attrib numFriendsBeforePlayer    -0.14934496885475865
+Sigmoid Node 13
+    Inputs    Weights
+    Threshold    0.011196264563322388
+    Attrib seat=0    0.014062746518543232
+    Attrib seat=1    -0.0037707377656038083
+    Attrib seat=2    3.5217625210657357E-4
+    Attrib Aus    0.053438998459642485
+    Attrib SA    0.010267130720161393
+    Attrib Afr    0.07785663178764153
+    Attrib NA    -0.048311575836710044
+    Attrib Eur    0.03724486422962278
+    Attrib Asia    0.15048463482285543
+    Attrib numEnemies    0.40289966512801884
+    Attrib numTerrsWithEnemy    0.17309893951413685
+    Attrib numFriends    0.1969856008519785
+    Attrib AusAfterPlayer    -0.01051187688560942
+    Attrib SAAfterPlayer    0.01551137267261116
+    Attrib AfrAfterPlayer    0.04239953443455974
+    Attrib NAAfterPlayer    0.11773280966971073
+    Attrib EurAfterPlayer    0.05324740104861478
+    Attrib AsiaAfterPlayer    0.03186153974133815
+    Attrib numEnemiesAfterPlayer    0.3628897759798117
+    Attrib numTerrsWithEnemyAfterPlayer    0.2038623323963771
+    Attrib numFriendsAfterPlayer    0.4789348438555731
+    Attrib AusBeforePlayer    0.055671956621569166
+    Attrib SABeforePlayer    -0.011741290615267692
+    Attrib AfrBeforePlayer    0.02106056540320324
+    Attrib NABeforePlayer    0.006973332681714483
+    Attrib EurBeforePlayer    0.05540567838438169
+    Attrib AsiaBeforePlayer    0.031683961513774825
+    Attrib numEnemiesBeforePlayer    0.29372779206148264
+    Attrib numTerrsWithEnemyBeforePlayer    0.16247011031035852
+    Attrib numFriendsBeforePlayer    0.28422719776690447
+Sigmoid Node 14
+    Inputs    Weights
+    Threshold    -0.08001067299901563
+    Attrib seat=0    0.0340287659914003
+    Attrib seat=1    -0.023437027722919404
+    Attrib seat=2    -0.03303749298779403
+    Attrib Aus    -0.024754655734327245
+    Attrib SA    -0.09569392500790666
+    Attrib Afr    -0.1028088128661788
+    Attrib NA    -0.13814517635966897
+    Attrib Eur    -0.05156478483853748
+    Attrib Asia    -0.19144707676147749
+    Attrib numEnemies    -1.1384162652147995
+    Attrib numTerrsWithEnemy    -0.6128536018646459
+    Attrib numFriends    -0.4974625693833075
+    Attrib AusAfterPlayer    -0.083069788574124
+    Attrib SAAfterPlayer    -0.05835723353446323
+    Attrib AfrAfterPlayer    -0.13289861799304525
+    Attrib NAAfterPlayer    -0.09814861316713286
+    Attrib EurAfterPlayer    -0.09520675651522287
+    Attrib AsiaAfterPlayer    -0.2487022239374039
+    Attrib numEnemiesAfterPlayer    -1.091994581942755
+    Attrib numTerrsWithEnemyAfterPlayer    -0.5083041676786881
+    Attrib numFriendsAfterPlayer    -1.108308807612544
+    Attrib AusBeforePlayer    -0.07215993345120866
+    Attrib SABeforePlayer    -0.09523426331574147
+    Attrib AfrBeforePlayer    -0.049431342662172764
+    Attrib NABeforePlayer    -0.12889813931596852
+    Attrib EurBeforePlayer    -0.1539140784129827
+    Attrib AsiaBeforePlayer    -0.16804907568843808
+    Attrib numEnemiesBeforePlayer    -1.0106890769753794
+    Attrib numTerrsWithEnemyBeforePlayer    -0.5928735029652422
+    Attrib numFriendsBeforePlayer    -0.5914280447838994
+Sigmoid Node 15
+    Inputs    Weights
+    Threshold    -0.0594926410306882
+    Attrib seat=0    0.006441350563157805
+    Attrib seat=1    -0.03173526790998279
+    Attrib seat=2    -0.0328975888167486
+    Attrib Aus    0.01918341579799733
+    Attrib SA    -0.034211232239917684
+    Attrib Afr    -0.023674928483662927
+    Attrib NA    -0.10191063953333546
+    Attrib Eur    -0.013006432734346509
+    Attrib Asia    -0.0033879362361383955
+    Attrib numEnemies    -0.17470986335050728
+    Attrib numTerrsWithEnemy    -0.13915419394147263
+    Attrib numFriends    -0.21284344072997466
+    Attrib AusAfterPlayer    0.014963717277770924
+    Attrib SAAfterPlayer    -0.04263191649513286
+    Attrib AfrAfterPlayer    0.0036638989844569405
+    Attrib NAAfterPlayer    -0.04208040097338621
+    Attrib EurAfterPlayer    -0.009227081471001167
+    Attrib AsiaAfterPlayer    -0.02462515906425567
+    Attrib numEnemiesAfterPlayer    -0.24533578213602977
+    Attrib numTerrsWithEnemyAfterPlayer    -0.19389912380257732
+    Attrib numFriendsAfterPlayer    -0.14282587651946899
+    Attrib AusBeforePlayer    0.005375900307045866
+    Attrib SABeforePlayer    0.027203038317282102
+    Attrib AfrBeforePlayer    0.0016060762057289052
+    Attrib NABeforePlayer    0.004682473883420704
+    Attrib EurBeforePlayer    -0.007816172917786687
+    Attrib AsiaBeforePlayer    -0.02953306167874969
+    Attrib numEnemiesBeforePlayer    -0.2645115613851365
+    Attrib numTerrsWithEnemyBeforePlayer    -0.13299013051214528
+    Attrib numFriendsBeforePlayer    -0.26313803872629915
+Class 
+    Input
+    Node 0
+
+
+Time taken to build model: 128.52 seconds
+

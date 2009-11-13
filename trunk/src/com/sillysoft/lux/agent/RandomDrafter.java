@@ -31,15 +31,25 @@ public class RandomDrafter extends SmartDrafter
     private static int[][] finalDraftStates;
 
     /**
-     * After every this many games, we save the data to file
+     * The number of wins for each player, for each draft
      */
-    private static final int SAVE_AFTER_EVERY = 250;
+    private static int[][] finalDraftWins;
+
+    /**
+     * After every this many drafts, we save the data to file
+     */
+    private static final int SAVE_AFTER_EVERY = 1;
 
     /**
      * The maximum number of games of data we want to save (so that the file
      * doesn't explode in size)
      */
-    private static final int MAX_NUM_GAMES = 0;
+    private static final int MAX_NUM_DRAFTS = 0;
+
+    /**
+     * The number of games we run with the same drafting
+     */
+    private static final int NUM_GAMES_PER_DRAFT = 1;
 
     /**
      * Continent which we want to reserve some picks for player 0
@@ -83,7 +93,11 @@ public class RandomDrafter extends SmartDrafter
         // Create the final draft state, if necessary
         if (finalDraftStates == null)
         {
-            finalDraftStates = new int[SAVE_AFTER_EVERY][countries.length + 1];
+            finalDraftStates = new int[SAVE_AFTER_EVERY][countries.length];
+        }
+        if (finalDraftWins == null)
+        {
+            finalDraftWins = new int[SAVE_AFTER_EVERY][board.getNumberOfPlayers()];
         }
 
         // Initialize reserved territories
@@ -137,54 +151,76 @@ public class RandomDrafter extends SmartDrafter
     public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
         int pick = -1;
-        if (ID == 0)
+        if (numGamesPlayed % NUM_GAMES_PER_DRAFT == 0)
         {
-            // Special reserved territories
-            if (reservedTerrs.isEmpty())
+            if (RESERVED_CONTINENT != -1)
             {
-                // Just make sure that we don't pick from the anti reserved list
-                ArrayList<Integer> availablePicks = new ArrayList<Integer>();
-                for (Integer terr : unownedCountries)
+                if (ID == 0)
                 {
-                    if (!antiReservedTerrs.contains(terr))
+                    // Special reserved territories
+                    if (reservedTerrs.isEmpty())
                     {
-                        availablePicks.add(terr);
+                        // Just make sure that we don't pick from the anti reserved list
+                        ArrayList<Integer> availablePicks = new ArrayList<Integer>();
+                        for (Integer terr : unownedCountries)
+                        {
+                            if (!antiReservedTerrs.contains(terr))
+                            {
+                                availablePicks.add(terr);
+                            }
+                        }
+                        if (availablePicks.isEmpty())
+                        {
+                            assert(false);
+                        }
+                        pick = availablePicks.get((int)(Math.random()*availablePicks.size()));
+                    }
+                    else
+                    {
+                        pick = reservedTerrs.remove(0);
                     }
                 }
-                if (availablePicks.isEmpty())
+                else
                 {
-                    assert(false);
+                    // Need to check if we have to pick from the anti-reserved list
+                    int maxNumPicksLeftForZero = unownedCountries.size() / board.getNumberOfPlayers() + 1;
+                    int numAvailablePicksForZero = unownedCountries.size() - antiReservedTerrs.size();
+
+                    if (numAvailablePicksForZero < maxNumPicksLeftForZero)
+                    {
+                        assert(false);
+                    }
+
+                    if (numAvailablePicksForZero == maxNumPicksLeftForZero)
+                    {
+                        // Must choose from anti list
+                        pick = antiReservedTerrs.remove((int)(Math.random()*antiReservedTerrs.size()));
+                    }
+                    else
+                    {
+                        // Pick from anywhere
+                        pick = unownedCountries.get((int)(Math.random()*unownedCountries.size()));
+                        if (antiReservedTerrs.contains((Integer) pick))
+                        {
+                            antiReservedTerrs.remove((Integer) pick);
+                        }
+                    }
                 }
-                pick = availablePicks.get((int)(Math.random()*availablePicks.size()));
             }
             else
             {
-                pick = reservedTerrs.remove(0);
+                pick = unownedCountries.get((int)(Math.random()*unownedCountries.size()));
             }
         }
         else
         {
-            // Need to check if we have to pick from the anti-reserved list
-            int maxNumPicksLeftForZero = unownedCountries.size() / board.getNumberOfPlayers() + 1;
-            int numAvailablePicksForZero = unownedCountries.size() - antiReservedTerrs.size();
-
-            if (numAvailablePicksForZero < maxNumPicksLeftForZero)
+            // Follow the last draft
+            for (Integer terr : unownedCountries)
             {
-                assert(false);
-            }
-            
-            if (numAvailablePicksForZero == maxNumPicksLeftForZero)
-            {
-                // Must choose from anti list
-                pick = antiReservedTerrs.remove((int)(Math.random()*antiReservedTerrs.size()));
-            }
-            else
-            {
-                // Pick from anywhere
-                pick = unownedCountries.get((int)(Math.random()*unownedCountries.size()));
-                if (antiReservedTerrs.contains((Integer) pick))
+                if (finalDraftStates[(numGamesPlayed / NUM_GAMES_PER_DRAFT) % SAVE_AFTER_EVERY][terr] == ID)
                 {
-                    antiReservedTerrs.remove((Integer) pick);
+                    pick = terr;
+                    break;
                 }
             }
         }
@@ -194,7 +230,7 @@ public class RandomDrafter extends SmartDrafter
             assert(false);
         }
 
-        finalDraftStates[numGamesPlayed % SAVE_AFTER_EVERY][pick] = ID;
+        finalDraftStates[(numGamesPlayed / NUM_GAMES_PER_DRAFT) % SAVE_AFTER_EVERY][pick] = ID;
 
         return pick;
     }
@@ -203,87 +239,99 @@ public class RandomDrafter extends SmartDrafter
     @Override
     public String youWon()
     {
+        // Record who won
+        if (numGamesPlayed % NUM_GAMES_PER_DRAFT == 0)
+        {
+            // initialize winning percentages
+            for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+            {
+                finalDraftWins[(numGamesPlayed / NUM_GAMES_PER_DRAFT) % SAVE_AFTER_EVERY][i] = 0;
+            }
+        }
+        for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+        {
+            if (i == ID)
+            {
+                finalDraftWins[(numGamesPlayed / NUM_GAMES_PER_DRAFT) % SAVE_AFTER_EVERY][i]++;
+                break;
+            }
+        }
+
         String message = super.youWon();
 
-        // Record who won
-        finalDraftStates[numGamesPlayed % SAVE_AFTER_EVERY][countries.length] = ID;
-
-        if (numGamesPlayed <= MAX_NUM_GAMES && numGamesPlayed % SAVE_AFTER_EVERY == 0)
+        if ((numGamesPlayed / NUM_GAMES_PER_DRAFT) <= MAX_NUM_DRAFTS && numGamesPlayed % (NUM_GAMES_PER_DRAFT * SAVE_AFTER_EVERY) == 0)
         {
             String data = "";
 
             for (int game = 0; game < SAVE_AFTER_EVERY; ++game)
             {
+                int[] draftState = finalDraftStates[game];
+
+                // Number of territories in each continent. for each player
+                int[][] numInEachContinent = new int[board.getNumberOfPlayers()][board.getNumberOfContinents()];
+
+                // List of enemy neighbours, for each player
+                ArrayList<Integer>[] enemyNeighbours = new ArrayList[board.getNumberOfPlayers()];
+                for (int i = 0; i < enemyNeighbours.length; ++i)
+                {
+                    enemyNeighbours[i] = new ArrayList<Integer>();
+                }
+
+                // Number of territories with an enemy neighbour, for each player
+                int[] numTerrsWithEnemy = new int[board.getNumberOfPlayers()];
+
+                // Number of friendly neighbours, for each player
+                int[] numFriendlyNeighbours = new int[board.getNumberOfPlayers()];
+
+                for (int terr = 0; terr < countries.length; ++terr)
+                {
+                    int owner = draftState[terr];
+
+                    // Increment continent count
+                    numInEachContinent[owner][countries[terr].getContinent()]++;
+
+                    for (int neighbour : countries[terr].getAdjoiningCodeList())
+                    {
+                        // Add this as an enemy neighbour for the other players, if necessary
+                        int neighbourOwner = draftState[neighbour];
+                        if (neighbourOwner != owner && !enemyNeighbours[neighbourOwner].contains((Integer) terr))
+                        {
+                            enemyNeighbours[neighbourOwner].add((Integer) terr);
+                        }
+
+                        // Add to the friendly neighbour count
+                        if (neighbourOwner == owner)
+                        {
+                            numFriendlyNeighbours[owner]++;
+                        }
+                    }
+
+                    // Check if this territory has an enemy
+                    for (int neighbour : countries[terr].getAdjoiningCodeList())
+                    {
+                        int neighbourOwner = draftState[neighbour];
+                        if (neighbourOwner != owner)
+                        {
+                            numTerrsWithEnemy[owner]++;
+                            break;
+                        }
+                    }
+                }
+
+                // Record the data points
                 for (int player = 0; player < board.getNumberOfPlayers(); ++player)
                 {
-                    if (RESERVED_CONTINENT != -1 && player > 0)
-                    {
-                        // We only want to record for player 0 when we reserve terrs
-                        break;
-                    }
-
-                    // Number of territories in each continent
-                    int[] numInEachContinent = new int[board.getNumberOfContinents()];
+                    data += "" + player + ","; // Record seat position
                     for (int i = 0; i < numInEachContinent.length; ++i)
                     {
-                        numInEachContinent[i] = 0;
-                    }
-
-                    // List of enemy neighbours
-                    ArrayList<Integer> enemyNeighbours = new ArrayList<Integer>();
-
-                    // Number of territories with an enemy neighbour
-                    int numTerrsWithEnemy = 0;
-
-                    for (int terr = 0; terr < countries.length; ++terr)
-                    {
-                        if (finalDraftStates[game][terr] != player)
+                        int adjustedPlayer = (i + player) % board.getNumberOfPlayers();
+                        for (int j = 0; j < numInEachContinent[adjustedPlayer].length; ++j)
                         {
-                            // Only are concerned with territories this player
-                            // owned at the end of the draft.
-                            continue;
+                            data += "" + numInEachContinent[adjustedPlayer][j] + ",";
                         }
-
-                        // Increment continent count
-                        numInEachContinent[countries[terr].getContinent()]++;
-
-                        // Add any enemy neighbours we haven't seen
-                        for (int neighbour : countries[terr].getAdjoiningCodeList())
-                        {
-                            if (finalDraftStates[game][neighbour] != player &&
-                                    !enemyNeighbours.contains((Integer) neighbour))
-                            {
-                                enemyNeighbours.add((Integer) neighbour);
-                            }
-                        }
-
-                        // Check if this territory has an enemy
-                        for (int neighbour : countries[terr].getAdjoiningCodeList())
-                        {
-                            if (finalDraftStates[game][neighbour] != player)
-                            {
-                                numTerrsWithEnemy++;
-                                break;
-                            }
-                        }
+                        data += "" + enemyNeighbours[adjustedPlayer].size() + "," + numTerrsWithEnemy[adjustedPlayer] + "," + numFriendlyNeighbours[adjustedPlayer] + ",";
                     }
-
-                    // Record the data point
-                    for (int i = 0; i < numInEachContinent.length; ++i)
-                    {
-                        data += "" + numInEachContinent[i] + ",";
-                    }
-                    data += "" + enemyNeighbours.size() + "," + numTerrsWithEnemy + ",";
-                    if (finalDraftStates[game][countries.length] == player)
-                    {
-                        // A win
-                        data += "1\n";
-                    }
-                    else
-                    {
-                        // A loss
-                        data += "0\n";
-                    }
+                    data += "" + finalDraftWins[game][player] + "\n";
                 }
             }
 
