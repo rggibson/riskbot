@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Random;
 import java.io.File;
 import java.io.ObjectInputStream;
@@ -33,7 +35,7 @@ public class RL_Action_Drafter extends SmartDrafter
 	 * The RL parameters  
 	 */
 	private double ALPHA = 0.2;
-	private double EPSILON = 0.02;
+	private double EPSILON = 0.2;
 	private double GAMMA = 1.0;
 	private double LAMBDA = 0.0;
 
@@ -44,23 +46,23 @@ public class RL_Action_Drafter extends SmartDrafter
 	/**
 	 * Abstract Actions
 	 */
-	private HashMap<String, Double> actions = new HashMap<String, Double>();
+	private LinkedHashMap<String, Double> actions = new LinkedHashMap<String, Double>();
 
 	/**
 	 * Abstract Binary States
 	 */
-	private HashMap<String, Boolean> states = new HashMap<String, Boolean>();
+	private LinkedHashMap<String, Boolean> states = new LinkedHashMap<String, Boolean>();
 
 	/**
 	 * (Previous) Abstract Binary States
 	 */
-	private HashMap<String, Boolean> prevStates = new HashMap<String, Boolean>();
+	private LinkedHashMap<String, Boolean> prevStates = new LinkedHashMap<String, Boolean>();
 
 
 	/**
 	 * Feature Vector with Q values
 	 */
-	private HashMap<String, Double> features = new HashMap<String, Double>();
+	private LinkedHashMap<String, Double> features = new LinkedHashMap<String, Double>();
 
 
 	/**
@@ -250,6 +252,7 @@ public class RL_Action_Drafter extends SmartDrafter
 		int pick = -1;
 
 
+		System.out.println("===== Start of episode =====");
 		// Get reward    	
 		// reward is calculated using the evaluation function
 		// the difference in value from previous state to current state is the reward
@@ -259,15 +262,24 @@ public class RL_Action_Drafter extends SmartDrafter
 		double reward = current_world_value - previous_world_value;    	
 		previous_world_value = current_world_value;
 
+		
+		System.out.println("reward: " + reward);
+		
 		// Update current states
 		UpdateCurrentStates(draftState);
 
+		printStateValues();
+		
 		// Choose an action according to the epsilon-greedy policy    	
 		String action = ChooseAction();
 
 		// Modify the Q-values according to reward
 		UpdateQvalue(reward, action);
 
+		printActionValues();
+		
+		printFeatureVector();
+		
 		previous_action = action;
 
 		// Resolve the action to a concrete country
@@ -409,7 +421,7 @@ public class RL_Action_Drafter extends SmartDrafter
 		Random generator = new Random();
 		double policyValue = generator.nextDouble();
 
-		//System.out.println("policyvalue: " + policyValue);
+		System.out.println("policy value: " + policyValue + " and EPSILON: " + EPSILON);
 		
 		
 		if (policyValue > EPSILON)
@@ -417,25 +429,35 @@ public class RL_Action_Drafter extends SmartDrafter
 			// exploit
 			actionIter = actions.keySet().iterator();    		
 			double maxActionValue = 0.0;
-			String maxValuedAction = "";
+			LinkedList<String> maxValuedActions = new LinkedList<String>();
 
-			// reset all action values
+			// choose largest valued action
 			while (actionIter.hasNext())
 			{
 				String action = actionIter.next();
 
-				if (actions.get(action).doubleValue() >= maxActionValue)
+				if (actions.get(action).doubleValue() == maxActionValue)
+				{
+					if (IsActionAvailable(action))
+					{	
+						maxValuedActions.add(action);
+					}
+				}
+				else if (actions.get(action).doubleValue() > maxActionValue)
 				{
 					if (IsActionAvailable(action))
 					{	
 						maxActionValue = actions.get(action).doubleValue();
-						maxValuedAction = action;
+						maxValuedActions.clear();
+						maxValuedActions.add(action);
 					}
 				}
 
-			}	
+			}
 
-			chosenAction = maxValuedAction;
+			int num = generator.nextInt(maxValuedActions.size());
+			System.out.println("random number: " + num);
+			chosenAction = maxValuedActions.get(num);
 
 		}
 		else
@@ -462,6 +484,8 @@ public class RL_Action_Drafter extends SmartDrafter
 			chosenAction = actionsList.get(chosenActionNum);
 
 		}
+		
+		System.out.println("chosen action: " + chosenAction);
 
 		return chosenAction;
 	}
@@ -550,20 +574,21 @@ public class RL_Action_Drafter extends SmartDrafter
 			}
 		}
 
+		double Qvalue = 0.0;
+		for (int i=0; i<statesList.size(); i++)
+		{	
+			Qvalue += features.get(action + "+" + statesList.get(i)).doubleValue();	
+		}
+		
 		// Q(s,a) = Q(s,a) + alpha * delta
-		// where delta = [r + gamma * Q(s',a') - Q(s,a)]		
+		// where delta = [r + gamma * Q(s',a') - Q(s,a)]				
 		for (int i=0; i<statesList.size(); i++)
 		{
+			double delta = reward + GAMMA * prevQvalue - Qvalue;
 
-			//System.out.println("%" + action + "%");
-			//System.out.println("%" + statesList.get(i) + "%");
-			//System.out.println("%" + action + "+" + statesList.get(i) + "%");
-			
-			double Qvalue = features.get(action + "+" + statesList.get(i)).doubleValue();
-
-			double delta = reward/statesList.size() + GAMMA * prevQvalue - Qvalue;
-
-			features.put(action + "+" + statesList.get(i), Qvalue + ALPHA * delta);			
+			System.out.println("GAMMA: " + GAMMA + " prevQvalue: " + prevQvalue + " Qvalue: " + Qvalue);
+			double previousFeatureValue = features.get(action + "+" + statesList.get(i));
+			features.put(action + "+" + statesList.get(i), previousFeatureValue + ALPHA * delta / statesList.size());			
 
 		}
 
@@ -626,7 +651,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-				if (numEmpty[curContinent] > mostEmpty)
+				if (numEmpty[curContinent] >= mostEmpty)
 				{
 					mostEmpty = numEmpty[curContinent];
 					chosenContinent = curContinent;
@@ -641,7 +666,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-				if (numEmpty[curContinent] < leastEmpty && numEmpty[curContinent] > 0)
+				if (numEmpty[curContinent] <= leastEmpty && numEmpty[curContinent] > 0)
 				{
 					leastEmpty = numEmpty[curContinent];
 					chosenContinent = curContinent;
@@ -656,7 +681,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-				if (numOwned[0][curContinent] > mostMy && numEmpty[curContinent] > 0)
+				if (numOwned[0][curContinent] >= mostMy && numEmpty[curContinent] > 0)
 				{
 					mostMy = numOwned[0][curContinent];
 					chosenContinent = curContinent;
@@ -671,7 +696,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-				if (numOwned[0][curContinent] < leastMy && numEmpty[curContinent] > 0)
+				if (numOwned[0][curContinent] <= leastMy && numEmpty[curContinent] > 0)
 				{
 					leastMy = numOwned[0][curContinent];
 					chosenContinent = curContinent;
@@ -688,7 +713,7 @@ public class RL_Action_Drafter extends SmartDrafter
 			{
 				int contiSize = numOwned[0][curContinent]+numOwned[1][curContinent]+numOwned[2][curContinent]+ numEmpty[curContinent];
 
-				if (contiSize < smallest && numEmpty[curContinent] > 0)
+				if (contiSize <= smallest && numEmpty[curContinent] > 0)
 				{
 					smallest = contiSize;
 					chosenContinent = curContinent;
@@ -705,7 +730,7 @@ public class RL_Action_Drafter extends SmartDrafter
 			{
 				int contiSize = numOwned[0][curContinent]+numOwned[1][curContinent]+numOwned[2][curContinent]+ numEmpty[curContinent];
 
-				if (contiSize > largest && numEmpty[curContinent] > 0)
+				if (contiSize >= largest && numEmpty[curContinent] > 0)
 				{
 					largest = contiSize;
 					chosenContinent = curContinent;
@@ -720,7 +745,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-				if (numBorders[curContinent] > mostAccess && numEmpty[curContinent] > 0)
+				if (numBorders[curContinent] >= mostAccess && numEmpty[curContinent] > 0)
 				{
 					mostAccess = numBorders[curContinent];
 					chosenContinent = curContinent;
@@ -735,7 +760,7 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			for (int curContinent =0; curContinent< numContinents; curContinent++)
 			{
-				if (numBorders[curContinent] < leastAccess && numEmpty[curContinent] > 0)
+				if (numBorders[curContinent] <= leastAccess && numEmpty[curContinent] > 0)
 				{
 					leastAccess = numBorders[curContinent];
 					chosenContinent = curContinent;
@@ -774,11 +799,14 @@ public class RL_Action_Drafter extends SmartDrafter
 				bestCode = c.getCode();
 				fewestNeib = c.getNumberNeighbors();
 			}
+			//System.out.println("neighbours: " + c.getNumberNeighbors() + "  fewest" + fewestNeib);
+			
 		}
 
 		if (bestCode == -1)
 		{
 			System.out.println("BUG: This should not happen.");
+			System.out.println("continent: " + continent);
 		}
 
 		return bestCode;
@@ -818,4 +846,56 @@ public class RL_Action_Drafter extends SmartDrafter
 		return "RL_Action_Drafter";
 	}
 
+	
+	public void printFeatureVector()
+	{
+		
+		System.out.println("Feature Vector values: ");
+		
+		// print out the feature vector
+		Iterator<String> actionIter = actions.keySet().iterator();
+		while (actionIter.hasNext())
+		{
+			String action = actionIter.next();
+
+			Iterator<String> stateIter = states.keySet().iterator();
+
+			while (stateIter.hasNext())
+			{
+				String state = stateIter.next();
+				
+				System.out.print(features.get(action + "+" + state).toString() + "  ");
+
+			}
+			System.out.println(" ");
+		}		
+	}
+	
+	public void printActionValues()
+	{
+		System.out.println("Action values: ");
+		// print the action values
+		
+		Iterator<String> actionIter = actions.keySet().iterator();
+		while (actionIter.hasNext())
+		{
+			String action = actionIter.next();
+
+			System.out.println(action + ": " + actions.get(action).toString() + "  ");
+		}
+	}
+
+	public void printStateValues()
+	{
+		System.out.println("States: ");
+		// print the state values
+		
+		Iterator<String> statesIter = states.keySet().iterator();
+		while (statesIter.hasNext())
+		{
+			String state = statesIter.next();
+
+			System.out.println(state + ": " + states.get(state).toString() + "  ");
+		}
+	}
 }
