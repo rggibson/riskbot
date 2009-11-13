@@ -29,7 +29,7 @@ import java.io.FileNotFoundException;
  */
 public class RL_Action_Drafter extends SmartDrafter
 {
-        protected static String HEURISTIC_DATA_FILENAME;
+	protected static String HEURISTIC_DATA_FILENAME;
 
 	/**
 	 * The RL parameters  
@@ -43,26 +43,27 @@ public class RL_Action_Drafter extends SmartDrafter
 	private double current_world_value = 0.0;
 	private String previous_action = "";
 
+	private static boolean initialized = false;
 	/**
 	 * Abstract Actions
 	 */
-	private LinkedHashMap<String, Double> actions = new LinkedHashMap<String, Double>();
+	private static LinkedHashMap<String, Double> actions = new LinkedHashMap<String, Double>();
 
 	/**
 	 * Abstract Binary States
 	 */
-	private LinkedHashMap<String, Boolean> states = new LinkedHashMap<String, Boolean>();
+	private static LinkedHashMap<String, Boolean> states = new LinkedHashMap<String, Boolean>();
 
 	/**
 	 * (Previous) Abstract Binary States
 	 */
-	private LinkedHashMap<String, Boolean> prevStates = new LinkedHashMap<String, Boolean>();
+	private static LinkedHashMap<String, Boolean> prevStates = new LinkedHashMap<String, Boolean>();
 
 
 	/**
 	 * Feature Vector with Q values
 	 */
-	private LinkedHashMap<String, Double> features = new LinkedHashMap<String, Double>();
+	private static LinkedHashMap<String, Double> features = new LinkedHashMap<String, Double>();
 
 
 	/**
@@ -133,49 +134,57 @@ public class RL_Action_Drafter extends SmartDrafter
 
 		// RL parameters
 
-		// set of actions and their current total values from features
-		actions.put("ChooseMostEmpty", 0.0);
-		actions.put("ChooseLeastEmpty", 0.0);
-		actions.put("ChooseMostMyTerritory", 0.0);
-		actions.put("ChooseLeastMyTerritory", 0.0);
-		actions.put("ChooseSmallest", 0.0);
-		actions.put("ChooseLargest", 0.0);
-		actions.put("ChooseMostAccessPoints", 0.0);
-		actions.put("ChooseLeastAccessPoints", 0.0);        
-		//actions.add("ChooseRandom");
-
-
-		// set of previous states
-		prevStates.put("SoleOwnerOfContinent", false);
-		prevStates.put("InControlOfContinent", false);
-		prevStates.put("OpponentControlContinent", false);
-		prevStates.put("EmptyContinent", false);
-		prevStates.put("Constant", true);
-
-		// set of states
-		states.put("SoleOwnerOfContinent", false);
-		states.put("InControlOfContinent", false);
-		states.put("OpponentControlContinent", false);
-		states.put("EmptyContinent", false);
-		states.put("Constant", true);
-
-
-		// feature vector containing set of features and their weights
-		Iterator<String> actionIter = actions.keySet().iterator();
-
-		while (actionIter.hasNext())
+		if (initialized == false)
 		{
-			String action = actionIter.next();
 
-			Iterator<String> stateIter = states.keySet().iterator();
+			// set of actions and their current total values from features
+			actions.put("ChooseMostEmpty", 0.0);
+			actions.put("ChooseLeastEmpty", 0.0);
+			actions.put("ChooseMostMyTerritory", 0.0);
+			actions.put("ChooseLeastMyTerritory", 0.0);
+			actions.put("ChooseSmallest", 0.0);
+			actions.put("ChooseLargest", 0.0);
+			actions.put("ChooseMostAccessPoints", 0.0);
+			actions.put("ChooseLeastAccessPoints", 0.0);        
+			//actions.add("ChooseRandom");
 
-			while (stateIter.hasNext())
+
+			// set of previous states
+			prevStates.put("SoleOwnerOfContinent", false);
+			prevStates.put("InControlOfContinent", false);
+			prevStates.put("OpponentControlContinent", false);
+			prevStates.put("EmptyContinent", false);
+			prevStates.put("Constant", true);
+
+			// set of states
+			states.put("SoleOwnerOfContinent", false);
+			states.put("InControlOfContinent", false);
+			states.put("OpponentControlContinent", false);
+			states.put("EmptyContinent", false);
+			states.put("Constant", true);
+
+
+			// feature vector containing set of features and their weights
+			Iterator<String> actionIter = actions.keySet().iterator();
+
+			while (actionIter.hasNext())
 			{
-				String state = stateIter.next();
+				String action = actionIter.next();
 
-				features.put(action + "+" + state, 0.0); 
+				Iterator<String> stateIter = states.keySet().iterator();
+
+				while (stateIter.hasNext())
+				{
+					String state = stateIter.next();
+
+					features.put(action + "+" + state, 0.0); 
+				}
 			}
+
+			initialized = true;
+			System.out.println("I have been initialized.");
 		}
+
 
 
 	}
@@ -185,7 +194,7 @@ public class RL_Action_Drafter extends SmartDrafter
 	public String youWon()
 	{
 		super.youWon();
-		
+
 		String message = "Ha Ha.  I out-drafted you again!";
 
 		m_numGamesPlayed++;
@@ -195,50 +204,50 @@ public class RL_Action_Drafter extends SmartDrafter
 		if ((m_numGamesPlayed % CAPTURE_AFTER_EVERY) == 0)
 		{
 			// Create the file name
-			
 
-//			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
-//			fileName += "" + m_numGamesPlayed + ".dat";			
-//
-//			// Check to make sure that the file does not already exist
-//			boolean exists = (new File(fileName)).exists();
-//			assert(!exists);
+
+			//			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
+			//			fileName += "" + m_numGamesPlayed + ".dat";			
+			//
+			//			// Check to make sure that the file does not already exist
+			//			boolean exists = (new File(fileName)).exists();
+			//			assert(!exists);
 
 			// Save the heuristic to this file
-//			try
-//			{
-//				FileOutputStream fos =  new FileOutputStream(fileName);
-				//ObjectOutputStream out = new ObjectOutputStream(fos);
+			//			try
+			//			{
+			//				FileOutputStream fos =  new FileOutputStream(fileName);
+			//ObjectOutputStream out = new ObjectOutputStream(fos);
 
-				// print out the feature vector
-				Iterator<String> actionIter = actions.keySet().iterator();
+			// print out the feature vector
+			Iterator<String> actionIter = actions.keySet().iterator();
 
-				while (actionIter.hasNext())
+			while (actionIter.hasNext())
+			{
+				String action = actionIter.next();
+
+				Iterator<String> stateIter = states.keySet().iterator();
+
+				while (stateIter.hasNext())
 				{
-					String action = actionIter.next();
+					String state = stateIter.next();
 
-					Iterator<String> stateIter = states.keySet().iterator();
+					System.out.println(features.get(action + "+" + state).toString());
+					//						fos.write(features.get(action + "+" + state).toString().getBytes());
+					//						fos.write(" ".getBytes());
 
-					while (stateIter.hasNext())
-					{
-						String state = stateIter.next();
-						
-						System.out.println(features.get(action + "+" + state).toString());
-//						fos.write(features.get(action + "+" + state).toString().getBytes());
-//						fos.write(" ".getBytes());
-
-					}
-
-//					fos.write("\n".getBytes());
 				}
 
+				//					fos.write("\n".getBytes());
+			}
 
-//				fos.close();
-//			}
-//			catch (Exception e)
-//			{
-//				assert(false);
-//			}
+
+			//				fos.close();
+			//			}
+			//			catch (Exception e)
+			//			{
+			//				assert(false);
+			//			}
 		}
 
 		return message;
@@ -262,14 +271,14 @@ public class RL_Action_Drafter extends SmartDrafter
 		double reward = current_world_value - previous_world_value;    	
 		previous_world_value = current_world_value;
 
-		
+
 		System.out.println("reward: " + reward);
-		
+
 		// Update current states
 		UpdateCurrentStates(draftState);
 
 		printStateValues();
-		
+
 		// Choose an action according to the epsilon-greedy policy    	
 		String action = ChooseAction();
 
@@ -277,9 +286,9 @@ public class RL_Action_Drafter extends SmartDrafter
 		UpdateQvalue(reward, action);
 
 		printActionValues();
-		
+
 		printFeatureVector();
-		
+
 		previous_action = action;
 
 		// Resolve the action to a concrete country
@@ -402,7 +411,7 @@ public class RL_Action_Drafter extends SmartDrafter
 					// get the state
 					String stateInFeature = feature.substring( feature.indexOf("+")+1 );
 					// if state is true
-					
+
 					//System.out.println("@" + stateInFeature + "@");
 					if (states.get(stateInFeature) == true)
 					{
@@ -422,8 +431,8 @@ public class RL_Action_Drafter extends SmartDrafter
 		double policyValue = generator.nextDouble();
 
 		System.out.println("policy value: " + policyValue + " and EPSILON: " + EPSILON);
-		
-		
+
+
 		if (policyValue > EPSILON)
 		{
 			// exploit
@@ -484,7 +493,7 @@ public class RL_Action_Drafter extends SmartDrafter
 			chosenAction = actionsList.get(chosenActionNum);
 
 		}
-		
+
 		System.out.println("chosen action: " + chosenAction);
 
 		return chosenAction;
@@ -569,7 +578,7 @@ public class RL_Action_Drafter extends SmartDrafter
 			{
 				//System.out.println("!" + previous_action  + "!");
 				//System.out.println("!" + prevStatesList.get(i) + "!");
-						
+
 				prevQvalue += features.get(previous_action + "+" + prevStatesList.get(i)).doubleValue();
 			}
 		}
@@ -579,7 +588,7 @@ public class RL_Action_Drafter extends SmartDrafter
 		{	
 			Qvalue += features.get(action + "+" + statesList.get(i)).doubleValue();	
 		}
-		
+
 		// Q(s,a) = Q(s,a) + alpha * delta
 		// where delta = [r + gamma * Q(s',a') - Q(s,a)]				
 		for (int i=0; i<statesList.size(); i++)
@@ -800,7 +809,7 @@ public class RL_Action_Drafter extends SmartDrafter
 				fewestNeib = c.getNumberNeighbors();
 			}
 			//System.out.println("neighbours: " + c.getNumberNeighbors() + "  fewest" + fewestNeib);
-			
+
 		}
 
 		if (bestCode == -1)
@@ -846,12 +855,12 @@ public class RL_Action_Drafter extends SmartDrafter
 		return "RL_Action_Drafter";
 	}
 
-	
+
 	public void printFeatureVector()
 	{
-		
+
 		System.out.println("Feature Vector values: ");
-		
+
 		// print out the feature vector
 		Iterator<String> actionIter = actions.keySet().iterator();
 		while (actionIter.hasNext())
@@ -863,19 +872,19 @@ public class RL_Action_Drafter extends SmartDrafter
 			while (stateIter.hasNext())
 			{
 				String state = stateIter.next();
-				
+
 				System.out.print(features.get(action + "+" + state).toString() + "  ");
 
 			}
 			System.out.println(" ");
 		}		
 	}
-	
+
 	public void printActionValues()
 	{
 		System.out.println("Action values: ");
 		// print the action values
-		
+
 		Iterator<String> actionIter = actions.keySet().iterator();
 		while (actionIter.hasNext())
 		{
@@ -889,7 +898,7 @@ public class RL_Action_Drafter extends SmartDrafter
 	{
 		System.out.println("States: ");
 		// print the state values
-		
+
 		Iterator<String> statesIter = states.keySet().iterator();
 		while (statesIter.hasNext())
 		{
