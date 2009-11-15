@@ -6,6 +6,7 @@
 package com.sillysoft.lux.agent;
 
 import com.sillysoft.lux.*;
+import com.sillysoft.lux.agent.SmartDrafter.EvaluationFunction;
 import com.sillysoft.lux.util.ContinentIterator;
 import com.sillysoft.lux.util.CountryIterator;
 
@@ -27,23 +28,30 @@ import java.io.FileNotFoundException;
  *
  * @author Richard Gibson, Neesha Desai, Richard Zhao
  */
-public class RL_Action_Drafter extends SmartDrafter
+public class RL_Action_Drafter_2 extends SmartDrafter
 {
 	protected static String HEURISTIC_DATA_FILENAME;
 
 	/**
 	 * The RL parameters  
 	 */
+	// learning rate
 	private double ALPHA = 0.2;
+	// exploration rate
 	private double EPSILON = 0.2;
+	// discount
 	private double GAMMA = 1.0;
-	private double LAMBDA = 0.0;
+	// eligibility trace
+	private double LAMBDA = 0.9;
 
-	private double previous_world_value = 0.0;
-	private double current_world_value = 0.0;
+	private static double previous_world_value = 0.0;
+	private static double current_world_value = 0.0;
 	private String previous_action = "";
+	private String current_action = "";
 
 	private static boolean initialized = false;
+	private static boolean gameStarted = false;
+
 	/**
 	 * Abstract Actions
 	 */
@@ -59,37 +67,16 @@ public class RL_Action_Drafter extends SmartDrafter
 	 */
 	private static LinkedHashMap<String, Boolean> prevStates = new LinkedHashMap<String, Boolean>();
 
-
 	/**
 	 * Feature Vector with Q values
 	 */
 	private static LinkedHashMap<String, Double> features = new LinkedHashMap<String, Double>();
 
-
 	/**
-	 * The initial values in the heuristic function.  Note that this does
-	 * nothing if we are loading the heuristic from file.
+	 * Feature Vector with e values (eligibility traces)
 	 */
-	final private double INITIAL_VALUE = 0.5;
+	private static LinkedHashMap<String, Double> e_sa = new LinkedHashMap<String, Double>();
 
-	/**
-	 * The initial number of visits to each value in the heuristic function.
-	 * Note that this does nothing if we are loading the heuristic from file.
-	 */
-	final private double INITIAL_WEIGHT = 1.0;
-
-	/**
-	 * Exploration parameter
-	 */
-	final private double c = 0.5;
-
-	/**
-	 * Keeps track of which states were encountered in the draft, so that we
-	 * know which to update in the heuristic function once the game is over.
-	 * Note that this is a bit of a hack.  Since there is no youLose() function,
-	 * the winner has to take care of all heuristic updates at the end.
-	 */
-	private static ArrayList<int[]>[] m_indicesToUpdate;
 
 	/**
 	 * How often we capture the heuristic function by saving it to file
@@ -111,13 +98,13 @@ public class RL_Action_Drafter extends SmartDrafter
 	/**
 	 * Constructor
 	 */
-	public RL_Action_Drafter()
+	public RL_Action_Drafter_2()
 	{
 		super();
 		/**
-		 * The file to store the heuristic function.
+		 * The file to store logs.
 		 */
-		HEURISTIC_DATA_FILENAME = "E:\\workspace\\Risk\\learnedHeuristic";
+		HEURISTIC_DATA_FILENAME = "D:\\logs.txt";
 
 	}
 
@@ -126,18 +113,12 @@ public class RL_Action_Drafter extends SmartDrafter
 	{
 		super.setPrefs(ID, board);
 
-		if (m_indicesToUpdate == null)
-		{
-			m_indicesToUpdate = new ArrayList[board.getNumberOfPlayers()];
-		}
-
 
 		// RL parameters
-
 		if (initialized == false)
 		{
 
-			// set of actions and their current total values from features
+			// initialize set of actions and their current total values from features
 			actions.put("ChooseMostEmpty", 0.0);
 			actions.put("ChooseLeastEmpty", 0.0);
 			actions.put("ChooseMostMyTerritory", 0.0);
@@ -149,14 +130,14 @@ public class RL_Action_Drafter extends SmartDrafter
 			//actions.add("ChooseRandom");
 
 
-			// set of previous states
+			// initialize set of previous states
 			prevStates.put("SoleOwnerOfContinent", false);
 			prevStates.put("InControlOfContinent", false);
 			prevStates.put("OpponentControlContinent", false);
 			prevStates.put("EmptyContinent", false);
 			prevStates.put("Constant", true);
 
-			// set of states
+			// initialize set of states
 			states.put("SoleOwnerOfContinent", false);
 			states.put("InControlOfContinent", false);
 			states.put("OpponentControlContinent", false);
@@ -164,7 +145,7 @@ public class RL_Action_Drafter extends SmartDrafter
 			states.put("Constant", true);
 
 
-			// feature vector containing set of features and their weights
+			// initialize feature vector containing set of features and their weights
 			Iterator<String> actionIter = actions.keySet().iterator();
 
 			while (actionIter.hasNext())
@@ -177,16 +158,71 @@ public class RL_Action_Drafter extends SmartDrafter
 				{
 					String state = stateIter.next();
 
-					features.put(action + "+" + state, 0.0); 
+					features.put(action + "+" + state, 0.0);
 				}
 			}
 
+			
 			initialized = true;
 			System.out.println("I have been initialized.");
 		}
 
+		// set e_sa to 0 before each game
+		Iterator<String> actionIter = actions.keySet().iterator();
+		while (actionIter.hasNext())
+		{
+			String action = actionIter.next();
 
+			Iterator<String> stateIter = states.keySet().iterator();
 
+			while (stateIter.hasNext())
+			{
+				String state = stateIter.next();
+				e_sa.put(action + "+" + state, 0.0);
+			}
+		}
+
+	}
+
+	public void placeArmies( int numberOfArmies )
+	{
+
+		// this is the time when we have a complete draft, but the post-draft game has not started
+		if (gameStarted == false)
+		{
+			// get current state of the draft
+			int[] draftState = new int[countries.length];
+			for (int i = 0; i < draftState.length; ++i)
+			{
+				draftState[i] = countries[i].getOwner();
+			}
+
+			
+			System.out.println("===== End of draft update =====");
+			System.out.println("player 0: " + board.getPlayerName(0));
+
+			// Get reward    	
+			// reward is calculated using the evaluation function
+			// the difference in value from previous state to current state is the reward
+			double[] current_world_values = evaluationFunction(draftState, EvaluationFunction.LIN_REG_NOM_FEATS);
+
+			current_world_value = current_world_values[0];    	     	 
+			double reward = current_world_value - previous_world_value;    	
+			previous_world_value = current_world_value;
+
+			System.out.println("reward: " + reward);
+
+			// Modify the Q-values according to reward
+			UpdateQvalue(reward, current_action);
+
+			printActionValues();
+
+			printFeatureVector();
+			
+			gameStarted = true;
+		}
+		
+		super.placeArmies(numberOfArmies);
 	}
 
 	// Update the heuristic function and save it to file
@@ -204,50 +240,45 @@ public class RL_Action_Drafter extends SmartDrafter
 		if ((m_numGamesPlayed % CAPTURE_AFTER_EVERY) == 0)
 		{
 			// Create the file name
+			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
+			fileName += "" + m_numGamesPlayed + ".txt";			
 
+			// Check to make sure that the file does not already exist
+			boolean exists = (new File(fileName)).exists();
+			assert(!exists);
 
-			//			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
-			//			fileName += "" + m_numGamesPlayed + ".dat";			
-			//
-			//			// Check to make sure that the file does not already exist
-			//			boolean exists = (new File(fileName)).exists();
-			//			assert(!exists);
-
-			// Save the heuristic to this file
-			//			try
-			//			{
-			//				FileOutputStream fos =  new FileOutputStream(fileName);
-			//ObjectOutputStream out = new ObjectOutputStream(fos);
-
-			// print out the feature vector
-			Iterator<String> actionIter = actions.keySet().iterator();
-
-			while (actionIter.hasNext())
+			// Save to this file
+			try
 			{
-				String action = actionIter.next();
+				FileOutputStream fos =  new FileOutputStream(fileName);
+				ObjectOutputStream out = new ObjectOutputStream(fos);
 
-				Iterator<String> stateIter = states.keySet().iterator();
+				// print out the feature vector
+				Iterator<String> actionIter = actions.keySet().iterator();
 
-				while (stateIter.hasNext())
+				while (actionIter.hasNext())
 				{
-					String state = stateIter.next();
+					String action = actionIter.next();
 
-					System.out.println(features.get(action + "+" + state).toString());
-					//						fos.write(features.get(action + "+" + state).toString().getBytes());
-					//						fos.write(" ".getBytes());
+					Iterator<String> stateIter = states.keySet().iterator();
 
+					while (stateIter.hasNext())
+					{
+						String state = stateIter.next();
+
+						//System.out.println(features.get(action + "+" + state).toString());
+						fos.write(features.get(action + "+" + state).toString().getBytes());
+						fos.write(" ".getBytes());
+					}
+
+					fos.write("\n".getBytes());
 				}
-
-				//					fos.write("\n".getBytes());
+				fos.close();
 			}
-
-
-			//				fos.close();
-			//			}
-			//			catch (Exception e)
-			//			{
-			//				assert(false);
-			//			}
+			catch (Exception e)
+			{
+				assert(false);
+			}
 		}
 
 		return message;
@@ -257,20 +288,28 @@ public class RL_Action_Drafter extends SmartDrafter
 	public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
 	{
 
-
+		// Return value
 		int pick = -1;
 
+		// if we are picking a territory, then game has not started
+		gameStarted = false;
 
 		System.out.println("===== Start of episode =====");
+		System.out.println("player 0: " + board.getPlayerName(0));
+
+		previous_action = current_action;
+		
 		// Get reward    	
 		// reward is calculated using the evaluation function
 		// the difference in value from previous state to current state is the reward
-		double[] current_world_values = myOwnEvaluationFunction(draftState);
+		//double[] current_world_values = evaluationFunction(draftState, EvaluationFunction.LIN_REG_NOM_FEATS);
 
-		current_world_value = current_world_values[0];    	     	 
-		double reward = current_world_value - previous_world_value;    	
-		previous_world_value = current_world_value;
-
+		//current_world_value = current_world_values[0];
+		//current_world_value = 0;
+		
+		//double reward = current_world_value - previous_world_value;    	
+		double reward = 0;
+		//previous_world_value = current_world_value;
 
 		System.out.println("reward: " + reward);
 
@@ -280,19 +319,18 @@ public class RL_Action_Drafter extends SmartDrafter
 		printStateValues();
 
 		// Choose an action according to the epsilon-greedy policy    	
-		String action = ChooseAction();
+		current_action = ChooseAction();
 
 		// Modify the Q-values according to reward
-		UpdateQvalue(reward, action);
+		UpdateQvalue(reward, current_action);
 
 		printActionValues();
 
 		printFeatureVector();
-
-		previous_action = action;
+		
 
 		// Resolve the action to a concrete country
-		pick = ResolveAction(action, draftState);
+		pick = ResolveAction(current_action, draftState);
 
 		// Return the pick    	
 		return pick;
@@ -436,6 +474,9 @@ public class RL_Action_Drafter extends SmartDrafter
 		if (policyValue > EPSILON)
 		{
 			// exploit
+			
+			System.out.println("exploit");
+			
 			actionIter = actions.keySet().iterator();    		
 			double maxActionValue = 0.0;
 			LinkedList<String> maxValuedActions = new LinkedList<String>();
@@ -464,14 +505,19 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			}
 
-			int num = generator.nextInt(maxValuedActions.size());
-			System.out.println("random number: " + num);
-			chosenAction = maxValuedActions.get(num);
+			System.out.println("exploit");
+			
+			int chosenActionNum = generator.nextInt(maxValuedActions.size());
+			System.out.println("random number: " + chosenActionNum);
+			chosenAction = maxValuedActions.get(chosenActionNum);
 
 		}
 		else
 		{
 			// explore
+			
+			System.out.println("explore");
+			
 			actionIter = actions.keySet().iterator();    		
 
 			ArrayList<String> actionsList = new ArrayList<String>();
@@ -489,7 +535,10 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			}	
 
+			System.out.println("explore");
+			
 			int chosenActionNum = generator.nextInt(actionsList.size());
+			System.out.println("random number: " + chosenActionNum);
 			chosenAction = actionsList.get(chosenActionNum);
 
 		}
@@ -545,7 +594,7 @@ public class RL_Action_Drafter extends SmartDrafter
 	{    	
 
 		// List of active state variables
-		ArrayList<String> statesList = new ArrayList<String>();
+		ArrayList<String> activeStatesList = new ArrayList<String>();
 		Iterator<String> stateIter = states.keySet().iterator();
 
 		while (stateIter.hasNext())
@@ -553,13 +602,13 @@ public class RL_Action_Drafter extends SmartDrafter
 			String state = stateIter.next();
 			if (states.get(state) == true)
 			{
-				statesList.add(state);
+				activeStatesList.add(state);
 			}
 		}
 
 
 		// List of previous active state variables
-		ArrayList<String> prevStatesList = new ArrayList<String>();
+		ArrayList<String> prevAcStatesList = new ArrayList<String>();
 		Iterator<String> presStateIter = prevStates.keySet().iterator();
 
 		while (presStateIter.hasNext())
@@ -567,39 +616,66 @@ public class RL_Action_Drafter extends SmartDrafter
 			String state = presStateIter.next();
 			if (prevStates.get(state) == true)
 			{
-				prevStatesList.add(state);
+				prevAcStatesList.add(state);
 			}
 		}
 
 		double prevQvalue = 0.0;
 		if (previous_action != "")
 		{
-			for (int i=0; i<prevStatesList.size(); i++)				
+			for (int i=0; i<prevAcStatesList.size(); i++)				
 			{
 				//System.out.println("!" + previous_action  + "!");
 				//System.out.println("!" + prevStatesList.get(i) + "!");
 
-				prevQvalue += features.get(previous_action + "+" + prevStatesList.get(i)).doubleValue();
+				prevQvalue += features.get(previous_action + "+" + prevAcStatesList.get(i)).doubleValue();
 			}
 		}
 
+		double e_sa_change = 1.0 / activeStatesList.size();
+		System.out.println("e_sa_change: " + e_sa_change);
+		
 		double Qvalue = 0.0;
-		for (int i=0; i<statesList.size(); i++)
+		for (int i=0; i<activeStatesList.size(); i++)
 		{	
-			Qvalue += features.get(action + "+" + statesList.get(i)).doubleValue();	
+			Qvalue += features.get(action + "+" + activeStatesList.get(i)).doubleValue();
+			e_sa.put(action + "+" + activeStatesList.get(i), e_sa.get(action + "+" + activeStatesList.get(i)) + e_sa_change );
 		}
 
-		// Q(s,a) = Q(s,a) + alpha * delta
-		// where delta = [r + gamma * Q(s',a') - Q(s,a)]				
-		for (int i=0; i<statesList.size(); i++)
+		// Q(s,a) = Q(s,a) + alpha * delta * e(s,a)
+		// where delta = [r + gamma * Q(s',a') - Q(s,a)]
+		double delta = (reward + GAMMA * Qvalue - prevQvalue) / activeStatesList.size();
+		System.out.println("GAMMA: " + GAMMA + " DELTA: " + delta + " prevQvalue: " + prevQvalue + " Qvalue: " + Qvalue);
+		
+
+		/*
+		// Sarsa(0) update
+		for (int i=0; i<activeStatesList.size(); i++)
 		{
-			double delta = reward + GAMMA * Qvalue - prevQvalue;
+			double oldQValue = features.get(action + "+" + activeStatesList.get(i));
+			features.put(action + "+" + activeStatesList.get(i), oldQValue + ALPHA * delta / activeStatesList.size());			
 
-			System.out.println("GAMMA: " + GAMMA + " prevQvalue: " + prevQvalue + " Qvalue: " + Qvalue);
-			double previousFeatureValue = features.get(action + "+" + statesList.get(i));
-			features.put(action + "+" + statesList.get(i), previousFeatureValue + ALPHA * delta / statesList.size());			
+		}*/
 
-		}
+		// Sarsa(lambda) update
+		Iterator<String> allActionIter = actions.keySet().iterator();
+
+		while (allActionIter.hasNext())
+		{
+			String loopAction = allActionIter.next();
+
+			Iterator<String> allStateIter = states.keySet().iterator();
+
+			while (allStateIter.hasNext())
+			{
+				String loopState = allStateIter.next();
+
+				double oldQValue = features.get(loopAction + "+" + loopState);
+				double old_e_sa = e_sa.get(loopAction + "+" + loopState);
+				features.put(loopAction + "+" + loopState, oldQValue + ALPHA * delta * old_e_sa);			
+				e_sa.put(loopAction + "+" + loopState, GAMMA * old_e_sa / LAMBDA);
+			}
+		}	
 
 	}
 
@@ -822,34 +898,6 @@ public class RL_Action_Drafter extends SmartDrafter
 	}
 
 
-	public double[] myOwnEvaluationFunction(int[] draft)
-	{
-
-		double playerValue[] = new double[board.getNumberOfPlayers()];
-		double totalValue = 0;
-
-		// Calculate the cumulative values of all territories for each player
-		for (int i = 0; i < board.getNumberOfPlayers(); i++)
-		{
-			for (int j = 0; j < draft.length; j++)
-			{
-				playerValue[i] += territoryValueForEvalFunc(j, i, draft);
-			}
-			totalValue = totalValue + playerValue[i];
-		}
-
-		// Convert values to probabilities of winning
-		for (int i = 0; i < board.getNumberOfPlayers(); i++)
-		{
-			if (totalValue > 0)
-			{
-				playerValue[i] = playerValue[i] / totalValue;
-			}
-		}
-		return playerValue;
-	}
-
-
 	public String name()
 	{
 		return "RL_Action_Drafter";
@@ -877,7 +925,28 @@ public class RL_Action_Drafter extends SmartDrafter
 
 			}
 			System.out.println(" ");
-		}		
+		}
+		
+		System.out.println("e Vector values: ");
+
+		// print out the feature vector
+		actionIter = actions.keySet().iterator();
+		while (actionIter.hasNext())
+		{
+			String action = actionIter.next();
+
+			Iterator<String> stateIter = states.keySet().iterator();
+
+			while (stateIter.hasNext())
+			{
+				String state = stateIter.next();
+
+				System.out.print(e_sa.get(action + "+" + state).toString() + "  ");
+
+			}
+			System.out.println(" ");
+		}
+		
 	}
 
 	public void printActionValues()
