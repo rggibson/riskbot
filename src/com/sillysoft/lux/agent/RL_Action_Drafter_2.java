@@ -17,7 +17,9 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Random;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.ObjectInputStream;
 import java.io.FileInputStream;
 import java.io.ObjectOutputStream;
@@ -88,6 +90,10 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 	 */
 	protected static Integer m_numGamesPlayed = 0;
 
+    /**
+     * The evaluation function to use
+     */
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
 
 	/**
 	 * Learned action values
@@ -162,7 +168,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 				}
 			}
 
-			
+
 			initialized = true;
 			System.out.println("I have been initialized.");
 		}
@@ -197,14 +203,14 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 				draftState[i] = countries[i].getOwner();
 			}
 
-			
+
 			System.out.println("===== End of draft update =====");
 			System.out.println("player 0: " + board.getPlayerName(0));
 
 			// Get reward    	
 			// reward is calculated using the evaluation function
 			// the difference in value from previous state to current state is the reward
-			double[] current_world_values = evaluationFunction(draftState, EvaluationFunction.LIN_REG_NOM_FEATS);
+			double[] current_world_values = evaluationFunction(draftState, m_evalFunc);
 
 			current_world_value = current_world_values[0];    	     	 
 			double reward = current_world_value - previous_world_value;    	
@@ -218,10 +224,10 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 			printActionValues();
 
 			printFeatureVector();
-			
+
 			gameStarted = true;
 		}
-		
+
 		super.placeArmies(numberOfArmies);
 	}
 
@@ -250,10 +256,13 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 			// Save to this file
 			try
 			{
-				FileOutputStream fos =  new FileOutputStream(fileName);
-				ObjectOutputStream out = new ObjectOutputStream(fos);
+				BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName, true));
+
+				//FileOutputStream fos =  new FileOutputStream(fileName);
+				//ObjectOutputStream out = new ObjectOutputStream(fos);
 
 				// print out the feature vector
+				bufferedWriter.write("feature vector\n");
 				Iterator<String> actionIter = actions.keySet().iterator();
 
 				while (actionIter.hasNext())
@@ -267,13 +276,18 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 						String state = stateIter.next();
 
 						//System.out.println(features.get(action + "+" + state).toString());
-						fos.write(features.get(action + "+" + state).toString().getBytes());
-						fos.write(" ".getBytes());
+						//fos.write(features.get(action + "+" + state).toString().getBytes());
+						//fos.write(" ".getBytes());
+						bufferedWriter.write(features.get(action + "+" + state).toString() + " ");
 					}
 
-					fos.write("\n".getBytes());
+					//fos.write("\n".getBytes());
+					bufferedWriter.write("\n");
 				}
-				fos.close();
+				//fos.flush();
+				//fos.close();
+				bufferedWriter.close();
+
 			}
 			catch (Exception e)
 			{
@@ -298,7 +312,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 		System.out.println("player 0: " + board.getPlayerName(0));
 
 		previous_action = current_action;
-		
+
 		// Get reward    	
 		// reward is calculated using the evaluation function
 		// the difference in value from previous state to current state is the reward
@@ -306,7 +320,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 
 		//current_world_value = current_world_values[0];
 		//current_world_value = 0;
-		
+
 		//double reward = current_world_value - previous_world_value;    	
 		double reward = 0;
 		//previous_world_value = current_world_value;
@@ -327,7 +341,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 		printActionValues();
 
 		printFeatureVector();
-		
+
 
 		// Resolve the action to a concrete country
 		pick = ResolveAction(current_action, draftState);
@@ -471,76 +485,92 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 		System.out.println("policy value: " + policyValue + " and EPSILON: " + EPSILON);
 
 
-		if (policyValue > EPSILON)
-		{
-			// exploit
-			
-			System.out.println("exploit");
-			
-			actionIter = actions.keySet().iterator();    		
-			double maxActionValue = 0.0;
-			LinkedList<String> maxValuedActions = new LinkedList<String>();
+		try{
 
-			// choose largest valued action
-			while (actionIter.hasNext())
+
+			if (policyValue > EPSILON)
 			{
-				String action = actionIter.next();
+				// exploit
 
-				if (actions.get(action).doubleValue() == maxActionValue)
+				System.out.println("exploit");
+
+				actionIter = actions.keySet().iterator();    		
+				double maxActionValue = 0.0;
+				LinkedList<String> maxValuedActions = new LinkedList<String>();
+
+				boolean firstAction = true;
+				
+				// choose largest valued action
+				while (actionIter.hasNext())
 				{
-					if (IsActionAvailable(action))
-					{	
+					String action = actionIter.next();
+
+					if (firstAction == true)   // making sure at least one action is chosen
+					{
 						maxValuedActions.add(action);
-					}
-				}
-				else if (actions.get(action).doubleValue() > maxActionValue)
-				{
-					if (IsActionAvailable(action))
-					{	
 						maxActionValue = actions.get(action).doubleValue();
-						maxValuedActions.clear();
-						maxValuedActions.add(action);
+						firstAction = false;
 					}
+					else if (actions.get(action).doubleValue() == maxActionValue)
+					{
+						if (IsActionAvailable(action))
+						{	
+							maxValuedActions.add(action);
+						}
+					}
+					else if (actions.get(action).doubleValue() > maxActionValue)
+					{
+						if (IsActionAvailable(action))
+						{	
+							maxActionValue = actions.get(action).doubleValue();
+							maxValuedActions.clear();
+							maxValuedActions.add(action);
+						}
+					}
+
 				}
+
+				int chosenActionNum = generator.nextInt(maxValuedActions.size());
+				System.out.println("random number: " + chosenActionNum);
+				chosenAction = maxValuedActions.get(chosenActionNum);
+
+
+			}
+			else
+			{
+				// explore
+
+				System.out.println("explore");
+
+				actionIter = actions.keySet().iterator();    		
+
+				ArrayList<String> actionsList = new ArrayList<String>();
+
+
+				// reset all action values
+				while (actionIter.hasNext())
+				{
+					String action = actionIter.next();
+
+					if (IsActionAvailable(action))
+					{	
+						actionsList.add(action);
+					}
+
+				}	
+
+				System.out.println("explore");
+
+				int chosenActionNum = generator.nextInt(actionsList.size());
+				System.out.println("random number: " + chosenActionNum);
+				chosenAction = actionsList.get(chosenActionNum);
 
 			}
 
-			System.out.println("exploit");
-			
-			int chosenActionNum = generator.nextInt(maxValuedActions.size());
-			System.out.println("random number: " + chosenActionNum);
-			chosenAction = maxValuedActions.get(chosenActionNum);
-
 		}
-		else
+		catch (Exception e)
 		{
-			// explore
-			
-			System.out.println("explore");
-			
-			actionIter = actions.keySet().iterator();    		
-
-			ArrayList<String> actionsList = new ArrayList<String>();
-
-
-			// reset all action values
-			while (actionIter.hasNext())
-			{
-				String action = actionIter.next();
-
-				if (IsActionAvailable(action))
-				{	
-					actionsList.add(action);
-				}
-
-			}	
-
-			System.out.println("explore");
-			
-			int chosenActionNum = generator.nextInt(actionsList.size());
-			System.out.println("random number: " + chosenActionNum);
-			chosenAction = actionsList.get(chosenActionNum);
-
+			System.out.println("ERROR: " + e.toString());
 		}
 
 		System.out.println("chosen action: " + chosenAction);
@@ -634,7 +664,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 
 		double e_sa_change = 1.0 / activeStatesList.size();
 		System.out.println("e_sa_change: " + e_sa_change);
-		
+
 		double Qvalue = 0.0;
 		for (int i=0; i<activeStatesList.size(); i++)
 		{	
@@ -646,7 +676,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 		// where delta = [r + gamma * Q(s',a') - Q(s,a)]
 		double delta = (reward + GAMMA * Qvalue - prevQvalue) / activeStatesList.size();
 		System.out.println("GAMMA: " + GAMMA + " DELTA: " + delta + " prevQvalue: " + prevQvalue + " Qvalue: " + Qvalue);
-		
+
 
 		/*
 		// Sarsa(0) update
@@ -926,7 +956,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 			}
 			System.out.println(" ");
 		}
-		
+
 		System.out.println("e Vector values: ");
 
 		// print out the feature vector
@@ -946,7 +976,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 			}
 			System.out.println(" ");
 		}
-		
+
 	}
 
 	public void printActionValues()
