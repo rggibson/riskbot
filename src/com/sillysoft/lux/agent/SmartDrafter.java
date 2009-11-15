@@ -223,12 +223,24 @@ public abstract class SmartDrafter extends SmartAgentBase
      */
     protected double[] evaluationFunctionSelfish(int[] finalDraftState, EvaluationFunction eval)
     {
-        // Check to make sure that this is a terminal state, and that each player
+        // Return values
+    	double[] values = new double[board.getNumberOfPlayers()];
+    	
+    	// Check to make sure that this is a terminal state, and that each player
         // made the correct number of picks.
         int[] numPicksPerPlayer = new int[board.getNumberOfPlayers()];
         for (int i = 0; i < finalDraftState.length; i++)
         {
-            assert(finalDraftState[i] >= 0 && finalDraftState[i] < board.getNumberOfPlayers());
+            //assert(finalDraftState[i] >= 0 && finalDraftState[i] < board.getNumberOfPlayers());
+        	assert(finalDraftState[i] < board.getNumberOfPlayers());
+        	
+        	// if this is not the final draft state, return a 0-vector
+        	if (finalDraftState[i] < 0)
+        	{
+        		System.out.println("Not a final draft state, returning 0-vector");
+        		return values;
+        	}
+        	
             numPicksPerPlayer[finalDraftState[i]]++;
         }
 
@@ -246,7 +258,6 @@ public abstract class SmartDrafter extends SmartAgentBase
         // Only works on the classic map
         assert(board.getNumberOfCountries() == 42);
 
-        double[] values = new double[board.getNumberOfPlayers()];
         for (int player = 0; player < board.getNumberOfPlayers(); ++player)
         {
 
