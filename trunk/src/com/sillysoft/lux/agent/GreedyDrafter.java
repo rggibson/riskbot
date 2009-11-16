@@ -22,7 +22,7 @@ public class GreedyDrafter extends SmartDrafter
     /**
      * The evaluation function to use
      */
-    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
+    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS_WITH_REPS;
 
     public GreedyDrafter()
     {

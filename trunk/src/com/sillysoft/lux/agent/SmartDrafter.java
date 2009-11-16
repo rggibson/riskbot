@@ -9,6 +9,8 @@ import com.sillysoft.lux.*;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.io.ObjectInputStream;
+import java.io.FileInputStream;
 
 /**
  * This agent is equivalent to EvilPixie except in the draft phase
@@ -27,10 +29,13 @@ public abstract class SmartDrafter extends SmartAgentBase
         LIN_REG_NUM_FEATS, // Linear regression with numeric features for continent counts
         LIN_REG_NUM_FEATS_CONT_BONUS, // Linear regression with numeric features for continent counts, plus a bonus for owning entire continent
         LIN_REG_MORE_FEATS, // Linear regression with mostly numeric features, extras include seat order, friendly neighbour counts, and what the opponents have
-        MULTI_PERCEP // An artificial neural network built from Weka (same features as LIN_REG_MORE_FEATS) THIS APPEARS TO BE BROKEN!!
+        MULTI_PERCEP, // An artificial neural network built from Weka (same features as LIN_REG_MORE_FEATS) THIS APPEARS TO BE BROKEN!!
+        LIN_REG_LEARNED, // Linear regression learned through UCT self-play
+        LIN_REG_MORE_NOM_FEATS, // Same as LIN_REG_MORE_FEATS except with nominal features, 100 games per draft, and linear extensions
+        LIN_REG_NOM_FEATS_WITH_REPS // Pretty much same as LIN_REG_NOM_FEATS except 100 games were played per draft and linear extensions used
     }
 
-    protected final EvaluationFunction FANTASY_RISK_EVAL_FUNC = EvaluationFunction.LIN_REG_NOM_FEATS;
+    protected final EvaluationFunction FANTASY_RISK_EVAL_FUNC = EvaluationFunction.LIN_REG_NOM_FEATS_WITH_REPS;
 
     /**
      * The name of the agent to use for post draft play
@@ -56,6 +61,8 @@ public abstract class SmartDrafter extends SmartAgentBase
      * Number of games played
      */
     protected static int numGamesPlayed = 0;
+
+    protected static double[] linRegLearnedWeights;
 
     /**
      * How much time, in milliseconds, the "thinkers" get to think, which we
@@ -99,6 +106,12 @@ public abstract class SmartDrafter extends SmartAgentBase
         m_postDraftPlayer = board.getAgentInstance(POST_DRAFT_PLAYER_NAME);
         assert(m_postDraftPlayer != null);
         m_postDraftPlayer.setPrefs(ID, board);
+
+        // Initialize learned heuristic weights
+        if (linRegLearnedWeights == null)
+        {
+            linRegLearnedWeights = initLinRegLearnedWeights();
+        }
     }
 
     public String name()
@@ -333,6 +346,888 @@ public abstract class SmartDrafter extends SmartAgentBase
     {
         switch (eval)
         {
+            case LIN_REG_NOM_FEATS_WITH_REPS:
+            {
+                int numPlayers = board.getNumberOfPlayers();
+
+                // For each player, calculate how much of each continent,
+                // as well as the number of enemy neighbours, number of terrs
+                // with an enemy neighbour, and friendly neighbours count
+                int[] numInCont = new int[board.getNumberOfContinents()];
+                ArrayList<Integer> enemyNeighbours = new ArrayList<Integer>();
+                int numFriends = 0;
+                for (Country country : countries)
+                {
+                    int terr = country.getCode();
+                    int owner = draftState[terr];
+
+                    // Only care about territories this player owns
+                    if (owner != player)
+                    {
+                        continue;
+                    }
+
+                    numInCont[country.getContinent()]++;
+                    for (int neighbour : country.getAdjoiningCodeList())
+                    {
+                        int neighbourOwner = draftState[neighbour];
+                        if (neighbourOwner != owner)
+                        {
+                            if (!enemyNeighbours.contains((Integer) neighbour))
+                            {
+                                // New enemy neighbour for owner
+                                enemyNeighbours.add((Integer) neighbour);
+                            }
+                        }
+                        else
+                        {
+                            numFriends++;
+                        }
+                    }
+                }
+
+                // LIN_REG_NOM_FEATS_WITH_REPS.txt
+                double value = -67.1557;
+
+                if (player == 0)
+                {
+                    value += 13.3818;
+                }
+                else if (player == 1)
+                {
+                    value += 5.3459;
+                }
+
+                // Australia
+                switch (numInCont[0])
+                {
+                    case 0:
+                        value += 2.972;
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        value += 8.4532;
+                        break;
+                    case 3:
+                        value += 9.9902;
+                        break;
+                    case 4:
+                        value += 10.7097;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // South America
+                switch (numInCont[1])
+                {
+                    case 1:
+                        value += 1.232;
+                        break;
+                    case 0:
+                        value += 0.6904;
+                        break;
+                    case 2:
+                        value += 3.8997;
+                        break;
+                    case 3:
+                        break;
+                    case 4:
+                        value += 17.7184;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Africa
+                switch (numInCont[2])
+                {
+                    case 4:
+                        value += 1.23;
+                        break;
+                    case 3:
+                        value += 7.1637;
+                        break;
+                    case 2:
+                        value += 10.7207;
+                        break;
+                    case 1:
+                        value += 12.8728;
+                        break;
+                    case 0:
+                        value += 14.3958;
+                        break;
+                    case 5:
+                        break;
+                    case 6:
+                        value += 29.796;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // North America
+                switch (numInCont[3])
+                {
+                    case 1:
+                        value += 0.9766;
+                        break;
+                    case 3:
+                        value += 2.1682;
+                        break;
+                    case 0:
+                        value += 3.1092;
+                        break;
+                    case 4:
+                        value += 7.1541;
+                        break;
+                    case 5:
+                        value += 19.3505;
+                        break;
+                    case 7:
+                        value += 24.0969;
+                        break;
+                    case 6:
+                        value += 24.8183;
+                        break;
+                    case 8:
+                        value += 36.1487;
+                        break;
+                    case 2:
+                        break;
+                    case 9:
+                        value += 48.2005; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Europe
+                switch (numInCont[4])
+                {
+                    case 4:
+                        value += 41.3515;
+                        break;
+                    case 2:
+                        value += 43.1116;
+                        break;
+                    case 3:
+                        value += 43.7726;
+                        break;
+                    case 0:
+                        value += 42.4404;
+                        break;
+                    case 1:
+                        value += 45.1071;
+                        break;
+                    case 6:
+                        value += 43.8472;
+                        break;
+                    case 5:
+                        value += 50.7666;
+                        break;
+                    case 7:
+                        value += 36.9278; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Asia
+                switch (numInCont[5])
+                {
+                    case 7:
+                        value += 15.6257;
+                        break;
+                    case 8:
+                        value += 17.4338;
+                        break;
+                    case 6:
+                        value += 19.3189;
+                        break;
+                    case 9:
+                        value += 13.8433;
+                        break;
+                    case 5:
+                        value += 23.6794;
+                        break;
+                    case 4:
+                        value += 23.6086;
+                        break;
+                    case 3:
+                        value += 23.1026;
+                        break;
+                    case 2:
+                        value += 23.759;
+                        break;
+                    case 1:
+                        value += 23.9027;
+                        break;
+                    case 0:
+                        value += 27.0974;
+                        break;
+                    case 10:
+                        value += 10.2528; // Linear extension
+                        break;
+                    case 11:
+                        value += 6.6623; // Linear extension
+                        break;
+                    case 12:
+                        value += 3.0718; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                value += -0.0719 * enemyNeighbours.size();
+                value += 0.4799 * numFriends;
+
+                return Math.max(0.0, value);
+            }
+
+            case LIN_REG_MORE_NOM_FEATS:
+            {
+                int numPlayers = board.getNumberOfPlayers();
+
+                // For each player, calculate how much of each continent,
+                // as well as the number of enemy neighbours, number of terrs
+                // with an enemy neighbour, and friendly neighbours count
+                int[][] numInCont = new int[numPlayers][board.getNumberOfContinents()];
+                ArrayList<Integer>[] enemyNeighbours = new ArrayList[numPlayers];
+                for (int i = 0; i < enemyNeighbours.length; ++i)
+                {
+                    enemyNeighbours[i] = new ArrayList<Integer>();
+                }
+                int[] numFriends = new int[numPlayers];
+                for (Country country : countries)
+                {
+                    int terr = country.getCode();
+                    int owner = draftState[terr];
+
+                    numInCont[owner][country.getContinent()]++;
+                    for (int neighbour : country.getAdjoiningCodeList())
+                    {
+                        int neighbourOwner = draftState[neighbour];
+                        if (neighbourOwner != owner)
+                        {
+                            if (!enemyNeighbours[owner].contains((Integer) neighbour))
+                            {
+                                // New enemy neighbour for owner
+                                enemyNeighbours[owner].add((Integer) neighbour);
+                            }
+                        }
+                        else
+                        {
+                            numFriends[owner]++;
+                        }
+                    }
+                }
+
+                // LIN_REG_MORE_NOM_FEATS.txt
+                double value = -145.6288;
+
+                if (player == 0)
+                {
+                    value += 13.4398;
+                }
+                else if (player == 1)
+                {
+                    value += 5.4214;
+                }
+
+                // Australia 
+                switch (numInCont[player][0])
+                {
+                    case 0:
+                        value += 3.1387;
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        value += 8.2552;
+                        break;
+                    case 3:
+                        value += 10.4603;
+                        break;
+                    case 4:
+                        value += 15.1957;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // South America
+                switch (numInCont[player][1])
+                {
+                    case 1:
+                        value += -0.9278;
+                        break;
+                    case 0:
+                        value += -2.4959;
+                        break;
+                    case 2:
+                        value += 2.7635;
+                        break;
+                    case 3:
+                        break;
+                    case 4:
+                        value += 18.1449;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Africa
+                switch (numInCont[player][2])
+                {
+                    case 4:
+                        value += -0.0701;
+                        break;
+                    case 3:
+                        value += 4.1888;
+                        break;
+                    case 2:
+                        value += 5.9511;
+                        break;
+                    case 1:
+                        value += 5.9686;
+                        break;
+                    case 0:
+                        value += 5.1645;
+                        break;
+                    case 5:
+                        break;
+                    case 6:
+                        value += 29.4134;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // North America
+                switch (numInCont[player][3])
+                {
+                    case 1:
+                        value += 2.7525;
+                        break;
+                    case 3:
+                        value += 1.2321;
+                        break;
+                    case 0:
+                        value += 7.0952;
+                        break;
+                    case 4:
+                        value += 6.1181;
+                        break;
+                    case 5:
+                        value += 19.2324;
+                        break;
+                    case 7:
+                        value += 29.6635;
+                        break;
+                    case 6:
+                        value += 26.8165;
+                        break;
+                    case 8:
+                        value += 45.0344;
+                        break;
+                    case 2:
+                        break;
+                    case 9:
+                        value += 60.4053; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Europe
+                switch (numInCont[player][4])
+                {
+                    case 4:
+                        value += 41.0801;
+                        break;
+                    case 2:
+                        value += 39.7357;
+                        break;
+                    case 3:
+                        value += 41.7809;
+                        break;
+                    case 0:
+                        value += 37.4062;
+                        break;
+                    case 1:
+                        value += 40.7987;
+                        break;
+                    case 6:
+                        value += 47.5113;
+                        break;
+                    case 5:
+                        value += 51.8401;
+                        break;
+                    case 7:
+                        value += 43.1825; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Asia
+                switch (numInCont[player][5])
+                {
+                    case 7:
+                        value += 12.6562;
+                        break;
+                    case 8:
+                        value += 15.3438;
+                        break;
+                    case 6:
+                        value += 16.5661;
+                        break;
+                    case 9:
+                        value += 12.3163;
+                        break;
+                    case 5:
+                        value += 20.4204;
+                        break;
+                    case 4:
+                        value += 20.1208;
+                        break;
+                    case 3:
+                        value += 19.2712;
+                        break;
+                    case 2:
+                        value += 19.1625;
+                        break;
+                    case 1:
+                        value += 18.2517;
+                        break;
+                    case 0:
+                        value += 21.0315;
+                        break;
+                    case 10:
+                        value += 9.2888; // Linear extension
+                        break;
+                    case 11:
+                        value += 6.2613; // Linear extension
+                        break;
+                    case 12:
+                        value += 3.2338; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                value += -0.256 * enemyNeighbours[player].size();
+                value += 0.4665 * numFriends[player];
+
+                // Australia after
+                switch (numInCont[(player + 1) % numPlayers][0])
+                {
+                    case 3:
+                        value += 5.9772;
+                        break;
+                    case 4:
+                        break;
+                    case 2:
+                        value += 7.1741;
+                        break;
+                    case 0:
+                        value += 8.9151;
+                        break;
+                    case 1:
+                        value += 10.3194;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // South America after
+                switch (numInCont[(player + 1) % numPlayers][1])
+                {
+                    case 2:
+                        value += 4.3893;
+                        break;
+                    case 0:
+                        value += 6.7938;
+                        break;
+                    case 1:
+                        value += 5.6147;
+                        break;
+                    case 4:
+                        break;
+                    case 3:
+                        value += 7.0449;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Africa after
+                switch (numInCont[(player + 1) % numPlayers][2])
+                {
+                    case 0:
+                        value += 8.5733;
+                        break;
+                    case 1:
+                        value += 8.9904;
+                        break;
+                    case 2:
+                        value += 9.0255;
+                        break;
+                    case 3:
+                        value += 9.603;
+                        break;
+                    case 4:
+                        value += 10.4194;
+                        break;
+                    case 6:
+                        break;
+                    case 5:
+                        value += 10.1046;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // North America after
+                switch (numInCont[(player + 1) % numPlayers][3])
+                {
+                    case 6:
+                        value += 23.1827;
+                        break;
+                    case 7:
+                        value += 26.0089;
+                        break;
+                    case 5:
+                        value += 28.1089;
+                        break;
+                    case 4:
+                        value += 34.3404;
+                        break;
+                    case 0:
+                        value += 32.1413;
+                        break;
+                    case 3:
+                        value += 36.747;
+                        break;
+                    case 1:
+                        value += 35.5926;
+                        break;
+                    case 2:
+                        value += 37.0826;
+                        break;
+                    case 8:
+                        break;
+                    case 9:
+                        value += -26.0089; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Europe after
+                switch (numInCont[(player + 1) % numPlayers][4])
+                {
+                    case 1:
+                        value += 6.6988;
+                        break;
+                    case 0:
+                        value += 7.0604;
+                        break;
+                    case 6:
+                        value += 7.7552;
+                        break;
+                    case 2:
+                        value += 7.4423;
+                        break;
+                    case 3:
+                        value += 7.2213;
+                        break;
+                    case 4:
+                        value += 7.4747;
+                        break;
+                    case 5:
+                        break;
+                    case 7:
+                        value += 9.1741; 
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Asia after
+                switch (numInCont[(player + 1) % numPlayers][5])
+                {
+                    case 2:
+                        value += -5.3444;
+                        break;
+                    case 1:
+                        value += -2.1782;
+                        break;
+                    case 3:
+                        value += -6.5751;
+                        break;
+                    case 4:
+                        value += -8.5423;
+                        break;
+                    case 5:
+                        value += -9.6596;
+                        break;
+                    case 6:
+                        value += -9.5761;
+                        break;
+                    case 8:
+                        value += -9.7352;
+                        break;
+                    case 7:
+                        value += -7.5956;
+                        break;
+                    case 9:
+                        value += -3.0965;
+                        break;
+                    case 10:
+                        value += -13.8482;
+                        break;
+                    case 0:
+                        break;
+                    case 11:
+                        value += -24.5999; // Linear extension
+                        break;
+                    case 12:
+                        value += -35.3516; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                value += 0.0922 * enemyNeighbours[(player + 1) % numPlayers].size();
+                value += -0.2143 * numFriends[(player + 1) % numPlayers];
+
+                // Australia before
+                switch (numInCont[(player + 2) % numPlayers][0])
+                {
+                    case 2:
+                        value += 1.0361;
+                        break;
+                    case 3:
+                        break;
+                    case 4:
+                        value += 1.2139;
+                        break;
+                    case 0:
+                        value += 4.4674;
+                        break;
+                    case 1:
+                        value += 6.1739;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // South America before
+                switch (numInCont[(player + 2) % numPlayers][1])
+                {
+                    case 0:
+                        value += 12.1041;
+                        break;
+                    case 2:
+                        value += 10.1207;
+                        break;
+                    case 1:
+                        value += 12.1508;
+                        break;
+                    case 4:
+                        break;
+                    case 3:
+                        value += 10.6642;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Africa before
+                switch (numInCont[(player + 2) % numPlayers][2])
+                {
+                    case 0:
+                        value += 17.9823;
+                        break;
+                    case 1:
+                        value += 16.3767;
+                        break;
+                    case 2:
+                        value += 15.9746;
+                        break;
+                    case 3:
+                        value += 16.775;
+                        break;
+                    case 4:
+                        value += 19.833;
+                        break;
+                    case 6:
+                        break;
+                    case 5:
+                        value += 19.6932;
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // North America before
+                switch (numInCont[(player + 2) % numPlayers][3])
+                {
+                    case 6:
+                        value += -4.6317;
+                        break;
+                    case 7:
+                        value += -10.4714;
+                        break;
+                    case 5:
+                        value += -1.8072;
+                        break;
+                    case 4:
+                        value += 5.2422;
+                        break;
+                    case 0:
+                        value += 7.1304;
+                        break;
+                    case 3:
+                        value += 7.8881;
+                        break;
+                    case 1:
+                        value += 7.8552;
+                        break;
+                    case 2:
+                        value += 8.9512;
+                        break;
+                    case 8:
+                        break;
+                    case 9:
+                        value += 10.4714; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Europe before
+                switch (numInCont[(player + 2) % numPlayers][4])
+                {
+                    case 1:
+                        value += 3.7259;
+                        break;
+                    case 0:
+                        value += 5.9482;
+                        break;
+                    case 5:
+                        value += 2.6178;
+                        break;
+                    case 3:
+                        value += 3.8383;
+                        break;
+                    case 2:
+                        value += 4.8539;
+                        break;
+                    case 4:
+                        value += 5.0943;
+                        break;
+                    case 6:
+                        break;
+                    case 7:
+                        value += -2.6178; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                // Asia before
+                switch (numInCont[(player + 2) % numPlayers][5])
+                {
+                    case 9:
+                        value += -12.8111;
+                        break;
+                    case 1:
+                        value += 2.2221;
+                        break;
+                    case 2:
+                        value += 1.7417;
+                        break;
+                    case 3:
+                        value += 0.1278;
+                        break;
+                    case 4:
+                        value += -1.4904;
+                        break;
+                    case 5:
+                        value += -3.4085;
+                        break;
+                    case 10:
+                        value += -19.1582; // Linear extension
+                        break;
+                    case 8:
+                        value += -6.464;
+                        break;
+                    case 6:
+                        value += -2.3737;
+                        break;
+                    case 7:
+                        value += -3.1801;
+                        break;
+                    case 0:
+                        break;
+                    case 11:
+                        value += -25.5053; // Linear extension
+                        break;
+                    case 12:
+                        value += -31.8524; // Linear extension
+                        break;
+                    default:
+                        assert false : "Error: Weird number of terrs in cont.";
+                        break;
+                }
+
+                value += 0.1638 * enemyNeighbours[(player + 2) % numPlayers].size();
+                value += -0.2522 * numFriends[(player + 2) % numPlayers];
+
+                return Math.max(0.0, value);
+            }
+
+            // Linear regression with learned weights
+            case LIN_REG_LEARNED:
+            {
+                int[] presentFeatures = getLinRegLearnedPresentFeatures(draftState, player);
+                assert presentFeatures.length == linRegLearnedWeights.length : "Error: Number of features and number of weights don't match!";
+                double value = 0.0;
+                for (int i = 0; i < presentFeatures.length; ++i)
+                {
+                    value += presentFeatures[i] * linRegLearnedWeights[i];
+                }
+
+                return Math.max(0.0, value);
+            }
+
             // Multilayer Perceptron
             case MULTI_PERCEP:
             {
@@ -1297,7 +2192,7 @@ public abstract class SmartDrafter extends SmartAgentBase
                     }
                 }
 
-                // LIN_REG_NUM_FEAT_CONT_BONUS.txt
+                // LIN_REG_NUM_FEAT.txt
                 double value = 0.2787;
                 value += 0.0447 * numInCont[0]; // Australia
                 value += 0.0243 * numInCont[1]; // South America
@@ -1549,7 +2444,7 @@ public abstract class SmartDrafter extends SmartAgentBase
                 }
 
                 // Asia
-                switch (numInCont[3])
+                switch (numInCont[5])
                 {
                     case 0:
                         value += 0.0235 + 0.0163 + 0.0053 - 0.0135 + 0.0422 - 0.031 + 0.0296 + 0.0077 + 0.0015 + 0.0075 + 0.0102 + 0.0329;
@@ -1820,6 +2715,451 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @return The index of the territory to pick
      */
     public abstract int getPick(int[] draftState, ArrayList<Integer> unownedCountries);
+
+    /**
+     * Initializes the weights of the evaluation function we are/have learned
+     * @return The initial weights
+     */
+    protected static double[] initLinRegLearnedWeights()
+    {
+//        ArrayList<Double> weights = new ArrayList<Double>();
+//
+//        // Seat
+//        weights.add(9.035 + 5.577);
+//        weights.add(5.577);
+//        weights.add(0.0);
+//
+//        // Australia
+//        for (int i = 0; i <= 4; ++i)
+//        {
+//            weights.add(i * 2.2505);
+//        }
+//        // South America
+//        for (int i = 0; i <= 4; ++i)
+//        {
+//            weights.add(i * 0.4765);
+//        }
+//        // Africa
+//        for (int i = 0; i <= 6; ++i)
+//        {
+//            weights.add(i * (-2.1602));
+//        }
+//        // North America
+//        for (int i = 0; i <= 9; ++i)
+//        {
+//            weights.add(i * 2.0242);
+//        }
+//        // Europe
+//        for (int i = 0; i <= 7; ++i)
+//        {
+//            weights.add(i * (-1.0675));
+//        }
+//        // Asia
+//        for (int i = 0; i <= 12; ++i)
+//        {
+//            weights.add(i * (-0.7873));
+//        }
+//        weights.add(-1.0463); // Num enemies
+//        weights.add(0.4221); // Num terrs with an enemy
+//        weights.add(0.5093); // Num friends
+//        // Australia for following player
+//        for (int i = 0; i <= 4; ++i)
+//        {
+//            weights.add(i * (-0.854));
+//        }
+//        // South America for following player
+//        for (int i = 0; i <= 4; ++i)
+//        {
+//            weights.add(i * (0.0936));
+//        }
+//        // Africa for following player
+//        for (int i = 0; i <= 6; ++i)
+//        {
+//            weights.add(i * 0.6137);
+//        }
+//        // North America for following player
+//        for (int i = 0; i <= 9; ++i)
+//        {
+//            weights.add(i * (-1.0759));
+//        }
+//        // Europe for following player
+//        for (int i = 0; i <= 7; ++i)
+//        {
+//            weights.add(i * 0.7138);
+//        }
+//        // Asia for following player
+//        for (int i = 0; i <= 12; ++i)
+//        {
+//            weights.add(i * 0.3612);
+//        }
+//        weights.add(0.3218); // Num enemies for after player
+//        weights.add(-0.4234); // Num terrs with an enemy for after player
+//        weights.add(-0.3158); // Num friends for after player
+//        // Australia for previous player
+//        for (int i = 0; i <= 4; ++i)
+//        {
+//            weights.add(i * (-1.3907));
+//        }
+//        // South America for following player
+//        for (int i = 0; i <= 4; ++i)
+//        {
+//            weights.add(i * (-0.568));
+//        }
+//        // Africa for following player
+//        for (int i = 0; i <= 6; ++i)
+//        {
+//            weights.add(i * 1.5397);
+//        }
+//        // North America for following player
+//        for (int i = 0; i <= 9; ++i)
+//        {
+//            weights.add(i * (-0.9499));
+//        }
+//        // Europe for following player
+//        for (int i = 0; i <= 7; ++i)
+//        {
+//            weights.add(i * 0.3479);
+//        }
+//        // Asia for following player
+//        for (int i = 0; i <= 12; ++i)
+//        {
+//            weights.add(i * 0.4266);
+//        }
+//        weights.add(0.7245); // Num enemies for before player
+//        weights.add(0.0013); // Num terrs with an enemy for before player
+//        weights.add(-0.1935); // Num friends for before player
+//
+//        // Constant
+//        weights.add(26.6227);
+//
+//        double[] ret = new double[weights.size()];
+//        for (int i = 0; i < ret.length; ++i)
+//        {
+//            ret[i] = weights.get(i);
+//        }
+
+        // Load the weights from file
+        double[] ret = null;
+        try
+        {
+            ObjectInputStream in = new ObjectInputStream(new FileInputStream("C:\\Users\\Richard\\Documents\\NetBeansProjects\\LuxSDK\\LuxSDK\\objectData\\linRegLearnedWeights.dat"));
+            ret = (double[])in.readObject();
+            in.close();
+        }
+        catch (Exception e)
+        {
+            assert(false);
+        }
+
+        assert ret != null : "Error: Couldn't load weights properly!";
+
+        return ret;
+    }
+
+    /**
+     * Computes the present features found in the present draftState from
+     * player's perspective
+     * @param draftState The (final) state of the draft
+     * @param player The player who we are concerned with
+     * @return The array of present features (with their values)
+     */
+    protected int[] getLinRegLearnedPresentFeatures(int[] draftState, int player)
+    {
+        ArrayList<Integer> features = new ArrayList<Integer>();
+        int numPlayers = board.getNumberOfPlayers();
+
+        // For each player, calculate how much of each continent,
+        // as well as the number of enemy neighbours, number of terrs
+        // with an enemy neighbour, and friendly neighbours count
+        int[][] numInCont = new int[numPlayers][board.getNumberOfContinents()];
+        ArrayList<Integer>[] enemyNeighbours = new ArrayList[numPlayers];
+        for (int i = 0; i < enemyNeighbours.length; ++i)
+        {
+            enemyNeighbours[i] = new ArrayList<Integer>();
+        }
+        int[] numTerrsWithEnemy = new int[numPlayers];
+        int[] numFriends = new int[numPlayers];
+        for (Country country : countries)
+        {
+            int terr = country.getCode();
+            int owner = draftState[terr];
+
+            numInCont[owner][country.getContinent()]++;
+            for (int neighbour : country.getAdjoiningCodeList())
+            {
+                int neighbourOwner = draftState[neighbour];
+                if (neighbourOwner != owner)
+                {
+                    if (!enemyNeighbours[owner].contains((Integer) neighbour))
+                    {
+                        // New enemy neighbour for owner
+                        enemyNeighbours[owner].add((Integer) neighbour);
+                    }
+                }
+                else
+                {
+                    numFriends[owner]++;
+                }
+            }
+            for (int neighbour : country.getAdjoiningCodeList())
+            {
+                if (draftState[neighbour] != owner)
+                {
+                    numTerrsWithEnemy[owner]++;
+                    break;
+                }
+            }
+        }
+
+        // Seat
+        for (int i = 0; i < numPlayers; ++i)
+        {
+            if (i == player)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        //Australia
+        for (int i = 0; i <= 4; ++i)
+        {
+            if (numInCont[player][0] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // South America
+        for (int i = 0; i <= 4; ++i)
+        {
+            if (numInCont[player][1] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Africa
+        for (int i = 0; i <= 6; ++i)
+        {
+            if (numInCont[player][2] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // North America
+        for (int i = 0; i <= 9; ++i)
+        {
+            if (numInCont[player][3] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Europe
+        for (int i = 0; i <= 7; ++i)
+        {
+            if (numInCont[player][4] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Asia
+        for (int i = 0; i <= 12; ++i)
+        {
+            if (numInCont[player][5] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        features.add(enemyNeighbours[player].size()); // Num enemies
+        features.add(numTerrsWithEnemy[player]); // Num terrs with enemy
+        features.add(numFriends[player]); // num friends
+        // Australia after player
+        for (int i = 0; i <= 4; ++i)
+        {
+            if (numInCont[(player + 1) % numPlayers][0] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // South America after player
+        for (int i = 0; i <= 4; ++i)
+        {
+            if (numInCont[(player + 1) % numPlayers][1] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Africa after player
+        for (int i = 0; i <= 6; ++i)
+        {
+            if (numInCont[(player + 1) % numPlayers][2] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // North America after player
+        for (int i = 0; i <= 9; ++i)
+        {
+            if (numInCont[(player + 1) % numPlayers][3] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Europe after player
+        for (int i = 0; i <= 7; ++i)
+        {
+            if (numInCont[(player + 1) % numPlayers][4] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Asia after player
+        for (int i = 0; i <= 12; ++i)
+        {
+            if (numInCont[(player + 1) % numPlayers][5] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        features.add(enemyNeighbours[(player + 1) % numPlayers].size()); // Num enemies after player
+        features.add(numTerrsWithEnemy[(player + 1) % numPlayers]); // Num terrs with enemy after player
+        features.add(numFriends[(player + 1) % numPlayers]); // num friends after player
+        // Australia before player
+        for (int i = 0; i <= 4; ++i)
+        {
+            if (numInCont[(player + 2) % numPlayers][0] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // South America before player
+        for (int i = 0; i <= 4; ++i)
+        {
+            if (numInCont[(player + 2) % numPlayers][1] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Africa before player
+        for (int i = 0; i <= 6; ++i)
+        {
+            if (numInCont[(player + 2) % numPlayers][2] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // North America before player
+        for (int i = 0; i <= 9; ++i)
+        {
+            if (numInCont[(player + 2) % numPlayers][3] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Europe before player
+        for (int i = 0; i <= 7; ++i)
+        {
+            if (numInCont[(player + 2) % numPlayers][4] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        // Asia before player
+        for (int i = 0; i <= 12; ++i)
+        {
+            if (numInCont[(player + 2) % numPlayers][5] == i)
+            {
+                features.add(1);
+            }
+            else
+            {
+                features.add(0);
+            }
+        }
+        features.add(enemyNeighbours[(player + 2) % numPlayers].size()); // Num enemies before player
+        features.add(numTerrsWithEnemy[(player + 2) % numPlayers]); // Num terrs with enemy before player
+        features.add(numFriends[(player + 2) % numPlayers]); // num friends before player
+
+        // Constant
+        features.add(1);
+
+        int[] ret = new int[features.size()];
+        for (int i = 0; i < ret.length; ++i)
+        {
+            ret[i] = features.get(i);
+        }
+
+        return ret;
+    }
 
 }
 
