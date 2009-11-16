@@ -1,0 +1,114 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.LinearRegression -S 1 -R 1.0E-8
+Relation:     risk
+Instances:    22728
+Attributes:   43
+              C0
+              C1
+              C2
+              C3
+              C4
+              C5
+              C6
+              C7
+              C8
+              C9
+              C10
+              C11
+              C12
+              C13
+              C14
+              C15
+              C16
+              C17
+              C18
+              C19
+              C20
+              C21
+              C22
+              C23
+              C24
+              C25
+              C26
+              C27
+              C28
+              C29
+              C30
+              C31
+              C32
+              C33
+              C34
+              C35
+              C36
+              C37
+              C38
+              C39
+              C40
+              C41
+              value
+Test mode:    evaluate on training data
+
+=== Classifier model (full training set) ===
+
+
+Linear Regression Model
+
+value =
+
+      0.022  * C0=1 +
+      0.0298 * C1=1 +
+      0.022  * C2=1 +
+      0.0158 * C3=1 +
+      0.0236 * C4=1 +
+      0.0253 * C5=1 +
+      0.0118 * C6=1 +
+      0.0091 * C7=0 +
+      0.0232 * C8=0 +
+      0.0127 * C9=0 +
+      0.0126 * C10=0 +
+     -0.0004 * C11=0 +
+     -0.0053 * C12=0 +
+     -0.0072 * C13=0 +
+      0.0433 * C14=1 +
+      0.0359 * C15=1 +
+      0.0359 * C16=1 +
+      0.0514 * C17=1 +
+      0.0319 * C18=1 +
+      0.0454 * C19=1 +
+      0.0303 * C20=1 +
+      0.039  * C21=1 +
+     -0.0083 * C22=0 +
+     -0.0068 * C23=0 +
+     -0.0082 * C24=0 +
+      0.0186 * C25=1 +
+     -0.006  * C26=0 +
+      0.0191 * C27=1 +
+      0.0349 * C28=1 +
+      0.0299 * C29=1 +
+     -0.0052 * C30=0 +
+      0.0177 * C31=0 +
+     -0.0001 * C32=0 +
+      0.0074 * C33=0 +
+     -0.002  * C34=0 +
+      0.0093 * C35=0 +
+      0.0096 * C36=0 +
+      0.0144 * C37=0 +
+      0.0122 * C38=0 +
+      0.0064 * C39=0 +
+      0.02   * C40=0 +
+     -0.0029 * C41=0 +
+      0.1527
+
+Time taken to build model: 0.91 seconds
+
+=== Evaluation on training set ===
+=== Summary ===
+
+Correlation coefficient                  0.2133
+Mean absolute error                      0.2359
+Root mean squared error                  0.2782
+Relative absolute error                 97.4214 %
+Root relative squared error             97.6994 %
+Total Number of Instances            22728     
+

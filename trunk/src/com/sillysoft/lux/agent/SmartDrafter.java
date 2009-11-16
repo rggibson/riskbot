@@ -23,19 +23,31 @@ public abstract class SmartDrafter extends SmartAgentBase
     /**
      * The different evaluation functions we have implemented
      */
-    public enum EvaluationFunction
-    {
-        LIN_REG_NOM_FEATS, // Linear regression with nominal features for continent counts
-        LIN_REG_NUM_FEATS, // Linear regression with numeric features for continent counts
-        LIN_REG_NUM_FEATS_CONT_BONUS, // Linear regression with numeric features for continent counts, plus a bonus for owning entire continent
-        LIN_REG_MORE_FEATS, // Linear regression with mostly numeric features, extras include seat order, friendly neighbour counts, and what the opponents have
-        MULTI_PERCEP, // An artificial neural network built from Weka (same features as LIN_REG_MORE_FEATS) THIS APPEARS TO BE BROKEN!!
-        LIN_REG_LEARNED, // Linear regression learned through UCT self-play
-        LIN_REG_MORE_NOM_FEATS, // Same as LIN_REG_MORE_FEATS except with nominal features, 100 games per draft, and linear extensions
-        LIN_REG_NOM_FEATS_WITH_REPS // Pretty much same as LIN_REG_NOM_FEATS except 100 games were played per draft and linear extensions used
-    }
+//    public enum EvaluationFunction
+//    {
+//        LIN_REG_NOM_FEATS, // Linear regression with nominal features for continent counts
+//        LIN_REG_NUM_FEATS, // Linear regression with numeric features for continent counts
+//        LIN_REG_NUM_FEATS_CONT_BONUS, // Linear regression with numeric features for continent counts, plus a bonus for owning entire continent
+//        LIN_REG_MORE_FEATS, // Linear regression with mostly numeric features, extras include seat order, friendly neighbour counts, and what the opponents have
+//        MULTI_PERCEP, // An artificial neural network built from Weka (same features as LIN_REG_MORE_FEATS) THIS APPEARS TO BE BROKEN!!
+//        LIN_REG_LEARNED, // Linear regression learned through UCT self-play
+//        LIN_REG_MORE_NOM_FEATS, // Same as LIN_REG_MORE_FEATS except with nominal features, 100 games per draft, and linear extensions
+//        LIN_REG_NOM_FEATS_WITH_REPS // Pretty much same as LIN_REG_NOM_FEATS except 100 games were played per draft and linear extensions used
+//    }
 
-    protected final EvaluationFunction FANTASY_RISK_EVAL_FUNC = EvaluationFunction.LIN_REG_NOM_FEATS_WITH_REPS;
+	final int LIN_REG_NOM_FEATS = 0; // Linear regression with nominal features for continent counts
+    final int LIN_REG_NUM_FEATS = 1; // Linear regression with numeric features for continent counts
+    final int LIN_REG_NUM_FEATS_CONT_BONUS = 2; // Linear regression with numeric features for continent counts, plus a bonus for owning entire continent
+    final int LIN_REG_MORE_FEATS = 3; // Linear regression with mostly numeric features, extras include seat order, friendly neighbour counts, and what the opponents have
+    final int MULTI_PERCEP = 4; // An artificial neural network built from Weka (same features as LIN_REG_MORE_FEATS) THIS APPEARS TO BE BROKEN!!
+    final int LIN_REG_GREEDY_NOM_FEATS = 5; // Linear regression with nominal features for continent counts using greedy
+    final int LIN_REG_IND_COUNTRIES = 6;
+    final int LIN_REG_MORE_NOM_FEATS = 7; // Same as LIN_REG_MORE_FEATS except with nominal features, 100 games per draft, and linear extensions
+    final int LIN_REG_NOM_FEATS_WITH_REPS = 8; // Pretty much same as LIN_REG_NOM_FEATS except 100 games were played per draft and linear extensions used
+    final int LIN_REG_LEARNED = 9;
+    final int LIN_REG_NOM_FEATS_2ACTUAL = 10;
+    
+    protected final int FANTASY_RISK_EVAL_FUNC = LIN_REG_NOM_FEATS_2ACTUAL;
 
     /**
      * The name of the agent to use for post draft play
@@ -134,6 +146,7 @@ public abstract class SmartDrafter extends SmartAgentBase
         // When playing fantasy risk, we need to evaluate the match here.
         numGamesPlayed++;
         double[] scores = evaluationFunction(outcomeOfDraft, FANTASY_RISK_EVAL_FUNC);
+//        System.out.println("scores: " + scores[0] + " " + scores[1] + " " + scores[2]);
         for (int i = 0; i < board.getNumberOfPlayers(); ++i)
         {
             double currentScore = scoreboard.get(board.getPlayerName(i));
@@ -234,7 +247,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param finalDraftState The final assignment of countries to the players
      * @return An array of length numPlayers denoting how much each player likes this state
      */
-    protected double[] evaluationFunctionSelfish(int[] finalDraftState, EvaluationFunction eval)
+    protected double[] evaluationFunctionSelfish(int[] finalDraftState, int eval)
     {
         // Return values
     	double[] values = new double[board.getNumberOfPlayers()];
@@ -311,7 +324,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param finalDraftState The final state of the draft (who owns what)
      * @return The value of the state to each player
      */
-    protected double[] evaluationFunction(int[] finalDraftState, EvaluationFunction eval)
+    protected double[] evaluationFunction(int[] finalDraftState, int eval)
     {
         double[] values = evaluationFunctionSelfish(finalDraftState, eval);
 
@@ -342,7 +355,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param eval The evaluation function to execute
      * @return The value for this state to the passed in player
      */
-    protected double getMachineLearnedValue(int[] draftState, int player, EvaluationFunction eval)
+    protected double getMachineLearnedValue(int[] draftState, int player, int eval)
     {
         switch (eval)
         {
@@ -2492,6 +2505,609 @@ public abstract class SmartDrafter extends SmartAgentBase
 
                 return value;
             }
+             
+            case LIN_REG_GREEDY_NOM_FEATS:
+            {
+                // Figure out how much of each continent this player has,
+                // as well as the number of enemy neighbours
+                int[] numInCont = new int[board.getNumberOfContinents()];
+                ArrayList<Integer> enemyNeighbours = new ArrayList<Integer>();
+                for (Country country : countries)
+                {
+                    int terr = country.getCode();
+                    if (draftState[terr] != player)
+                    {
+                        // Only care about territories we own
+                        continue;
+                    }
+
+                    numInCont[country.getContinent()]++;
+                    for (int enemy : country.getAdjoiningCodeList())
+                    {
+                        if (draftState[enemy] != player && !enemyNeighbours.contains((Integer) enemy))
+                        {
+                            enemyNeighbours.add((Integer) enemy);
+                        }
+                    }
+                }
+
+                // LIN_REG_NOM_FEATS.txt
+                double value = 0.22; // - 0.0047 * enemyNeighbours.size();
+
+                // Australia
+                switch (numInCont[0])
+                {
+                    case 0:
+                        break;
+                    case 1:
+                        value += 0.313;
+                        break;
+                    case 2:
+                        value += 0.0313 + 0.0252;
+                        break;
+                    case 3:
+                        value += 0.0313 + 0.0252;
+                        break;
+                    case 4:
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // South America
+                switch (numInCont[1])
+                {
+                    case 0:
+                        value += 0.0194 -.0106;
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        value += 0.0194;
+                        break;
+                    case 3:
+                        value += 0.0194 - 0.0106 + 0.0318;
+                        break;
+                    case 4:
+                        value += 0.0194 - 0.0106 + 0.0318;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // Africa
+                switch (numInCont[2])
+                {
+                    case 0:
+                        value += 0.0328 + 0.0105;
+                        break;
+                    case 1:
+                        value += 0.0328 + 0.0105;
+                        break;
+                    case 2:
+                        value += 0.0328 + 0.0105;
+                        break;
+                    case 3:
+                        value += 0.0328;
+                        break;
+                    case 4:
+                        break;
+                    case 5:
+                        value += 0.0328;
+                        break;
+                    case 6:
+                        value += 0.0328 + 0.0105;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // North America
+                switch (numInCont[3])
+                {
+                    case 0:
+                        value += 0.0136;
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        value += 0.0136;
+                        break;
+                    case 4:
+                        value += 0.0136 + 0.0418; 
+                        break;
+                    case 5:
+                        value += 0.0136 + 0.0418 + 0.0921; 
+                        break;
+                    case 6:
+                        value += 0.0136 + 0.0921 + 0.0418 + 0.0555; 
+                        break;
+                    case 7:
+                        value += 0.0136 + 0.0418 + 0.0921 + 0.0555;
+                        break;
+                    case 8:
+                        value += 0.0136 + 0.0418 + 0.0921 + 0.0555;
+                        break;
+                    case 9:
+                        value += 0.0136;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // Europe
+                switch (numInCont[4])
+                {
+                    case 0:
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        value += 0.0192; 
+                        break;
+                    case 4:
+                        value += 0.0192 + 0.0189;
+                        break;
+                    case 5:
+                        value += 0.0192 + 0.0189 + 0.0382;
+                        break;
+                    case 6:
+                        value += 0.0192 + 0.0189 + 0.0382 + 0.1663;
+                        break;
+                    case 7:
+                        value += 0.0192 + 0.0189 + 0.0382 + 0.1663;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // Asia
+                switch (numInCont[3])
+                {
+                    case 0:
+                        value += 0.0408 + 0.0134 + 0.0122 + 0.0186 + 0.0209;
+                        break;
+                    case 1:
+                        value += 0.0408 + 0.0134 + 0.0122 + 0.0186 + 0.0209;
+                        break;
+                    case 2:
+                        value += 0.0408 + 0.0134 + 0.0122 + 0.0186;
+                        break;
+                    case 3:
+                        value += 0.0408 + 0.0134 + 0.0122;
+                        break;
+                    case 4:
+                        value += 0.0408 + 0.0134;
+                        break;
+                    case 5:
+                        value += 0.0408 + 0.0134;
+                        break;
+                    case 6:
+                        value += 0.0408;
+                        break;
+                    case 7:
+                        value += 0.0408;
+                        break;
+                    case 8:
+                        break;
+                    case 9:
+                        value += 0.0408 + 0.0134;
+                        break;
+                    case 10:
+                        value += 0.0408 + 0.0134 + 0.0122 + 0.0186 + 0.0209;
+                        break;
+                    case 11:
+                        value += 0.0408 + 0.0134;
+                        break;
+                    case 12:
+                        value += 0.0408 + 0.0134;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                return value;
+            }
+            
+            case LIN_REG_NOM_FEATS_2ACTUAL:
+            {
+            	//System.out.println("LIN_REG_NOM_FEATS_2ACTUAL");
+                // Figure out how much of each continent this player has,
+                // as well as the number of enemy neighbours
+                int[] numInCont = new int[board.getNumberOfContinents()];
+                ArrayList<Integer> enemyNeighbours = new ArrayList<Integer>();
+
+                int numTerrsWithEnemy = 0;
+                for (Country country : countries)
+                {
+                    int terr = country.getCode();
+                    if (draftState[terr] != player)
+                    {
+                        // Only care about territories we own
+                        continue;
+                    }
+
+                    numInCont[country.getContinent()]++;
+                    for (int enemy : country.getAdjoiningCodeList())
+                    {
+                        if (draftState[enemy] != player && !enemyNeighbours.contains((Integer) enemy))
+                        {
+                            enemyNeighbours.add((Integer) enemy);
+                        }
+                    }
+                    for (int neighbour : country.getAdjoiningCodeList())
+                    {
+                        if (draftState[neighbour] != player)
+                        {
+                            numTerrsWithEnemy++;
+                            break;
+                        }
+                    }
+
+                }
+
+                
+                
+                // LIN_REG_NOM_FEATS.txt
+                double value = 0.0845 + (-0.001 * enemyNeighbours.size()) + (0.011 + numTerrsWithEnemy);
+
+                // Australia
+                switch (numInCont[0])
+                {
+                    case 0:
+                    	value += -0.013;
+                        break;
+                    case 1:
+                        value += 0.0123;
+                        break;
+                    case 2:
+                        value += 0.0265;
+                        break;
+                    case 3:
+                        value += 0.0283;
+                        break;
+                    case 4:
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // South America
+                switch (numInCont[1])
+                {
+                    case 0:
+                        value += 0.0159;
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        value += 0.0103;
+                        break;
+                    case 3:
+                        value += 0.0239;
+                        break;
+                    case 4:
+                        value += 0.3809;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // Africa
+                switch (numInCont[2])
+                {
+                    case 0:
+                        value += 0.0764;
+                        break;
+                    case 1:
+                        value += 0.0678;
+                        break;
+                    case 2:
+                        value += 0.0553;
+                        break;
+                    case 3:
+                        value += 0.0394;
+                        break;
+                    case 4:
+                        break;
+                    case 5:
+                        value += 0.018;
+                        break;
+                    case 6:
+                        value += 0.1472;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // North America
+                switch (numInCont[3])
+                {
+                    case 0:
+                        value += 0.0203;
+                        break;
+                    case 1:
+                    	value += 0.0045;
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        value += 0.0043;
+                        break;
+                    case 4:
+                        value += 0.0368; 
+                        break;
+                    case 5:
+                        value += 0.1208; 
+                        break;
+                    case 6:
+                        value += 0.172; 
+                        break;
+                    case 7:
+                        value += 0.1531;
+                        break;
+                    case 8:
+                        value += 0.2721;
+                        break;
+                    case 9:
+                        value += 0.3911;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // Europe
+                switch (numInCont[4])
+                {
+                    case 0:
+                    	value += 0.0011;
+                        break;
+                    case 1:
+                    	value += 0.0068;
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        value += 0.0083; 
+                        break;
+                    case 4:
+                        value += 0.0182;
+                        break;
+                    case 5:
+                        value += 0.0488;
+                        break;
+                    case 6:
+                        value += 0.2141;
+                        break;
+                    case 7:
+                        value += 0.2501;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                // Asia
+                switch (numInCont[3])
+                {
+                    case 0:
+                        value += 0.1769;
+                        break;
+                    case 1:
+                        value += 0.1579;
+                        break;
+                    case 2:
+                        value += 0.1313;
+                        break;
+                    case 3:
+                        value += 0.1047;
+                        break;
+                    case 4:
+                        value += 0.0866;
+                        break;
+                    case 5:
+                        value += 0.072;
+                        break;
+                    case 6:
+                        value += 0.0555;
+                        break;
+                    case 7:
+                        value += 0.0431;
+                        break;
+                    case 8:
+                        break;
+                    case 9:
+                        value += 0.1114;
+                        break;
+                    case 10:
+                        value += 0.2693;
+                        break;
+                    case 11:
+                        value += 0.4272;
+                        break;
+                    case 12:
+                        value += 0.5851;
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+
+                return value;
+            }
+            
+            case LIN_REG_IND_COUNTRIES:
+            {
+                // Figure out how much of each continent this player has,
+                // as well as the number of enemy neighbours
+//                int[] numInCont = new int[board.getNumberOfContinents()];
+//                ArrayList<Integer> enemyNeighbours = new ArrayList<Integer>();
+//                for (Country country : countries)
+//                {
+//                    int terr = country.getCode();
+//                    if (draftState[terr] != player)
+//                    {
+//                        // Only care about territories we own
+//                        continue;
+//                    }
+//
+//                    numInCont[country.getContinent()]++;
+//                    for (int enemy : country.getAdjoiningCodeList())
+//                    {
+//                        if (draftState[enemy] != player && !enemyNeighbours.contains((Integer) enemy))
+//                        {
+//                            enemyNeighbours.add((Integer) enemy);
+//                        }
+//                    }
+//                }
+                
+
+                // LIN_REG_NOM_FEATS.txt
+                double value = 0.1527; // - 0.0047 * enemyNeighbours.size();
+
+                if (draftState[0] == player) {
+                	value += 0.022;
+                }
+                if (draftState[1] == player) {
+                	value += 0.0298;
+                }
+                if (draftState[2] == player) {
+                	value += 0.022;
+                }
+                if (draftState[3] == player) {
+                	value += 0.0158;
+                }
+                if (draftState[4] == player) {
+                	value += 0.0236;
+                }
+                if (draftState[5] == player) {
+                	value += 0.0253;
+                }
+                if (draftState[6] == player) {
+                	value += 0.0118;
+                }
+                if (draftState[7] != player) {
+                	value += 0.0091;
+                }
+                if (draftState[8] != player) {
+                	value += 0.0232;
+                }
+                if (draftState[9] != player) {
+                	value += 0.0127;
+                }
+                if (draftState[10] != player) {
+                	value += 0.0126;
+                }
+                if (draftState[11] != player) {
+                	value -= 0.0004;
+                }
+                if (draftState[12] != player) {
+                	value -= 0.0053;
+                }
+                if (draftState[13] != player) {
+                	value -= 0.0072;
+                }
+                if (draftState[14] == player) {
+                	value += 0.0433;
+                }
+                if (draftState[15] == player) {
+                	value += 0.0359;
+                }
+                if (draftState[16] == player) {
+                	value += 0.0359;
+                }
+                if (draftState[17] == player) {
+                	value += 0.0514;
+                }
+                if (draftState[18] == player) {
+                	value += 0.0319;
+                }
+                if (draftState[19] == player) {
+                	value += 0.0454;
+                }
+                if (draftState[20] == player) {
+                	value += 0.0303;
+                }
+                if (draftState[21] == player) {
+                	value += 0.039;
+                }
+                if (draftState[22] != player) {
+                	value -= 0.0083;
+                }
+                if (draftState[23] != player) {
+                	value -= 0.0068;
+                }
+                if (draftState[24] != player) {
+                	value -= 0.0082;
+                }
+                if (draftState[25] == player) {
+                	value += 0.0186;
+                }
+                if (draftState[26] != player) {
+                	value -= 0.006;
+                }
+                if (draftState[27] == player) {
+                	value += 0.0191;
+                }
+                if (draftState[28] == player) {
+                	value += 0.0349;
+                }
+                if (draftState[29] == player) {
+                	value += 0.0299;
+                }
+                if (draftState[30] != player) {
+                	value -= 0.0052;
+                }
+                if (draftState[31] != player) {
+                	value += 0.0177;
+                }
+                if (draftState[32] != player) {
+                	value -= 0.0001;
+                }
+                if (draftState[33] != player) {
+                	value += 0.0074;
+                }
+                if (draftState[34] != player) {
+                	value -= 0.002;
+                }
+                if (draftState[35] != player) {
+                	value += 0.0093;
+                }
+                if (draftState[36] != player) {
+                	value += 0.0096;
+                }
+                if (draftState[37] != player) {
+                	value += 0.0144;
+                }
+                if (draftState[38] != player) {
+                	value += 0.0122;
+                }
+                if (draftState[39] != player) {
+                	value += 0.0064;
+                }
+                if (draftState[40] != player) {
+                	value += 0.02;
+                }
+                if (draftState[41] != player) {
+                	value -= 0.0029;
+                }
+                
+                return value;
+            }
                 
             default:
                 assert false : "Error: Unrecognized evaluation function!";
@@ -2615,7 +3231,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * @param selfish Whether to evaluate selfishly or not
      * @return The greedy pick
      */
-    protected int getGreedyPick(int[] draftState, ArrayList<Integer> unownedCountries, int player, boolean selfish, EvaluationFunction eval)
+    protected int getGreedyPick(int[] draftState, ArrayList<Integer> unownedCountries, int player, boolean selfish, int eval)
     {
         ArrayList<Integer> unownedNeighbours = new ArrayList<Integer>();
 

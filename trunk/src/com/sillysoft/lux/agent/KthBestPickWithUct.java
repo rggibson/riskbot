@@ -23,7 +23,7 @@ public class KthBestPickWithUct extends SmartDrafter
     /**
      * The evaluation function to use
      */
-    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS_WITH_REPS;
+    protected int m_evalFunc = LIN_REG_NOM_FEATS_WITH_REPS;
 
     /**
      * The maximum number of picks to consider

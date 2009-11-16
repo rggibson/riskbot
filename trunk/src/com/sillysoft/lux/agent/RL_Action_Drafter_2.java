@@ -93,7 +93,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
     /**
      * The evaluation function to use
      */
-    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
+    protected int m_evalFunc = LIN_REG_NOM_FEATS;
 
 	/**
 	 * Learned action values
