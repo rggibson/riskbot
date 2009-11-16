@@ -1,0 +1,56 @@
+=== Run information ===
+
+Scheme:       weka.classifiers.functions.LinearRegression -S 2 -R 1.0E-8
+Relation:     risk-weka.filters.unsupervised.attribute.Remove-R8
+Instances:    21507
+Attributes:   8
+              Aus
+              SA
+              Afr
+              NA
+              Eur
+              Asia
+              numEnemies
+              value
+Test mode:    evaluate on training data
+
+=== Classifier model (full training set) ===
+
+
+Linear Regression Model
+
+value =
+
+      0.0313 * Aus=1,2,3 +
+      0.0252 * Aus=2,3 +
+      0.0194 * SA=2,0,3,4 +
+     -0.0106 * SA=0,3,4 +
+      0.0318 * SA=3,4 +
+      0.0328 * Afr=5,3,2,1,0,6 +
+      0.0105 * Afr=2,1,0,6 +
+      0.0136 * NA=3,0,9,4,5,7,6,8 +
+      0.0418 * NA=4,5,7,6,8 +
+      0.0921 * NA=5,7,6,8 +
+      0.0555 * NA=7,6,8 +
+      0.0192 * Eur=3,4,5,7,6 +
+      0.0189 * Eur=4,5,7,6 +
+      0.0382 * Eur=5,7,6 +
+      0.1663 * Eur=7,6 +
+      0.0408 * Asia=7,6,5,9,4,12,11,3,2,1,0,10 +
+      0.0134 * Asia=5,9,4,12,11,3,2,1,0,10 +
+      0.0122 * Asia=3,2,1,0,10 +
+      0.0186 * Asia=2,1,0,10 +
+      0.0209 * Asia=1,0,10 +
+      0.22  
+
+Time taken to build model: 183.78 seconds
+
+=== Evaluation on training set ===
+=== Summary ===
+
+Correlation coefficient                  0.2191
+Mean absolute error                      0.2351
+Root mean squared error                  0.2777
+Relative absolute error                 97.1339 %
+Root relative squared error             97.5695 %
+Total Number of Instances            21507     
