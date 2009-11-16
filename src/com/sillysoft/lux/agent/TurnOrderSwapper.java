@@ -18,9 +18,9 @@ public class TurnOrderSwapper extends SmartDrafter
     /**
      * The names of the players that will be drafting
      */
-    protected static final String[] DRAFTERS = {"QuoClone",
-                                                "RandomDrafter",
-                                                "UCT_Drafter2"  };
+    protected static final String[] DRAFTERS = {"UCT_Drafter2Clone3",
+                                                "UCT_Drafter2",
+                                                "UCT_Drafter2Clone2"  };
 
     /**
      * The number of orderings we are considering
@@ -142,9 +142,13 @@ public class TurnOrderSwapper extends SmartDrafter
                             {
                                 perm[m] = k;
                             }
+                            else if ((numGamesPlayed % 3) == ((m+1) % 3))
+                            {
+                                perm[m] = (k+1) % 3;
+                            }
                             else
                             {
-                                perm[m] = i;
+                                perm[m] = (k+2) % 3;
                             }
                         }
                     }
