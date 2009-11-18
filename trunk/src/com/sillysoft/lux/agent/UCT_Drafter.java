@@ -34,7 +34,7 @@ public class UCT_Drafter extends SmartDrafter
     /**
      * The evaluation function to use
      */
-    protected EvaluationFunction m_evalFunc = EvaluationFunction.LIN_REG_NOM_FEATS;
+    protected int m_evalFunc = LIN_REG_NOM_FEATS;
     
     /**
      * Constructor

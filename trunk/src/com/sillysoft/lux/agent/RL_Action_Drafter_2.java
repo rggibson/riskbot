@@ -6,11 +6,9 @@
 package com.sillysoft.lux.agent;
 
 import com.sillysoft.lux.*;
-import com.sillysoft.lux.agent.SmartDrafter.EvaluationFunction;
 import com.sillysoft.lux.util.ContinentIterator;
 import com.sillysoft.lux.util.CountryIterator;
 
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -88,8 +86,13 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 	/**
 	 * Keep track of the number of games we've played
 	 */
-	protected static Integer m_numGamesPlayed = 0;
+	protected static Integer numGamesPlayed = 0;
 
+	/**
+	 * Keep track of the number of games we've won
+	 */
+	protected static Integer numGamesWon = 0;
+	
     /**
      * The evaluation function to use
      */
@@ -110,7 +113,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 		/**
 		 * The file to store logs.
 		 */
-		HEURISTIC_DATA_FILENAME = "D:\\logs.txt";
+		HEURISTIC_DATA_FILENAME = "C:\\logs.txt";
 
 	}
 
@@ -187,7 +190,7 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 				e_sa.put(action + "+" + state, 0.0);
 			}
 		}
-
+		
 	}
 
 	public void placeArmies( int numberOfArmies )
@@ -225,6 +228,13 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 
 			printFeatureVector();
 
+			numGamesPlayed++;
+
+			// reduce epsilon (exploration)
+			double tempVal = numGamesPlayed / 100;
+			if (tempVal < 1.0) tempVal = 1.0;
+			EPSILON = 0.2 / tempVal; 
+			
 			gameStarted = true;
 		}
 
@@ -239,15 +249,15 @@ public class RL_Action_Drafter_2 extends SmartDrafter
 
 		String message = "Ha Ha.  I out-drafted you again!";
 
-		m_numGamesPlayed++;
+		numGamesWon++;
 
 
 		// Check if we should capture this heuristic function
-		if ((m_numGamesPlayed % CAPTURE_AFTER_EVERY) == 0)
+		if ((numGamesWon % CAPTURE_AFTER_EVERY) == 0)
 		{
 			// Create the file name
 			String fileName = HEURISTIC_DATA_FILENAME.substring(0, HEURISTIC_DATA_FILENAME.length() - 3); // Removes "dat"
-			fileName += "" + m_numGamesPlayed + ".txt";			
+			fileName += "" + numGamesWon + ".txt";			
 
 			// Check to make sure that the file does not already exist
 			boolean exists = (new File(fileName)).exists();
