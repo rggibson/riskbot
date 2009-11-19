@@ -47,7 +47,7 @@ public abstract class SmartDrafter extends SmartAgentBase
     final int LIN_REG_LEARNED = 9;
     final int LIN_REG_NOM_FEATS_2ACTUAL = 10;
     
-    protected final int FANTASY_RISK_EVAL_FUNC = LIN_REG_NOM_FEATS_2ACTUAL;
+    protected final int FANTASY_RISK_EVAL_FUNC = LIN_REG_NOM_FEATS_WITH_REPS;
 
     /**
      * The name of the agent to use for post draft play
@@ -83,7 +83,7 @@ public abstract class SmartDrafter extends SmartAgentBase
      * i.e. the code here is written to trust the agent to abide by the time
      * restriction.
      */
-    protected final static int PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR = 500;
+    protected final static int PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR = 250;
 
     public SmartDrafter()
     {
@@ -602,7 +602,7 @@ public abstract class SmartDrafter extends SmartAgentBase
                 value += -0.0719 * enemyNeighbours.size();
                 value += 0.4799 * numFriends;
 
-                return Math.max(0.0, value);
+                return Math.max(0.0, value / 100);
             }
 
             case LIN_REG_MORE_NOM_FEATS:
