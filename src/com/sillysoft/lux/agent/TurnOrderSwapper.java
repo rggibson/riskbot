@@ -18,9 +18,9 @@ public class TurnOrderSwapper extends SmartDrafter
     /**
      * The names of the players that will be drafting
      */
-    protected static final String[] DRAFTERS = {"UCT_Drafter2Clone3",
-                                                "UCT_Drafter2",
-                                                "UCT_Drafter2Clone2"  };
+    protected static final String[] DRAFTERS = {"UCT_Drafter2",
+                                                "Quo",
+                                                "RandomDrafter"  };
 
     /**
      * The number of orderings we are considering
@@ -42,7 +42,10 @@ public class TurnOrderSwapper extends SmartDrafter
      * The drafter we are currently using
      */
     protected SmartDrafter m_drafterForThisGame;
+    protected Quo m_drafterQuoForThisGame;
 
+    protected boolean useSmart = true;
+    
     /**
      * Constructor
      */
@@ -156,8 +159,15 @@ public class TurnOrderSwapper extends SmartDrafter
             }
         }
 
-        m_drafterForThisGame = (SmartDrafter)board.getAgentInstance(DRAFTERS[perm[ID]]);
-        m_drafterForThisGame.setPrefs(ID, board);
+        if (board.getAgentInstance(DRAFTERS[perm[ID]]) instanceof Quo) {
+        	m_drafterQuoForThisGame = (Quo)board.getAgentInstance(DRAFTERS[perm[ID]]);  
+        	m_drafterQuoForThisGame.setPrefs(ID, board);
+        	useSmart = false;
+        } else {
+        	m_drafterForThisGame = (SmartDrafter)board.getAgentInstance(DRAFTERS[perm[ID]]);
+        	m_drafterForThisGame.setPrefs(ID, board);
+        }
+        
         System.out.println("At seat " + ID + " for game " + numGamesPlayed + " is " + DRAFTERS[perm[ID]]);
     }
 
@@ -170,7 +180,10 @@ public class TurnOrderSwapper extends SmartDrafter
     @Override
     public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
-        return m_drafterForThisGame.getPick(draftState, unownedCountries);
+    	if (useSmart)
+    		return m_drafterForThisGame.getPick(draftState, unownedCountries);
+    	else
+    		return m_drafterQuoForThisGame.pickCountry();
     }
 
     @Override
