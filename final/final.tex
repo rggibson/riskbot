@@ -10,6 +10,7 @@
 \usepackage{algorithmic}
 \usepackage{url}
 \usepackage{colortbl}
+\usepackage{color}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -40,6 +41,8 @@
 \newcommand{\dist}{\operatorname{dist}}
 
 \newcommand{\avg}{\operatorname{avg}}
+
+\definecolor{grey}{rgb}{0.4,0.4,0.4}
 
 
 \numberwithin{equation}{section}
@@ -89,15 +92,19 @@ Below, we formalize the concept of a drafting game and discuss the problems we e
 \subsection{Drafting games}
 \label{subsec:DraftingGames}
 
-A \emph{drafting game} is a finite, deterministic, full-information game played by a set of $n \geq 2$ players, which we label 0 through $n-1$.  The game has a single set of actions or \emph{picks} $A$ initially available to every player.  Once a player makes a pick, that pick is forbidden to all players for the rest of the game.  Play continues until some predefined end game condition is satisfied, or all actions in $A$ have been chosen.  At the game's conclusion, the picks made by each of the players induce a partition $Z = \{A_0, A_1, ..., A_{n-1}, \bar{A}\}$ of $A$, where $A_i$ is the set of all picks made by player $i$, and $\bar{A}$ are the actions that were not chosen by any player.  Each player then receives a reward signal $r_i(Z)$ according to the resulting partition $Z$.  Player $i$'s objective is to make picks in such a way as to maximize $r_i(Z)$.  Note that this means there is not necessarily a single winner; players may be following their own individual and independent objectives.
+A \emph{drafting game} is a finite, deterministic, full-information game played by a set of $n \geq 2$ players, which we label 1 through $n$.  The game has a single set of actions or \emph{picks} $A$ initially available to every player.  Once a player makes a pick, that pick is forbidden to all players for the rest of the game.  Play continues until some predefined end game condition is satisfied, or all actions in $A$ have been chosen.  At the game's conclusion, the picks made by each of the players induce a partition $Z = \{A_1, ..., A_{n}, \bar{A}\}$ of $A$, where $A_i$ is the set of all picks made by player $i$, and $\bar{A}$ are the actions that were not chosen by any player.  Each player then receives a reward signal $r_i(Z)$ according to the resulting partition $Z$.  Player $i$'s objective is to make picks in such a way as to maximize $r_i(Z)$.  Note that this means there is not necessarily a single winner; players may be following their own individual and independent objectives.
 
 \subsection{Engineering the reward signal}
 
-In many applications, a drafting game is a precursor to a larger competition involving the same set of players.  For example, in Risk, once players draft territories, the game continues until a single player wins by occupying all territories on the map.  If we want to consider the opening draft as its own separate sub-game, it is not immediately clear what the reward signals should be.  For such a sub-game, the task is thus to create a reward signal $r_i(Z)$ for each player in the drafting game that correlates with the objectives of each player in the encompassing game.  Throughout this paper, we refer to these drafting games as ``drafting sub-games.''
+Some drafting games, like Tic-Tac-Toe, are stand-alone games which naturally inherit a reward signal from the rules and objectives of the game; for example, the reward signal
+\[ r_i(Z) = \left\{ \begin{array}{cl} 1 & \text{if player $i$ has 3 cells in a row in $Z$,} \\ -1 & \text{if the other player has 3 cells in a row in $Z$,} \\ 0 & \text{otherwise} \end{array} \right. \]
+acts as a clear objective for player $i$ to maximize in Tic-Tac-Toe.  However, in many applications, a drafting game is a precursor to a larger competition involving the same set of players.  For example, in Risk, once players draft territories, the game continues until a single player wins by occupying all territories on the map.  If we want to consider the opening draft as its own separate sub-game, it is not immediately clear what the reward signals should be.  For such a sub-game, the task is thus to create a reward signal $r_i(Z)$ for each player in the drafting game that correlates with the objectives of each player in the encompassing game.  Throughout this paper, we refer to these drafting games as ``drafting sub-games.''
 
 \subsection{Selfish versus non-selfish play}
 
-When engineering the reward signal for a drafting sub-game where the encompassing game has only a single winner (such as Risk), it may be convenient to have $r_i(Z)$ approximate player $i$'s chances of winning from $Z$.  If we can provide a value $v_i$ representing the merit of player $i$'s picks, $A_i$, then
+Suppose the reward signal is of the form 
+\[ r_i(Z) = \frac{v_i}{\sum_j v_j} \]
+for $i = 1,...,n$, where $v_i \in [0, \infty)$ represents the merit of the resulting partition $Z$ to player $i$.  In this case, the objective of player $i$ is to maximize her merit $v_i$ while minimizing the merits of her opponents.  However, player $i$ could instead focus solely on maximizing his own merit $v_i$ and rely on the other players minimizing the other merit values.  Can such a strategy lead to a gain in reward?  We call this ``playing selfishly'' and investigate whether such a plan is viable.
 
 \section{Related Work}
 
@@ -223,7 +230,7 @@ There are a number of different possibilities for the heuristic function.  The m
 % Possible opponent models: KthBestPick (in practice, keep track of repeated calls in one state, and truncate the game to a fixed maximum number of picks remaining), if repeated games then could try to learn an opponent model.  Typically will not be given the explicit opponent drafting strategies.
 As for the opponent models, again there are a few options.  Firstly, we should use KthBestPick as the opponent model for our own play, since we know this is the strategy being used to make our picks.  Typically for the other players, however, we will not be given their explicit drafting strategies.  The simplest approach would be to assume that the opponents are also using KthBestPick to make decisions with an appropriate self-centered heuristic function.  This turns line 10 of Algorithm \ref{alg:kth} into a recursive call, and in this case, KthBestPick can be very costly in computation time.  We can combat this by only considering a fixed number of the highest ranked picks at line 3, and repeating the algorithm iteratively on this number until returning a pick is necessary.  Finally, if we are fortunate enough to have obtained the strategies of our opponents, we can simply pass these into the algorithm.
 
-WALK THROUGH A SMALL EXAMPLE
+WALK THROUGH A SMALL EXAMPLE?
 
 %\section{Theoretical Analysis}
 %
@@ -234,20 +241,37 @@ WALK THROUGH A SMALL EXAMPLE
 
 \section{Risk}
 
-We use the game Risk as a testbed for our proposed drafting approaches.  Risk is a strategy board game for two to six players where the objective of the game is to occupy all 42 territories on the board.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After each player places their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and make tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  Full rules can be found at \cite{WikipediaRisk}.
+We use the game Risk as a testbed for our proposed drafting approaches.  Risk is a strategy board game for two to six players where the objective of the game is to occupy all 42 territories on the board.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After each player places their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  Players receive reinforcements proportional to the number of territories owned, and receive bonus reinforcements for owning entire continents.  Each continent has its own reinforcement bonus.  Full rules can be found on-line \cite{Hasbro}.  INCLUDE A MAP OF RISK HERE?  CHANGE RULES REFERENCE TO A FOOTNOTE?
 
-\section{Empirical Evaluation of Drafting}
+The Lux Delux\footnote{http://sillysoft.net/lux/} game provides a computer version of Risk, along with several AI bots (with source code) to play against.  Each of the included bots has an associated difficulty and a general playing style.  For example, the ``Quo'' bot is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
 
-In this section, we describe the drafting game we use called ``Fantasy Risk,'' a stand-alone drafting game that mimics the drafting sub-game of standard Risk.  We then compare our drafting approaches in this game, followed by an analysis of selfish versus non-selfish play.
+In this paper, we are only concerned with strategies for playing the drafting sub-game at the beginning of Risk.  Strategies for the other phases of Risk are interesting and have been researched (\cite{RiskBots}, \cite{ZuckFelnerKraus2009}), but we do not investigate these here.  In addition, we decided to focus only on three player Risk, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to playing with more players.  This is because each player must make more selections per draft.
 
-\subsection{Fantasy Risk}
+\section{A Machine-Learned Reward Signal}
 
-% Explain fantasy risk, plus give scoring table.
-In Fantasy Risk, players take turns selecting from the 42 territories on the Risk board until all territories have been claimed, just as in the beginning of a standard game of Risk.  Then, the game immediately ends and the players receive rewards based on the outcome of the draft.  Playing Fantasy Risk allows us to better analyze our different drafting strategies without worrying about the dynamics of post-draft Risk.  We decided to run all of our experiments with three players, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to with more players because each player must make more selections per game.
+Our objectives in this paper include both determining what strategies are desirable in drafting games, and finding a strategy in the Risk drafting sub-game that can improve our chances of winning in the full game of Risk.  The latter problem suffers from a few complications.  First, the merit of a strategy for the drafting sub-game may highly depend on the strategy used in post-draft play.  For instance, a drafting strategy that primarily selects territories in North America would not be advisable to play with a post-draft strategy that plays to own Australia at all costs.  With this post-draft strategy, it would make more sense to simply select territories in Australia rather than North America during the draft.  Secondly, as mentioned previously, it is not easy to classify a draft outcome $Z$ as either ``good'' or ``bad'' for player $i$.  This makes it practically impossible to guide drafting selections towards desirable outcomes.  What we are lacking is a reward signal $r_i(Z)$ that approximates player $i$'s chances of winning from $Z$ when following a given post-draft strategy.  In this section, we describe how we used machine learning to create such a reward signal.
+
+We identified a number of features that are tactically important in Risk.  Many of these features are inspired by those found in the evaluation function described in \cite{RiskBots}.  For each player, our features are described by:
+\begin{itemize}
+	\item[(i)] for each continent, the number of territories owned in that continent;
+	\item[(ii)] when the player plays in the turn order;
+	\item[(iii)] the number of distinct territories owned by other players which border owned territories (number of enemy neighbours); and
+	\item[(iv)] the number of distinct ordered pairs of owned territories which are adjacent (number of friendly neighbours).
+\end{itemize}
+The merit of each feature set is estimated by a process similar to how Lee \cite{GregLeeThesis} creates a domain-specific fitness function or meta-model for selecting a set of actions in a Markov decision process.  First, we collect several draft outcomes, each obtained by randomly assigning all 42 territories evenly among the three players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot (see Risk section).  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, machine learning is applied to obtain a general function
+\[ f: S \mapsto v \in \textbf{R} \] 
+that estimates the merit of $S$ when following Quo's post-draft strategy.  INCLUDE A DIAGRAM LIKE LEE'S SHOWING THIS PROCESS?  Finally, for a draft outcome $Z = (A_1,A_2,A_3,\phi)$, we calculate $v_i = f(S_i)$ where $S_i$ is the feature set associated with $A_i$, and define the reward signal for player $i$ to be
+\[ r_i(Z) = \frac{v_i^+}{v_1^+ + v_2^+ + v_3^+}, \]
+where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ are nonnegative, many learners could allow $f$ to be negative and so we must take the max to keep the sign of $r_i(Z)$ correct.  Thus, to maximize reward, the objective of each player is to maximize the estimated merit of her selections while minimizing those of her opponents.
+
+Our general function $f$ is computed from 7364 random draft outcomes for a total of 22092 $(S,v)$ pairs.  We use Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) are represented as nominal features and features (iii) and (iv) are represented as numeric.  These weights are displayed in Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring}.  However, there are some features which do not appear in any of the 22092 pairs feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features are calculated through linear extrapolation of the closest two numbers in the continent counts for the associated continent.  For instance, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
+\[ 36.1487 + (36.1487 - 24.0969) = 48.2005. \]  SHOW DIAGRAM OF LINEAR EXTRAPOLATION FOR NORTH AMERICA?
+
+GIVE EXAMPLE OF COMPUTING F HERE?
 
 \begin{table*}[t]
   \begin{center} 
-   \caption{The continent points associated with Fantasy Risk.}
+   \caption{The weights for features of type (i), as computed in Weka.  The weights denoted with a * are derived through linear extrapolation.}
     \label{tab:ContScoring}
     \begin{tabular}{|c|c|c|c|c|c|c|}
     	\hline
@@ -263,21 +287,21 @@ In Fantasy Risk, players take turns selecting from the 42 territories on the Ris
     	\hline
     	\bf 4 & 10.7097 & 17.7184 & 1.23 & 7.1541 & 41.3515 & 23.6086 \\
     	\hline
-    	\bf 5 & \cellcolor{black} & \cellcolor{black} & 0 & 19.3505 & 50.7666 & 23.6794 \\
+    	\bf 5 & - & - & 0 & 19.3505 & 50.7666 & 23.6794 \\
     	\hline
-    	\bf 6 & \cellcolor{black} & \cellcolor{black} & 29.796 & 24.8183 & 43.8472 & 19.3189 \\
+    	\bf 6 & - & - & 29.796 & 24.8183 & 43.8472 & 19.3189 \\
     	\hline
-    	\bf 7 & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & 24.0969 & 36.9278 & 15.6257 \\
+    	\bf 7 & - & - & - & 24.0969 & 36.9278* & 15.6257 \\
     	\hline
-    	\bf 8 & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & 36.1487 & \cellcolor{black} & 17.4338 \\
+    	\bf 8 & - & - & - & 36.1487 & - & 17.4338 \\
     	\hline
-    	\bf 9 & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & 48.2005 & \cellcolor{black} & 13.8433 \\
+    	\bf 9 & - & - & - & 48.2005* & - & 13.8433 \\
     	\hline
-    	\bf 10 & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & 10.2528 \\
+    	\bf 10 & - & - & - & - & - & 10.2528* \\
     	\hline
-    	\bf 11 & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & 6.6623 \\
+    	\bf 11 & - & - & - & - & - & 6.6623* \\
     	\hline
-    	\bf 12 & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & \cellcolor{black} & 3.0718 \\
+    	\bf 12 & - & - & - & - & - & 3.0718* \\
     	\hline
     \end{tabular}
   \end{center}
@@ -285,15 +309,15 @@ In Fantasy Risk, players take turns selecting from the 42 territories on the Ris
 
 \begin{table}[t]
 	\begin{center}
-		\caption{Additional points associated with Fantasy Risk.} 
+		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
 		\label{tab:MoreScoring}
 		\begin{tabular}{|c|c|}
 			\hline
 			\textbf{Feature} & \textbf{Points} \\
 			\hline
-			First to pick & 13.3818 \\
+			First to play & 13.3818 \\
 			\hline
-			Second to pick & 5.3459 \\
+			Second to play & 5.3459 \\
 			\hline
 			Each unique enemy neighbour & -0.0719 \\
 			\hline
@@ -303,27 +327,24 @@ In Fantasy Risk, players take turns selecting from the 42 territories on the Ris
 	\end{center}
 \end{table}
 
-We create end-game rewards for the players in Fantasy Risk by first accumulating a number of points $v_i$ for player $i$, $i=1,2,3$.  The points are determined by the number of territories owned in each continent, when the player picks in the turn order, the number of unique territories owned by other players which border owned territories (enemy neighbours), and the number of ordered pairs of owned territories which border each other (friendly neighbours).  Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} show the point values associated with each of these features.  
+\section{Empirical Evaluation}
+
+In this section, we describe the drafting game we use called ``Fantasy Risk,'' a stand-alone drafting game that mimics the drafting sub-game of standard Risk.  We then compare our drafting approaches in this game, followed by an analysis of the effects of playing selfishly.  We end this section by combining our best drafting strategy with Quo's post-draft strategy and facing off against the most difficult bots provided with the Lux Delux environment.
+
+\subsection{Fantasy Risk}
+
+% Explain fantasy risk, plus give scoring table.
+In Fantasy Risk, players take turns selecting from the 42 territories on the Risk board until all territories have been claimed, just as in the beginning of a standard game of Risk.  Then, the game immediately ends and the players receive rewards according to the evaluation function described in the previous section.  Playing Fantasy Risk allows us to better analyze our different drafting strategies without worrying about the dynamics and variance of post-draft Risk.  
 
 \subsection{Comparison of Algorithms}
-
-% Mention how going first is an advantage and how we compensate for that
 
 % Run experiments, graph results
 
 \subsection{Selfish Play}
 
-% Explain selfish play, run experiments, graph results
+% Run experiments, graph results
 
-\section{Engineering Rewards For Playing Risk}
-
-% Say what this section is all about
-
-\subsection{Machine learning}
-
-% Describe the linear regression we did in Weka plus linear extrapolation
-
-\subsection{Empirical evaluation}
+\subsection{Full Risk}
 
 % Run experiments of actual Risk results and make graphs
 
@@ -417,6 +438,9 @@ We create end-game rewards for the players in Fantasy Risk by first accumulating
 We conclude by listing some possible avenues of further research:
 \begin{itemize}
 	\item apply opponent modelling on-line to learn opponent models for KthBestPick.
+	\item find other drafting games to play
+	\item use a more sophisticated system for engineering a reward signal, such as an artificial neural network.  This could also provide a more complex drafting game than what is being used for Fantasy Risk.
+	\item use opponent modelling within UCT.
 \end{itemize}
 
 \section*{Acknowledgments}
