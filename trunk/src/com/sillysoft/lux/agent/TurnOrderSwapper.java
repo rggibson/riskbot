@@ -7,7 +7,11 @@ package com.sillysoft.lux.agent;
 
 import com.sillysoft.lux.*;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * This drafter cycles through all possible turn orders each game.
@@ -18,9 +22,9 @@ public class TurnOrderSwapper extends SmartDrafter
     /**
      * The names of the players that will be drafting
      */
-    protected static final String[] DRAFTERS = {"UCT_Drafter2",
-                                                "GreedyDrafter",
-                                                "RL_Action_Drafter_2"  };
+    protected static final String[] DRAFTERS = {"RL_Action_Drafter_2",
+                                                "UCT_Drafter2",
+                                                "GreedyDrafter"  };
 
     /**
      * The number of orderings we are considering
@@ -43,9 +47,10 @@ public class TurnOrderSwapper extends SmartDrafter
      */
     protected SmartDrafter m_drafterForThisGame;
     protected Quo m_drafterQuoForThisGame;
+    protected Quo2 m_drafterQuo2ForThisGame;
 
     protected boolean useSmart = true;
-    
+
     /**
      * Constructor
      */
@@ -77,29 +82,29 @@ public class TurnOrderSwapper extends SmartDrafter
         // Lazy factorial calculation
         switch(board.getNumberOfPlayers())
         {
-            case 2:
-                numOrderings = 2;
-                break;
+        case 2:
+            numOrderings = 2;
+            break;
 
-            case 3:
-                numOrderings = 6;
-                break;
+        case 3:
+            numOrderings = 6;
+            break;
 
-            case 4:
-                numOrderings = 24;
-                break;
+        case 4:
+            numOrderings = 24;
+            break;
 
-            case 5:
-                numOrderings = 120;
-                break;
+        case 5:
+            numOrderings = 120;
+            break;
 
-            case 6:
-                numOrderings = 720;
-                break;
+        case 6:
+            numOrderings = 720;
+            break;
 
-            default:
-                assert false : "Error: Bad number of players!";
-                break;
+        default:
+            assert false : "Error: Bad number of players!";
+        break;
         }
 
         int r = numGamesPlayed % numOrderings;
@@ -159,13 +164,22 @@ public class TurnOrderSwapper extends SmartDrafter
             }
         }
 
-        if (board.getAgentInstance(DRAFTERS[perm[ID]]) instanceof Quo) {
-        	m_drafterQuoForThisGame = (Quo)board.getAgentInstance(DRAFTERS[perm[ID]]);  
-        	m_drafterQuoForThisGame.setPrefs(ID, board);
-        	useSmart = false;
-        } else {
-        	m_drafterForThisGame = (SmartDrafter)board.getAgentInstance(DRAFTERS[perm[ID]]);
-        	m_drafterForThisGame.setPrefs(ID, board);
+        //System.out.println("At seat " + ID + " for game " + numGamesPlayed + " is " + DRAFTERS[perm[ID]]);
+        if (board.getAgentInstance(DRAFTERS[perm[ID]]) instanceof Quo)
+        {
+            m_drafterQuoForThisGame = (Quo)board.getAgentInstance(DRAFTERS[perm[ID]]);  
+            m_drafterQuoForThisGame.setPrefs(ID, board);
+            useSmart = false;
+        } 
+        else if (DRAFTERS[perm[ID]] == "Quo2")  
+        {
+            m_drafterQuo2ForThisGame = (Quo2)board.getAgentInstance(DRAFTERS[perm[ID]]);  
+            m_drafterQuo2ForThisGame.setPrefs(ID, board);
+            useSmart = false;
+        }
+        else {
+            m_drafterForThisGame = (SmartDrafter)board.getAgentInstance(DRAFTERS[perm[ID]]);
+            m_drafterForThisGame.setPrefs(ID, board);
         }
         
         System.out.println("At seat " + ID + " for game " + numGamesPlayed + " is " + DRAFTERS[perm[ID]]);
@@ -176,18 +190,26 @@ public class TurnOrderSwapper extends SmartDrafter
     {
         return "TurnOrderSwapper";
     }
-    
+
     @Override
     public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
-    	if (useSmart)
-    	{
-    		return m_drafterForThisGame.getPick(draftState, unownedCountries);
-    	}
-    	else
-    	{
-    		return m_drafterQuoForThisGame.pickCountry();
-    	}
+        if (useSmart)
+        {
+            return m_drafterForThisGame.getPick(draftState, unownedCountries);
+        }
+        else
+        {
+            if (board.getAgentInstance(DRAFTERS[perm[ID]]) instanceof Quo)
+            {
+                return m_drafterQuoForThisGame.pickCountry();
+            } 
+            else
+            {
+                return m_drafterQuo2ForThisGame.pickCountry();
+            }
+
+        }
     }
 
     @Override
@@ -325,13 +347,133 @@ public class TurnOrderSwapper extends SmartDrafter
 
         }
 
+
+        if (numGamesPlayed == 100 *6 +5)
+        {
+            // Create the file name
+            String fileName = "c:\\finalresults.txt";			
+
+            // Save to this file
+            try
+            {
+                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(fileName, true));
+
+                // Print the results to file
+                bufferedWriter.write("\n\nFantasy Scores for round " + (numGamesPlayed / numOrderings) + " are:"+ "\n");
+                for (int player = 0; player < board.getNumberOfPlayers(); ++player)
+                {
+                    bufferedWriter.write(DRAFTERS[player] + ": " + currentFanScoresForRound[player] + "\n");
+                }
+                bufferedWriter.write("\n");
+
+                bufferedWriter.write("\n\nActual Scores for round " + (numGamesPlayed / numOrderings) + " are:"+ "\n");
+                for (int player = 0; player < board.getNumberOfPlayers(); ++player)
+                {
+                    bufferedWriter.write(DRAFTERS[player] + ": " + currentActualScoresForRound[player]+ "\n");
+                }
+                bufferedWriter.write("\n");
+
+                // Calculate averages and confidence intervals
+                double[] means = new double[board.getNumberOfPlayers()];
+                for (Double[] score : fantasyScores)
+                {
+                    for (int i = 0; i < score.length; ++i)
+                    {
+                        means[i] += score[i];
+                    }
+                }
+                for (int i = 0; i < means.length; ++i)
+                {
+                    means[i] /= fantasyScores.size();
+                }
+
+                double[] standardErrors = new double[board.getNumberOfPlayers()];
+                for (Double[] score : fantasyScores)
+                {
+                    for (int i = 0; i < score.length; ++i)
+                    {
+                        standardErrors[i] += Math.pow(score[i] - means[i], 2);
+                    }
+                }
+                for (int i = 0; i < standardErrors.length; ++i)
+                {
+                    standardErrors[i] /= fantasyScores.size();
+                    if (fantasyScores.size() > 1)
+                    {
+                        standardErrors[i] /= (fantasyScores.size() - 1);
+                    }
+                    standardErrors[i] = Math.sqrt(standardErrors[i]);
+                }
+
+                bufferedWriter.write("Average fantasy winnings with 95% confidence interval:" + "\n");
+                for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+                {
+                    bufferedWriter.write(DRAFTERS[i] + ": " + means[i] + " +- " + (1.96 * standardErrors[i]) + "\n" );
+                }
+                bufferedWriter.write("\n\n");
+
+                means = new double[board.getNumberOfPlayers()];
+                for (Double[] score : actualScores)
+                {
+                    for (int i = 0; i < score.length; ++i)
+                    {
+                        means[i] += score[i];
+                    }
+                }
+                for (int i = 0; i < means.length; ++i)
+                {
+                    means[i] /= actualScores.size();
+                }
+
+                standardErrors = new double[board.getNumberOfPlayers()];
+                for (Double[] score : actualScores)
+                {
+                    for (int i = 0; i < score.length; ++i)
+                    {
+                        standardErrors[i] += Math.pow(score[i] - means[i], 2);
+                    }
+                }
+                for (int i = 0; i < standardErrors.length; ++i)
+                {
+                    standardErrors[i] /= actualScores.size();
+                    if (actualScores.size() > 1)
+                    {
+                        standardErrors[i] /= (actualScores.size() - 1);
+                    }
+                    standardErrors[i] = Math.sqrt(standardErrors[i]);
+                }
+
+                bufferedWriter.write("Average actual winnings with 95% confidence interval:" + "\n");
+                for (int i = 0; i < board.getNumberOfPlayers(); ++i)
+                {
+                    bufferedWriter.write(DRAFTERS[i] + ": " + means[i] + " +- " + (1.96 * standardErrors[i]) + "\n" );
+                }
+                bufferedWriter.write("\n\n");
+
+                bufferedWriter.close();
+
+            }
+            catch (Exception e)
+            {
+                assert(false);
+            }
+        }
+
         return super.youWon();
     }
-    
+
     @Override
     public void placeArmies( int numberOfArmies )
-	{
-    	// RL Drafter needs its own placeArmies function for value update
-    	m_drafterForThisGame.placeArmies(numberOfArmies);
+    {
+        // RL Drafter needs its own placeArmies function for value update
+        if (useSmart)
+        {
+            m_drafterForThisGame.placeArmies(numberOfArmies);
+        }
+        else
+        {
+            super.placeArmies(numberOfArmies);
+        }
+
     }
 }
