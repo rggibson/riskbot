@@ -19,8 +19,8 @@ public class TurnOrderSwapper extends SmartDrafter
      * The names of the players that will be drafting
      */
     protected static final String[] DRAFTERS = {"UCT_Drafter2",
-                                                "Quo",
-                                                "RandomDrafter"  };
+                                                "GreedyDrafter",
+                                                "RL_Action_Drafter_2"  };
 
     /**
      * The number of orderings we are considering
@@ -181,9 +181,13 @@ public class TurnOrderSwapper extends SmartDrafter
     public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
     	if (useSmart)
+    	{
     		return m_drafterForThisGame.getPick(draftState, unownedCountries);
+    	}
     	else
+    	{
     		return m_drafterQuoForThisGame.pickCountry();
+    	}
     }
 
     @Override
