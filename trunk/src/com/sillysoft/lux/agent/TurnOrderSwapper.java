@@ -327,4 +327,11 @@ public class TurnOrderSwapper extends SmartDrafter
 
         return super.youWon();
     }
+    
+    @Override
+    public void placeArmies( int numberOfArmies )
+	{
+    	// RL Drafter needs its own placeArmies function for value update
+    	m_drafterForThisGame.placeArmies(numberOfArmies);
+    }
 }
