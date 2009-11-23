@@ -50,7 +50,7 @@
 \numberwithin{lemma}{section}
 \numberwithin{df}{section}
 
-\title{Search Strategies in Multi-Player Drafting Games  \\ \small \vspace{0.1cm} CMPUT 651 Progress Report}
+\title{Strategies for Multi-Player Drafting Games and Their Application to the Board Game Risk \\ \small \vspace{0.1cm} CMPUT 651 Final Report}
 
 \nocopyright
 
@@ -65,7 +65,7 @@ $\{$neesha$\mid$rggibson$\mid$rxzhao$\}$@cs.ualberta.ca}
 \maketitle
 
 \begin{abstract}
-A \emph{drafting game} is a game played by a set of $n$ players, where items are picked in turn without replacement from a communal collection.  Players attempt to maximize an individual end-game reward signal based on the unordered sets of choices made by each of the players.  A drafting game could stand alone, or it could be a sub-game of a larger, encompassing competition.  We investigate several approaches to playing drafting games including a new, novel strategy called the KthBestPick algorithm.  In addition, we show how to apply machine learning to guide these approaches when the players' objectives are not clear in the drafting game, but are realized in an encompassing game.  We test our techniques in the standard version of the board game Risk, where play begins with players picking territories in turn.  (ADD RESULTS SENTENCE HERE).  
+A \emph{drafting game} is a game played by a set of $n$ players, where items are picked in turn without replacement from a communal collection.  Players attempt to maximize an individual end-game reward signal based on the unordered sets of choices made by each of the players.  A drafting game could stand alone, or it could be a sub-game of a larger, encompassing competition.  We investigate several approaches to playing drafting games including a new, novel strategy called the KthBestPick algorithm.  In addition, we show how to apply machine learning to guide these approaches when the players' objectives are not clear in the drafting game, but are realized in an encompassing game.  We test our techniques in the standard version of the board game Risk, where play begins with players picking territories in turn.  We find that UCT and KthBestPick yield the strongest drafting strategies in a game we call ``Fantasy Risk''.  Furthermore, we augment an existing bot with our best drafting strategy to create a new program which outperforms the strongest opponents supplied with the computer game Lux Delux, a clone of the board game Risk.
 \end{abstract}
 
 \section{Introduction}
@@ -77,12 +77,13 @@ For at least the past few decades, games have been an exceptional platform for a
 % Also include Risk in this discussion
 There are a number of games, including both traditional board games and modern commercial video games, which either can be modelled as a drafting game or incorporate some kind of draft within part of the game.  The simplest example is Tic-Tac-Toe, where two players take turns picking cells of a 3-by-3 grid until one player forms a line of 3 cells in a row with his cells (a win) or all cells are claimed (a draw).  Here, we can consider the player in the winning position at game's end receiving a positive reward while the losing player receives a negative reward, whereas zero reward is received in drawn positions.  Another example is the board game Risk by Hasbro Inc., which begins by players drafting the territories on the board until every territory has an owner.  Drafting territories in Risk presents an additional challenge as it is not clear what selections are best to make in order to eventually win the overall game.  As for video games, sports simulations in particular often include a drafting aspect.  For instance, when playing through multiple seasons of the baseball game \textit{MLB 09: The Show} from Sony, a rookie draft takes place in between each season, where the human player and the computer opponents take turns choosing from a pool of new players who may then be added to the respective team's roster.  Another example is the new hockey game \textit{NHL 10} by EA Sports, where a fantasy draft can be activated at the beginning of a season.  In a fantasy draft, all players are removed from their current teams, and then selected one-by-one by the agents (human or computer-controlled teams) in the league.  Like with Risk, it is hard to judge which selections will improve a team's chance of winning the most.  Finally, the video game \textit{Star Wars: Empire at War} contains a drafting-type game. where one can choose their ground force composition, execute ``auto-combat,'' and see the outcome of the battle.
 
-% What is our goal/contribution?  When are our algorithms best suited?
-ENTER CONTRIBUTIONS/GOALS OF PAPER HERE
-%The KthBestPick algorithm is a drafting-game-only strategy which picks a valuable action, according to some heuristic, that is believed to be sought after by at least one other player.  We use Risk as a testbed for our drafting techniques.  SOMETHING ABOUT CREATING EVALUATION FUNCTIONS FOR RISK
-
-% Outline rest of the paper
-OUTLINE REST OF PAPER HERE
+Our main contributions in this paper are:
+\begin{itemize}
+	\item a novel adversarial search algorithm, KthBestPick, specifically designed for playing drafting games;
+	\item a method for evaluating the opening draft in Risk using supervised maching learning; and
+	\item a Risk bot, derived from an existing program but augmented with a new drafting strategy, which outperforms a number of difficult opponents.
+\end{itemize}
+The rest of the paper is organized as follows.  First, we formally describe drafting games and explain the potential need to create our own reward signal for some games.  We then discuss related work, followed by an introduction to the drafting strategies we try in Risk.  Next, we outline the basic rules of Risk and show how we apply supervised machine learning to generate a reward signal for the opening draft in Risk.  Finally, we empirically test our algorithms in Risk games, discuss the results, and conclude with some future works.
 
 \section{Problem Formulation}
 \label{sec:Prob}
@@ -171,7 +172,7 @@ Finally, Lee's work is closely related to drafting sub-games.  In his thesis \ci
 
 We investigate three different approaches to playing drafting games: Reinforcement learning, UCT, and a novel adversarial search algorithm for drafting games, KthBestPick.  We now discuss each of these below.
 
-\subsection{Reinforcement learning}
+\subsection{Reinforcement Learning}
 
 % Describe reinforcement learning in general and how we applied it to drafting games.
 
@@ -182,6 +183,8 @@ We investigate three different approaches to playing drafting games: Reinforceme
 % Describe UCT, specifically for multi-player games (like drafting games)
 
 % May want to discuss theoretical properties of UCT (converges to Nash equilibrium?)
+
+% Perhaps mention UCT being used in GGP (plus reference)?
 
 %Monte-Carlo tree search algorithms, such as UCT \cite{UCT}, are a different approach to game playing than minimax-type methods.  Simply put, thousands of games are simulated to completion, and each node's value is set to the average of the outcomes which passed through that node.  As game tree sizes typically grow exponentially in their branching factor, minimax-type algorithms must often rely on an accurate heuristic function at non-terminal nodes due to memory or time constraints.  Monte-Carlo tree search, on the other hand, needs no heuristic function and receives an unbiased estimate of the value of each action.  Because of this, UCT is often preferred in games with large action spaces or which lack a quality heuristic function, and has had much success in Computer Go \cite{ComputerGo}.  As drafting games typically have large, initial action spaces and lack a general heurstic function, we have implemented UCT as a drafting strategy.  UCT is also used as a base for our new algorithm, KthBestPick (see Section \ref{sec:KthBestPick}).
 
@@ -236,7 +239,7 @@ As for the opponent models, again there are a few options.  Firstly, we should u
 
 We now consider a small example to build up intuition behind the KthBestPick algorithm.  Consider the drafting game with four actions, A, B, C, and D, and three players, 1, 2, and 3.  Players pick in numerical order until all actions have been picked (thus player 1 gets two picks).  For each action and each player, we associate a point value that that player receives for making that pick.  A player's reward at the end of the game is simply the sum of the points of his picks.  Suppose the point values are as given in Table \ref{tab:KthEx}, and let's assume that we are player 1.  If we rank picks according to the point values for us only, then B would appear to be the best pick (4 points) and A the second best (3 points).  Following this heuristic alone would have us pick B.  Now if players 2 and 3 are playing optimally, player 2 will pick A, followed by player 3 picking C.  This forces us to pick D, leaving us with a reward of $4 + 1 = 5$.  However, if we apply KthBestPick with this heuristic and assume our opponents play optimally, then we will see that picking A first will lead player 2 to pick D and player 3 to pick C, leaving us to pick B with our last pick.  In this case, we end the game with a reward of $3 + 4 = 7$, a better result.  Note that UCT will also conclude that picking A first is a better move, but only after a number of simulations.  KthBestPick, on the other hand, finds the solution with just one ``simulation.'' 
 
-\begin{table}
+\begin{table}[t]
 	\begin{center}
 		\caption{The point values for an example drafting game.}
 		\label{tab:KthEx}
@@ -263,7 +266,7 @@ We now consider a small example to build up intuition behind the KthBestPick alg
 
 \section{Risk}
 
-We use the game Risk as a testbed for our proposed drafting approaches.  Risk is a strategy board game for two to six players where the objective of the game is to occupy all 42 territories on the board.  The territories are divided into 6 continents, with 4 territories in both Australia and South America, 6 in Africa, 9 in North America, 7 in Europe, and 12 in Asia.  Figure \ref{fig:Conts} depicts their arrangement on the board.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After each player places their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  Players receive reinforcements proportional to the number of territories owned, and receive bonus reinforcements for owning entire continents.  Each continent has its own reinforcement bonus as given in Figure \ref{fig:Conts}.  Full rules can be found on-line\footnote{\url{http://www.hasbro.com/common/instruct/Risk.pdf}}.
+We use the game Risk as a testbed for our proposed drafting approaches.  Risk is a strategy board game for two to six players where the objective of the game is to occupy all 42 territories on the board.  The territories are divided into 6 continents, with 4 territories in both Australia and South America, 6 in Africa, 9 in North America, 7 in Europe, and 12 in Asia.  Figure \ref{fig:Conts} depicts their arrangement on the board.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After each player places their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  Players receive one reinforcement army for every three territories owned and receive bonus reinforcements for owning entire continents or trading in cards earned by conquering territories.  Each continent has its own reinforcement bonus as depicted in Figure \ref{fig:Conts}.  Full rules can be found on-line\footnote{\url{http://www.hasbro.com/common/instruct/Risk.pdf}}.
 
 \begin{figure}[t]
 	\centering
@@ -272,7 +275,7 @@ We use the game Risk as a testbed for our proposed drafting approaches.  Risk is
 	\label{fig:Conts}
 \end{figure}
 
-The Lux Delux\footnote{\url{http://sillysoft.net/lux/}} game provides a computer version of Risk, along with several AI bots (with source code) to play against.  Each of the included bots has an associated difficulty and a general playing style.  For example, the ``Quo'' bot is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
+The Lux Delux\footnote{\url{http://sillysoft.net/lux/}} game provides a computer version of Risk, along with several AI bots (with source code) to play against, all of which are rule-based.  Each of the included bots has an associated difficulty and a general playing style.  For example, ``Quo'' is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
 
 In this paper, we are only concerned with strategies for playing the drafting sub-game at the beginning of Risk.  Strategies for the other phases of Risk are interesting and have been researched (\cite{RiskBots}, \cite{ZuckFelnerKraus2009}), but we do not investigate these here.  In addition, we decided to focus only on three player Risk, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to playing with more players.  This is because each player must make more selections per draft.
 
@@ -302,7 +305,7 @@ where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ a
 
 Our general function $f$ is computed from 7364 random draft outcomes for a total of 22092 $(S,v)$ pairs.  We use Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) are represented as nominal features and features (iii) and (iv) are represented as numeric.  These weights are displayed in Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring}.  However, there are some features which do not appear in any of the 22092 pairs feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features are calculated through linear extrapolation of the closest two numbers in the continent counts for the associated continent.  For instance, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
 \[ 36.1487 + (36.1487 - 24.0969) = 48.2005. \]  
-Note that only in rare cases will $f$ be negative (lots of enemy neighbours and low scores elsewhere).  SHOW DIAGRAM OF LINEAR EXTRAPOLATION FOR NORTH AMERICA?
+Note that only in rare cases will $f$ be negative (lots of enemy neighbours and low scores elsewhere).  %SHOW DIAGRAM OF LINEAR EXTRAPOLATION FOR NORTH AMERICA?  ONLY IF THERE'S ROOM.
 
 \begin{table*}[t]
   \begin{center} 
@@ -374,7 +377,7 @@ giving us $r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ rounded to four decimal places.
 \begin{figure}[t]
 	\centering
 	\includegraphics[scale=0.3]{figs/DraftExample.png}
-	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  Territories connected by a line are also considered adjacent.}
+	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  Territories connected by a line are also considered adjacent or bordering.}
 	\label{fig:DraftExample}
 \end{figure}
 
@@ -385,11 +388,20 @@ In this section, we describe the drafting game we use called ``Fantasy Risk,'' a
 \subsection{Fantasy Risk}
 
 % Explain fantasy risk, plus give scoring table.
-In Fantasy Risk, players take turns selecting from the 42 territories on the Risk board until all territories have been claimed, just as in the beginning of a standard game of Risk.  Then, the game immediately ends and the players receive rewards according to the evaluation function described in the previous section.  Playing Fantasy Risk allows us to better analyze our different drafting strategies without worrying about the dynamics and variance of post-draft Risk.  
+In Fantasy Risk, players take turns selecting from the 42 territories on the Risk board until all territories have been claimed, just as in the beginning of standard Risk.  Then, the game immediately ends and the players receive rewards according to the machine-learned reward signal described in the previous section.  Playing Fantasy Risk allows us to better analyze our different drafting strategies without worrying about the dynamics and variance of post-draft Risk.  
 
-\subsection{Comparison of Algorithms}
+\subsection{Comparison of Algorithms in Fantasy Risk}
 
 % Run experiments, graph results
+MAKE IT SO THAT WE TALK ABOUT UCT IN THE FORM UCT(3000,0.01)
+
+In addition to our three proposed approaches, RL, UCT, and KthBestPick, we consider two baseline strategies.  The first is simply a random player that picks territories at random.  The second, which we call ``GreedyDrafter'', works as follows.  At any state $\hat{Z}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made by the three players, using the same features as described in the previous section.  We can then calculate the estimated reward signal $\hat{r}_i(\hat{Z}) = \frac{f(\hat{S_1})}{\hat{S_1} + \hat{S_2} + \hat{S_3}}$ of the state $\hat{Z}$.  GreedyDrafter picks the territory which leads to the state with the greatest estimated reward signal $\hat{r}_i(\hat{Z})$, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  For example, on an empty board, we can conclude from Table \ref{tab:ContScoring} that GreedyDrafter will always open with picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe).  GreedyDrafter can be seen as a 1-ply lookahead search that uses $\hat{r}_i(\hat{Z})$ as an evaluation function.
+
+Figures \ref{fig:UCTvsRANvsGRE} and \ref{fig:UCTvsRLvsGRE} compare RL and UCT against the two baseline strategies in Fantasy Risk.  Each of these results display the average rewards received by each bot per round over 100 rounds, where the error bars indicate the 95\% confidence interval of the rewards.  One round consists of 6 games, one game for each of the $3!$ turn orderings of the players.  MENTION RL PARAMETERS AND SET UP HERE.  For UCT, 3000 simulations were performed per pick (which took less than one second per pick) with an exploration parameter of $c=0.01$, as this was the strongest parameter found in preliminary experiments.  We can see in Figure \ref{fig:UCTvsRANvsGRE} that UCT outperforms the baselines by a large margin, approximately doubling the average rewards of GreedyDrafter.  In addition, Figure \ref{UCTvsRLvsGRE} shows UCT on top again against RL and GreedyDrafter.  Note that our RL approach unfortunately fails in comparison to even the baseline GreedyDrafter.  
+
+Figures \ref{fig:kthNoOrc} and \ref{fig:KthOrc} show the results of two sets of 50 rounds of KthBestPick, GreedyDrafter, and UCT with exploration parameter $c=0.01$.  In both sets, KthBestPick uses UCT with 3000 simulations with an exploration parameter of $c=0.25$ as its heuristic.  The exploration parameter was increased here since it is important for KthBestPick to not only have confidence about the highest ranked pick, but also to have confidence about the next best picks too.  For a fair comparison of KthBestPick and UCT, we instituted a time limit of 250 milliseconds per unowned territory on the board before a pick had to be made.  UCT simply ran as many simulations as possible in the time limit, while KthBestPick iterated on the number of lower-ranked picks considered in line 3 of Algorithm \ref{alg:kth}, returning the last selection made once time was up.  The iterations started by considering only the top ranked pick so that the for loop (line 3) only executed once on the first iteration.  In addition, if the pick of rank $k$ was determined to be bad (lines 10 or 20), we took the pick of rank $k-1$ after we simulated this move and ran UCT simulations from the new state to improve future estimates of actions until time expired.  The UCT tree was only deleted from memory after each game.  Furthermore, we ran UCT simulations to rank the picks (line 1) only until at least 3000 simulations had been acquired from the current state, counting previous simulations through this node.
+
+The rewards shown in Figure \ref{fig:kthNoOrc} have KthBestPick using itself as the opponent model for all three players, whereas in Figure \ref{fig:KthOrc} KthBestPick uses UCT and the logic of GreedyDrafter to model its opponents appropriately (we don't concern ourselves with how KthBestPick would obtain such models here, but only the benefits of having them).  BLURB ABOUT KTH RESULTS HERE, AND NOTE THAT WE DID NOT ATTEMPT TO OPTIMIZE UCT'S PARAMETER IN UCT WITH THE EXTRA AMOUNT OF TIME IT HAS COMPARED TO BEFORE.
 
 %\subsection{Selfish Play}
 
@@ -399,7 +411,9 @@ In Fantasy Risk, players take turns selecting from the 42 territories on the Ris
 
 % Run experiments of actual Risk results and make graphs
 
+We created a ``UCT-Quo'' bot for the full game of Risk by identically duplicating the rule-based strategy of the Quo bot, except replaced its drafting rules with our UCT(3000,0.01) implementation guided by our machine-learned reward signal $r_i(Z)$.  We decided to use UCT rather than KthBestPick so that more games could be played, as KthBestPick requires more time per pick.  
 
+We pitted our UCT-Quo bot against all four bots labeled as ``difficult'' in the Lux Delux game, Killbot, EvilPixie, Quo, and Boscoe.  Figures \ref{fig:UCTvsQUOvsQUO} through \ref{fig:UCTvsKILvsBOS} each report the average number of games won by each bot per round over 100 rounds, with again all 6 turn orderings played each round.  Figures \ref{fig:UCTvsQUOvsQUO}, \ref{fig:UCTvsQUOvsEP}, and \ref{fig:UCTvsKILvsBOS} show UCT-Quo winning significantly more than its fair share of games.  In particular, Figure \ref{fig:UCTvsQUOvsQUO} shows that when all strategies in the post-draft play are identical, one player drafting using UCT guided by $r_i(Z)$ leads to more wins when the other two follow Quo's rule-based approach (which attempts to draft entire continents when possible).  However, Figure \ref{fig:UCTvsUCTvsQUO} shows that our bot is not perfect, as two UCT-Quo bots lose out to one Quo player.  
 
 %All of our experiments will be conducted in the board game Risk using the Lux Delux\footnote{http://sillysoft.net/lux/} environment.  Lux Delux provides several Risk bots with source code, which include their own hand-coded drafting strategies.  Conveniently, this gives us plenty of competition to test our algorithms against.  We use the selected countries and placed initial armies options in all of our experiments.
 
@@ -478,25 +492,31 @@ In Fantasy Risk, players take turns selecting from the 42 territories on the Ris
 
 % Discuss our results, what was interesting, what ideas could carry over to drafting games in general
 
+% It would be interesting to see how often KthBestPick is deviating from the top ranked pick provided by 3000 simulations of UCT; unfortunately, we did not have time to reproduce our experiments to gather this and related statistics.
+
+% Mention  why UCT vs UCT vs Quo didn't pan out so well:  Two players following our machine learned reward signal tend to get in each other's way.  For instance, they will not let each other claim all of North America since they both believe it to be too valuable.  All the while Quo gathers an entire continent or two which may not appear too strong in the eyes of our imperfect reward signal, but end up proving to be strong picks nonetheless.
+
 % Discuss the strengths (and possibly weaknesses) of the approaches.
 
 \section{Conclusions}
 
-% Summarize what we have so far with the algorithms and empirical results
+% Summarize 
 
-%This paper has formalized the concept of a drafting game.  As the action spaces are large and the actions of multiple opponents must be considered, traditional game playing strategies are not directly applicable.  We introduced two solutions for playing a drafting game.  Our first approach, MaxN-MC, is a combination of the MaxN algorithm, which generalizes minimax search to multi-player games, and Monte-Carlo simulations, as used in Monte-Carlo tree search algorithms.  Our second technique is KthBestPick, which uses heuristics to rank actions and opponent models to predict which actions will be selected by other players.  
+We have formally introduced the concept of a drafting game and shown how to use supervised machine learning to create a reward signal for the drafting sub-game in Risk.  We discussed three strategies, RL, UCT, and KthBestPick, for playing drafting games and tested out each in Fantasy Risk, our abbreviated version of Risk.  The strongest players in Fantasy Risk were KthBestPick and UCT, and our augmented UCT-Quo bot performed exceptionally well in the full Risk game.
+
+%This paper has formalized the concept of a drafting game.    We introduced two solutions for playing a drafting game.  Our first approach, MaxN-MC, is a combination of the MaxN algorithm, which generalizes minimax search to multi-player games, and Monte-Carlo simulations, as used in Monte-Carlo tree search algorithms.  Our second technique is KthBestPick, which uses heuristics to rank actions and opponent models to predict which actions will be selected by other players.  
 
 We conclude by listing some possible avenues of further research:
 \begin{itemize}
-	\item apply opponent modelling on-line to learn opponent models for KthBestPick.
-	\item find other drafting games to play, such as drafting in Fantasy sports.  KthBestPick may perform better in domains that can be modelled similar to the example in Table \ref{tab:KthEx} where rewards are determined by summing the points associated with each pick.
-	\item use a more sophisticated system for engineering a reward signal, such as an artificial neural network.  This could also provide a more complex drafting game than what is being used for Fantasy Risk.
-	\item use opponent modelling within UCT.
+	\item determine how to model opponents on-line in Fantasy Risk to learn opponent models for KthBestPick.
+	\item apply our techniques to other drafting games, such as drafting in fantasy sports.  KthBestPick may perform even better in domains where an obvious heuristic exists, such as in the drafting game depicted in Table \ref{tab:KthEx}.  In fantasy sports, actions are usually grouped into types (eg.~a hockey player's position) where each player must select of certain number of actions of each type.  A numerical value (additive reward) is typically associated with each action (eg.~picking a hockey player) estimating the number of points that pick will provide to the fantasy team.  This value provides a simple heuristic for KthBestPick without the need for another algorithm such as UCT.  KthBestPick can then spend all of its efforts determining which of the highest ranked picks to make depending on the number of picks already made of each type by all the players.
+	\item use a more sophisticated system for engineering a reward signal, such as an artificial neural network.  This may alleviate the poor performance of UCT-Quo in Figure \ref{fig:UCTvsUCTvsQUO}, and would provide a new, likely more complex drafting game to compare algorithms against than our current game of Fantasy Risk.
+	\item any way of improving RL?
+%	\item use opponent modelling within UCT.
 \end{itemize}
 
 \section*{Acknowledgments}
-%
-% Should we thank Vadim here?
+We would like to thank Vadim Bulitko for pointing out the connection between Lee's thesis and our lack of a reward signal for the drafting sub-game of Risk, as well as his suggestion to use Weka.  We would also like to thank SillySoft for providing full source code of their Risk bots in Lux Delux.
 
 %\bibliography{../../../LaTeX/bib}
 %\bibliographystyle{../../../LaTeX/Styles/aaai}
