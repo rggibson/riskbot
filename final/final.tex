@@ -11,7 +11,7 @@
 \usepackage{url}
 \usepackage{colortbl}
 \usepackage{color}
-
+\usepackage{subfigure}
 \usepackage{amsmath}
 \usepackage{amssymb}
 
@@ -179,6 +179,8 @@ We investigate three different approaches to playing drafting games: Reinforceme
 % Any theoretical properties to mention?
 
 \subsection{UCT}
+
+
 
 % Describe UCT, specifically for multi-player games (like drafting games)
 
@@ -398,6 +400,57 @@ MAKE IT SO THAT WE TALK ABOUT UCT IN THE FORM UCT(3000,0.01)
 In addition to our three proposed approaches, RL, UCT, and KthBestPick, we consider two baseline strategies.  The first is simply a random player that picks territories at random.  The second, which we call ``GreedyDrafter'', works as follows.  At any state $\hat{Z}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made by the three players, using the same features as described in the previous section.  We can then calculate the estimated reward signal $\hat{r}_i(\hat{Z}) = \frac{f(\hat{S_1})}{\hat{S_1} + \hat{S_2} + \hat{S_3}}$ of the state $\hat{Z}$.  GreedyDrafter picks the territory which leads to the state with the greatest estimated reward signal $\hat{r}_i(\hat{Z})$, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  For example, on an empty board, we can conclude from Table \ref{tab:ContScoring} that GreedyDrafter will always open with picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe).  GreedyDrafter can be seen as a 1-ply lookahead search that uses $\hat{r}_i(\hat{Z})$ as an evaluation function.
 
 Figures \ref{fig:UCTvsRANvsGRE} and \ref{fig:UCTvsRLvsGRE} compare RL and UCT against the two baseline strategies in Fantasy Risk.  Each of these results display the average rewards received by each bot per round over 100 rounds, where the error bars indicate the 95\% confidence interval of the rewards.  One round consists of 6 games, one game for each of the $3!$ turn orderings of the players.  MENTION RL PARAMETERS AND SET UP HERE.  For UCT, 3000 simulations were performed per pick (which took less than one second per pick) with an exploration parameter of $c=0.01$, as this was the strongest parameter found in preliminary experiments.  We can see in Figure \ref{fig:UCTvsRANvsGRE} that UCT outperforms the baselines by a large margin, approximately doubling the average rewards of GreedyDrafter.  In addition, Figure \ref{UCTvsRLvsGRE} shows UCT on top again against RL and GreedyDrafter.  Note that our RL approach unfortunately fails in comparison to even the baseline GreedyDrafter.  
+
+\begin{figure}[ht]
+\centering
+\subfigure[bla]{
+\includegraphics[scale=.55]{figs/kth.png}
+\label{fig:subfigkth1}
+}\hspace{5pt}
+\subfigure[bla2.]{
+\includegraphics[scale=.55]{figs/kthno.png}
+\label{fig:subfigkth2}
+}
+\label{fig:subfigureExample}
+\caption[]{Assigning p-orientation edges to a cycle in a non-chordal graph forces a chord: \subref{fig:subfigkth1}, \subref{fig:subfigkth2}}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\subfigure[bla]{
+\includegraphics[scale=.55]{figs/random.png}
+\label{fig:subfig1}
+}\hspace{5pt}
+\subfigure[bla2.]{
+\includegraphics[scale=.55]{figs/rl.png}
+\label{fig:subfig2}
+}
+\label{fig:subfigureExample}
+\caption[]{Assigning p-orientation edges to a cycle in a non-chordal graph forces a chord: \subref{fig:subfig1}, \subref{fig:subfig2}}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\subfigure[bla]{
+\includegraphics[scale=.55]{figs/2uct.png}
+\label{fig:subfigAct1}
+}\hspace{5pt}
+\subfigure[bla2.]{
+\includegraphics[scale=.55]{figs/2quo.png}
+\label{fig:subfigAct2}
+}\hspace{5pt}
+\subfigure[bla2.]{
+\includegraphics[scale=.55]{figs/evilpixie.png}
+\label{fig:subfigAct3}
+}\hspace{5pt}
+\subfigure[bla2.]{
+\includegraphics[scale=.55]{figs/others.png}
+\label{fig:subfigAct4}
+}
+\label{fig:subfigureExample}
+\caption[]{Assigning p-orientation edges to a cycle in a non-chordal graph forces a chord: \subref{fig:subfigAct1}, \subref{fig:subfigAct2}, \subref{fig:subfigAct3}, \subref{fig:subfigAct4}}
+\end{figure}
+
 
 Figures \ref{fig:kthNoOrc} and \ref{fig:KthOrc} show the results of two sets of 50 rounds of KthBestPick, GreedyDrafter, and UCT with exploration parameter $c=0.01$.  In both sets, KthBestPick uses UCT with 3000 simulations with an exploration parameter of $c=0.25$ as its heuristic.  The exploration parameter was increased here since it is important for KthBestPick to not only have confidence about the highest ranked pick, but also to have confidence about the next best picks too.  For a fair comparison of KthBestPick and UCT, we instituted a time limit of 250 milliseconds per unowned territory on the board before a pick had to be made.  UCT simply ran as many simulations as possible in the time limit, while KthBestPick iterated on the number of lower-ranked picks considered in line 3 of Algorithm \ref{alg:kth}, returning the last selection made once time was up.  The iterations started by considering only the top ranked pick so that the for loop (line 3) only executed once on the first iteration.  In addition, if the pick of rank $k$ was determined to be bad (lines 10 or 20), we took the pick of rank $k-1$ after we simulated this move and ran UCT simulations from the new state to improve future estimates of actions until time expired.  The UCT tree was only deleted from memory after each game.  Furthermore, we ran UCT simulations to rank the picks (line 1) only until at least 3000 simulations had been acquired from the current state, counting previous simulations through this node.
 
