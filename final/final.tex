@@ -244,9 +244,31 @@ We use Risk as a testbed for our proposed drafting approaches.  Risk is a strate
 	\label{fig:Conts}
 \end{figure}
 
-The Lux Delux\footnote{http://sillysoft.net/lux/} game provides a computer version of Risk, along with several AI bots (with source code) to play against, all of which are rule-based.  Each of the included bots has an associated difficulty and a general playing style.  For example, ``Quo'' is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
+The Lux Delux\footnote{http://sillysoft.net/lux/} game provides a computer version of Risk, along with several AI programs (bots) with source code to play against, all of which are rule-based.  Each of the included bots has an associated difficulty and a general playing style.  For example, ``Quo'' is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
 
 In this paper, we are only concerned with strategies for playing the drafting sub-game of Risk.  Strategies for the other phases of Risk are interesting and have been researched (\cite{RiskBots}, \cite{ZuckFelnerKraus2009}), but we do not investigate these here.  In addition, we decided to focus only on three player Risk, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to playing with more players because each player must make more selections per draft.
+
+\begin{table}[t]
+	\begin{center}
+		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
+		\label{tab:MoreScoring}
+		\begin{footnotesize}
+		\begin{tabular}{|c|c|}
+			\hline
+			\textbf{Feature} & \textbf{Points} \\
+			\hline
+			First to play & 13.38 \\
+			\hline
+			Second to play & 5.35 \\
+			\hline
+			Each unique enemy neighbour & -0.07 \\
+			\hline
+			Each ordered pair of friendly neighbours & 0.48 \\
+			\hline
+		\end{tabular}
+		\end{footnotesize}
+	\end{center}
+\end{table}
 
 \section{A Machine-Learned Reward Signal}
 
@@ -369,27 +391,12 @@ Our general function $f$ is computed from $7,364$ random draft outcomes for a to
   \end{center}
 \end{table*}
 
-\begin{table}[t]
-	\begin{center}
-		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
-		\label{tab:MoreScoring}
-		\begin{footnotesize}
-		\begin{tabular}{|c|c|}
-			\hline
-			\textbf{Feature} & \textbf{Points} \\
-			\hline
-			First to play & 13.38 \\
-			\hline
-			Second to play & 5.35 \\
-			\hline
-			Each unique enemy neighbour & -0.07 \\
-			\hline
-			Each ordered pair of friendly neighbours & 0.48 \\
-			\hline
-		\end{tabular}
-		\end{footnotesize}
-	\end{center}
-\end{table}
+\begin{figure}[t]
+	\centering
+	\includegraphics[scale=0.3]{figs/DraftExample.png}
+	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  Territories connected by a line are also considered adjacent or bordering.}
+	\label{fig:DraftExample}
+\end{figure}
 
 We now show how to use Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} to compute $r_i(Z)$ for the draft outcome given in Figure \ref{fig:DraftExample}.  Player 1 (blue) has 4 territories in Australia, 0 in South America, 2 in Africa, 1 in North America, 3 in Europe, and 4 in Asia.  In addition, player 1 has 18 distinct enemy neighbours and 22 ordered pairs of friendly neighbours.  Assuming player 1 is first to play, $f(S_1)$ is computed as
 \begin{eqnarray*}
@@ -402,33 +409,24 @@ where the values in the first set of brackets are from Table \ref{tab:ContScorin
 $f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $r_i(Z)$ is computed via $r_i(Z) = f(S_i) / \left(f(S_1) + f(S_2) + f(S_3) \right)$, giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
 $r_i(Z) = \{0.35, 0.28, 0.37\}$.
 
-\begin{figure}[t]
-	\centering
-	\includegraphics[scale=0.3]{figs/DraftExample.png}
-	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  Territories connected by a line are also considered adjacent or bordering.}
-	\label{fig:DraftExample}
-\end{figure}
-
 \section{Empirical Evaluation}
 
-In this section, we describe the drafting game we call ``Fantasy Risk,'' a stand-alone drafting game that mimics the drafting sub-game of standard Risk.  Then, we compare our drafting approaches in Fantasy Risk.  We end this section by combining UCT with Quo's post-draft strategy and facing off against the most difficult bots provided with Lux Delux in full games of Risk.
+In this section, we describe the drafting game we call ``Fantasy Risk,'' a stand-alone drafting game that mimics the drafting sub-game of standard Risk.  We then compare our drafting approaches in Fantasy Risk.  To end the section, we combine UCT with Quo's post-draft strategy and face off against the most difficult bots provided with Lux Delux in full games of Risk.
 
 \subsection{Fantasy Risk}
 
 % Explain fantasy risk, plus give scoring table.
-In Fantasy Risk, players take turns selecting from the 42 territories on the Risk board until all territories have been claimed, just as in the beginning of standard Risk.  Then, the game immediately ends and the players receive rewards according to the machine-learned reward signal described in the previous section.  Playing Fantasy Risk allows us to better analyze our different drafting strategies without worrying about the dynamics and variance of post-draft Risk.  
+In Fantasy Risk, players take turns selecting from the 42 territories on the Risk board until all territories have been claimed, just as in the beginning of standard Risk.  Then, the game immediately ends and the players receive rewards according to our machine-learned reward signal described in the previous section.  Playing Fantasy Risk allows us to better analyze our different drafting strategies without worrying about the dynamics and variance of post-draft Risk.  
 
 \subsection{Comparison of Algorithms in Fantasy Risk}
 
 % Run experiments, graph results
-In addition to our three proposed approaches, RL, UCT, and KthBestPick, we consider two baseline strategies.  The first is simply a player that picks territories at random.  The second, which we call ``GreedyDrafter,'' works as follows.  At any state $\hat{Z}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made, using the same features as described in the previous section.  We can then calculate the estimated reward signal $\hat{r}_i(\hat{Z}) = \frac{f(\hat{S_1})}{f(\hat{S_1}) + f(\hat{S_2}) + f(\hat{S_3})}$ of the state $\hat{Z}$.  GreedyDrafter picks the territory which leads to the state with the greatest estimated reward signal $\hat{r}_i(\hat{Z})$, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  For example, on an empty board, we can conclude from Table \ref{tab:ContScoring} that GreedyDrafter will always open with picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe).  GreedyDrafter can be seen as a 1-ply lookahead search that uses $\hat{r}_i(\hat{Z})$ as an evaluation function.
+In addition to our three proposed approaches, RL, UCT, and KthBestPick, we consider two baseline strategies.  The first is simply a player that picks territories at random.  The second, which we call ``Greedy,'' works as follows.  At any state $\hat{Z}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made, using the same features as described in the previous section.  We can then calculate the estimated reward signal $\hat{r}_i(\hat{Z}) = f(\hat{S_1}) / (f(\hat{S_1}) + f(\hat{S_2}) + f(\hat{S_3}))$ of the state $\hat{Z}$.  Greedy picks the territory which leads to the state with the greatest estimated reward signal $\hat{r}_i(\hat{Z})$, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  %For example, on an empty board, we can conclude from Table \ref{tab:ContScoring} that Greedy will always open with picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe).  
+Greedy can be seen as a 1-ply lookahead search that uses $\hat{r}_i(\hat{Z})$ as an evaluation function.
 
-In the game of Risk drafting, actions need to be abstracted, since making an action from selecting each territory would mean that there are 42 actions to choose from, and learning to differentiate between all actions would take an infeasible amount of time.  The eight abstracted actions used in the experiments are: choose the most empty continent; choose the least empty continent; choose the continent with the most number of my territories; choose the continent with the least number of my territories; choose the smallest available continent; choose the largest available continent; choose the continent with the most access points (links to other continents); choose the continent with the least access points.  Four binary state variables representing the environment are used: I am the sole owner of a continent; I have more than half of all territories in a continent; an opponent has more than half of all territories in a continent; there is an empty continent.  Once an action is chosen, an action resolution mechanism is invoked to pick a territory within the chosen continent, based on the strategy that having territories close to one another is better than having territories separated by enemies.
-From some preliminary experiments, it is determined that the following parameters produced the best results: $\alpha$ (learning rate) = 0.1, initial $\epsilon$ (exploration rate) = 0.2, $\gamma$ (discount factor) = 1.0, $\lambda$ = 0.9.  These are the values used in subsequent experiments.  
+For our RL implementation, we abstract the action space at every state by considering only the eight following actions: choose the most empty continent; choose the least empty continent; choose the continent with the most number of my territories; choose the continent with the least number of my territories; choose the smallest available continent; choose the largest available continent; choose the continent with the most access points (links to other continents); choose the continent with the least access points.  Four binary state variables representing the environment are used: I am the sole owner of a continent; I have more than half of all territories in a continent; an opponent has more than half of all territories in a continent; there is an empty continent.  Once an action is chosen, an action resolution mechanism is invoked to pick a territory within the chosen continent, based on the strategy that having territories close to one another is better than having territories separated by enemies.  We chose the following parameters based on performance in preliminary experiments: $\alpha = 0.1$, $\epsilon = 0.2 / \text{max}(1.0, t/100)$ (where $t$ is the time step), $\gamma = 1.0$, and $\lambda = 0.9$.
 
-In the Risk implementation, this property is satisfied with an $\epsilon$-greedy policy, where $\epsilon =$ 0.2 / max\{1.0, t/100\}, t is the time step.
-
-Figure \ref{fig:FantRisk1} compares RL and UCT$(3000, 0.01)$ against the two baseline strategies in Fantasy Risk.  Each of these results display the average rewards (multiplied by 100) received by each bot per game over 100 rounds, where one round consists of 6 games for each of the $3!$ turn orderings.  The error bars indicate 95\% confidence intervals, measured per round and multiplied by $100 / 6$.  The UCT parameters were chosen for fast action selection (each took less than a second) and were found to perform well in preliminary experiments.  We can see in Figure \ref{fig:UCTvsRANvsGRE} that UCT outperforms the baselines by a large margin, approximately doubling the average rewards of GreedyDrafter.  In addition, Figure \ref{fig:UCTvsRLvsGRE} shows UCT on top again against RL and GreedyDrafter.  Note that our RL approach unfortunately fails in comparison to even the baseline GreedyDrafter strategy.
+Figure \ref{fig:FantRisk1} compares RL and UCT$(3000, 0.01)$ against the two baseline strategies in Fantasy Risk.  Each of these results display the average rewards (multiplied by 100) received by each player per game over 100 rounds, where one round consists of 6 games for each of the $3!$ turn orderings.  The vertical bars indicate 95\% confidence intervals, measured per round.  The UCT parameters were chosen for fast action selection (each took less than a second) and were found to perform well in preliminary experiments.  We can see in Figure \ref{fig:UCTvsRANvsGRE} that UCT outperforms the baselines by a large margin, approximately doubling the rewards of Greedy.  In addition, Figure \ref{fig:UCTvsRLvsGRE} shows UCT on top again against RL and Greedy.  Note that our RL approach unfortunately fails in comparison to even the baseline Greedy strategy.
 
 \begin{figure}[t]
 \centering
@@ -440,13 +438,13 @@ Figure \ref{fig:FantRisk1} compares RL and UCT$(3000, 0.01)$ against the two bas
 \includegraphics[scale=.55]{figs/rl.png}
 \label{fig:UCTvsRLvsGRE}
 }
-\caption[]{Average Fantasy Risk rewards earned per game ($\times 100$) in contests featuring \subref{fig:UCTvsRANvsGRE}: Random vs.~UCT vs.~GreedyDrafter, and \subref{fig:UCTvsRLvsGRE}: RL vs.~UCT vs.~GreedyDrafter.}
+\caption[]{Average Fantasy Risk rewards earned per game ($\times 100$) in contests featuring \subref{fig:UCTvsRANvsGRE}: Random vs.~UCT vs.~Greedy, and \subref{fig:UCTvsRLvsGRE}: RL vs.~UCT vs.~Greedy.}
 \label{fig:FantRisk1}
 \end{figure}  
 
-Figure \ref{fig:FantRisk2} shows the results of two sets of 50 Fantasy Risk rounds of KthBestPick versus GreedyDrafter versus UCT$(\cdot, 0.01)$.  In both sets, KthBestPick uses UCT$(3000, 0.25)$ as its heuristic.  The exploration parameter was increased here since it is important for KthBestPick to not only have confidence about the highest ranked pick, but also to have confidence about the next best picks too.  For a fair comparison of KthBestPick and UCT, we instituted a time limit of 250 milliseconds per unowned territory on the board before a pick had to be made.  UCT simply ran as many simulations as possible in the time limit, while KthBestPick iterated on the number of lower-ranked picks considered in line 3 of Algorithm \ref{alg:kth}, returning the last selection made once time was up.  The iterations started by considering only the top ranked pick, meaning that the for loop (line 3) only executed once on the first iteration.  In addition, if the pick of rank $k$ was determined to be bad (line 10 or 20), we took the pick of rank $k-1$, simulated this move, and ran UCT simulations from the new state to improve future estimates of actions until time expired.  The UCT tree was only deleted from memory after each game.  Furthermore, we ran UCT simulations to rank the picks (line 1) only until at least 3000 simulations had been acquired from the current state, counting previous simulations through this node.  Finally, no program performed any ``thinking'' during another program's turn.
+Figure \ref{fig:FantRisk2} shows the results of two sets of 50 Fantasy Risk rounds of KthBestPick versus Greedy versus UCT$(\cdot, 0.01)$.  In both sets, KthBestPick uses UCT$(3000, 0.25)$ as its heuristic.  The exploration parameter was increased here since it is important for KthBestPick to not only have confidence about the highest ranked pick, but also to have confidence about the next best picks too.  For a fair comparison of KthBestPick and UCT, we instituted a time limit of 250 milliseconds per unowned territory on the board before a pick had to be made.  UCT simply ran as many simulations as possible in the time limit, while KthBestPick iterated on the number of lower-ranked picks considered in line 3 of Algorithm \ref{alg:kth}, returning the last selection made once time was up.  The iterations started by considering only the top ranked pick, meaning that the for loop (line 3) only executed once on the first iteration.  In addition, if the pick of rank $k$ was determined to be bad (line 10 or 20), we took the pick of rank $k-1$, simulated this move, and ran UCT simulations from the new state to improve future estimates of actions until time expired.    Furthermore, we ran UCT simulations to rank the picks (line 1) only until at least 3000 simulations had been acquired from the current state, counting previous simulations through this node.  Finally, no program performed any ``thinking'' during another program's turn.
 
-The average rewards shown in Figure \ref{fig:kthNoOrc} have KthBestPick using itself as the opponent model for all three players, whereas in Figure \ref{fig:KthOrc} KthBestPick uses UCT and the logic of GreedyDrafter to model its opponents appropriately.  We don't concern ourselves with how KthBestPick would obtain such models here, but only the benefits of having these ``oracles.''  The results of both cases are similar, as we can see KthBestPick beating UCT by a small margin.
+The average rewards shown in Figure \ref{fig:kthNoOrc} have KthBestPick using itself as the opponent model for all three players, whereas in Figure \ref{fig:KthOrc} KthBestPick uses UCT and the logic of Greedy to model its opponents appropriately.  We don't concern ourselves with how KthBestPick would obtain such models here, but only the benefits of having these ``oracles.''  The results of both cases are similar, as KthBestPick beats UCT by a small margin.
 
 \begin{figure}[t]
 \centering
@@ -458,7 +456,7 @@ The average rewards shown in Figure \ref{fig:kthNoOrc} have KthBestPick using it
 \includegraphics[scale=.55]{figs/kthno.png}
 \label{fig:KthOrc}
 }
-\caption[]{Average Fantasy Risk rewards earned per game ($\times 100$) in contests featuring KthBestPick vs.~UCT vs.~GreedyDrafter.}
+\caption[]{Average Fantasy Risk rewards earned per game ($\times 100$) in contests featuring KthBestPick vs.~UCT vs.~Greedy.}
 \label{fig:FantRisk2}
 \end{figure}
 
@@ -551,7 +549,7 @@ We pitted our UCT-Quo bot against all four bots labeled as ``difficult'' in the 
 
 % Discuss our results, what was interesting, what ideas could carry over to drafting games in general
 
-Our experiments in Fantasy Risk indicate that UCT and KthBestPick are our best strategies for this game.  While we did run preliminary experiments that indicated an exploration parameter of $C = 0.01$ worked well with 3000 UCT simulations, we did not do the same in the KthBestPick runs where UCT was able to run many more simulations in the time limit.  It may be the case that with more simulations, higher exploration is beneficial, and so further tests should be run before we can conclude that KthBestPick is superior.  In addition, it would be interesting to see how often KthBestPick is deviating from the top ranked pick provided by UCT simulations.  Finally, we believe that KthBestPick did not benefit by having ``oracle'' opponent models due to similarities in strategies, particularly between UCT and KthBestPick.  Again, statistical evidence of this is needed.
+Our experiments in Fantasy Risk indicate that UCT and KthBestPick are our best strategies for this game.  While we did run preliminary experiments that indicated an exploration parameter of $c = 0.01$ worked well with 3000 UCT simulations, we did not do the same in the KthBestPick runs.  For these runs, UCT executed well over $3000$ simulations in the time limit and higher exploration here could be beneficial, and so further tests need to be run before we can conclude that KthBestPick is superior.  In addition, it would be interesting to see how often KthBestPick is deviating from the top ranked pick provided by UCT simulations.  Finally, we believe that KthBestPick did not benefit by having ``oracle'' opponent models due to similarities in strategies, particularly between UCT and KthBestPick; however, statistical evidence of this is needed.
 
 In actual games of Risk, our UCT-Quo bot stands ahead of its competition.  When viewing UCT-Quo in action during the draft, it tends to favour territories in North America, while Quo prefers Australia and South America.  In addition, UCT-Quo is often seen preventing an opponent from owning an entire continent by selecting the last territory remaining in the continent.  However, we cannot take all the credit for the high number of victories as we chose Quo for our post-draft play based on its superior winning percentage against the other three difficult bots in preliminary experiments.  Furthermore, two players following our UCT strategy tend to get in each other's way.  For instance, two UCT-Quos will not let each other claim all of North America since they both believe it to be too valuable.  All the while, the other player is able to gather an entire continent or two which may not appear too strong in the eyes of our imperfect reward signal, but ends up proving to be strong picks nonetheless.  We believe this explains the poor performance of the UCT-Quos in Figure \ref{fig:UCTvsUCTvsQUO}.
 
@@ -589,9 +587,9 @@ We formally introduced the concept of a drafting game and showed how to use supe
 
 We conclude by listing some possible avenues of further research:
 \begin{itemize}
-	\item determine how to model opponents on-line in Fantasy Risk to learn opponent models for KthBestPick.
-	\item apply our techniques to other drafting games, such as drafting in fantasy sports.  KthBestPick may perform even better in domains where an obvious heuristic exists, such as in the drafting game depicted in Table \ref{tab:KthEx}.  In fantasy sports, actions are usually grouped into types (eg.~a hockey player's position) where each player must select a certain number of actions of each type.  A numerical value (additive reward) is typically associated with each action (eg.~picking a hockey player) estimating the number of points that pick will provide to the fantasy team.  This value provides a simple heuristic for KthBestPick without the need for another algorithm such as UCT.  KthBestPick can then spend all of its efforts determining which of the highest ranked picks to make depending on the number of picks already made of each type by all the players.
-	\item use a more sophisticated system for engineering a reward signal, such as an artificial neural network.  This may alleviate the poor performance of UCT-Quo in Figure \ref{fig:UCTvsUCTvsQUO}, and would provide a new, likely more complex drafting game to compare algorithms against than our current game of Fantasy Risk.
+%	\item determine how to model opponents on-line in Fantasy Risk to learn opponent models for KthBestPick.
+	\item apply our techniques to other drafting games, such as drafting in fantasy sports.  %KthBestPick may perform even better in domains where an obvious heuristic exists, such as in the drafting game depicted in Table \ref{tab:KthEx}.  In fantasy sports, actions are usually grouped into types (eg.~a hockey player's position) where each player must select a certain number of actions of each type.  A numerical value (additive reward) is typically associated with each action (eg.~picking a hockey player) estimating the number of points that pick will provide to the fantasy team.  This value provides a simple heuristic for KthBestPick without the need for another algorithm such as UCT.  KthBestPick can then spend all of its efforts determining which of the highest ranked picks to make depending on the number of picks already made of each type by all the players.
+	\item use a more sophisticated classifer for engineering a reward signal, such as an artificial neural network.  This may alleviate the poor performance of UCT-Quo in Figure \ref{fig:UCTvsUCTvsQUO}, and would provide a new, likely more complex drafting game to compare algorithms against than our current game of Fantasy Risk.
 	\item explore better RL abstractions.  The RL method we tried uses a general and naive action and state abstraction mechanism, which does not encode the problem domain well, as shown through our experiments.  It would be nice to see if further improvements are possible through a better abstraction mechanism that includes map-specific knowledge.
 %	\item use opponent modelling within UCT.
 \end{itemize}
