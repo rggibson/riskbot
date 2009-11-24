@@ -14,6 +14,7 @@
 \usepackage{subfigure}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{enumerate}
 
 \newtheorem{df}{Definition}
 \newtheorem{notation}{Notation}
@@ -28,6 +29,10 @@
 \newcommand{\proof}{{\bf Proof. }}
 
 \newcommand{\nin}{\noindent}
+
+\usepackage[belowskip=-5pt,aboveskip=5pt]{caption}
+
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
 
 \newcommand{\bea}{\begin{eqnarray}}
 \newcommand{\eea}{\end{eqnarray}}
@@ -119,8 +124,7 @@ While minimax search is a traditional strategy employed in many two-player games
 Finally, Lee's work is closely related to drafting sub-games.  In his thesis \cite{GregLeeThesis}, Lee combines heuristic search with a machine-learned fitness function to pick a set of actions from a large library, which an agent is then restricted to in a Markov Decision Process.  The objective is to find a small set of actions which enable the agent to behave as close to optimal as possible in its domain, relative to having access to the entire library of actions.  Our work with drafting sub-games can be seen as an extension of Lee's work from a single-agent problem to a competitive multi-agent problem, where we replace heuristic search with adversarial methods. 
 
 \begin{table}[t]
-	\begin{center}
-		\caption{The point values for an example drafting game.}
+	\centering
 		\label{tab:KthEx}
 		\begin{footnotesize}
 		\begin{tabular}{|c|c|c|c|c|}
@@ -134,8 +138,8 @@ Finally, Lee's work is closely related to drafting sub-games.  In his thesis \ci
 			\bf 3 & 4 & 2 & 3 & 1 \\
 			\hline
 		\end{tabular}
+		\caption{The point values for an example drafting game.}
 		\end{footnotesize}
-	\end{center}
 \end{table}
 
 \section{Drafting Game Strategies}
@@ -215,9 +219,8 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploratio
 \end{figure}
 
 \begin{table*}[t]
-  \begin{center} 
-   \caption{The weights for features of type (i), as computed in Weka.  A * denotes weights derived through linear extrapolation.}
-    \label{tab:ContScoring}
+ \centering
+     \label{tab:ContScoring}
     \begin{footnotesize}
     \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
     	\hline
@@ -236,8 +239,8 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploratio
     	\bf Asia & 27.10 & 23.90 & 23.61 & 23.10 & 23.61 & 23.68 & 19.32 & 15.63 & 17.43 & 13.84 & 10.25* & 6.66* & 3.07* \\
     	\hline
     \end{tabular}
+      \caption{The weights for features of type (i), as computed in Weka.  A * denotes weights derived through linear extrapolation.}
     \end{footnotesize}
-  \end{center}
 \end{table*}
 
 \subsection{The KthBestPick Algorithm}
@@ -278,8 +281,7 @@ The Lux Delux\footnote{http://sillysoft.net/lux/} game provides a computer versi
 In this paper, we are only concerned with strategies for playing the drafting sub-game of Risk.  Strategies for the other phases of Risk are interesting and have been researched (\cite{RiskBots}, \cite{ZuckFelnerKraus2009}), but we do not investigate these here.  In addition, we decided to focus only on three player Risk, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to playing with more players because each player must make more selections per draft.
 
 \begin{table}[t]
-	\begin{center}
-		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
+	\centering
 		\label{tab:MoreScoring}
 		\begin{footnotesize}
 		\begin{tabular}{|c|c|}
@@ -295,8 +297,9 @@ In this paper, we are only concerned with strategies for playing the drafting su
 			Each ordered pair of friendly neighbours & 0.48 \\
 			\hline
 		\end{tabular}
+		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
 		\end{footnotesize}
-	\end{center}
+	
 \end{table}
 
 \section{A Machine-Learned Reward Signal}
@@ -312,12 +315,12 @@ Secondly, as mentioned previously, it is not easy to classify a draft outcome $Z
 \end{figure}
 
 We identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by those found in the evaluation function described in \cite{RiskBots}.  For each player, our features are described by:
-\begin{itemize}\addtolength{\itemsep}{-0.5\baselineskip}
-	\item[(i)] for each continent, the number of territories owned in that continent;
-	\item[(ii)] when the player plays in the turn order;
-	\item[(iii)] the number of distinct territories owned by other players which border owned territories (enemy neighbours); and
-	\item[(iv)] the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbours).
-\end{itemize}
+\begin{enumerate}[i] \addtolength{\itemsep}{-0.5\baselineskip}
+	\item for each continent, the number of territories owned in that continent;
+	\item when the player plays in the turn order;
+	\item the number of distinct territories owned by other players which border owned territories (enemy neighbours); and
+	\item the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbours).
+\end{enumerate}
 The merit of each feature set is estimated by a process similar to how Lee creates a domain-specific fitness function for selecting a set of actions in a Markov decision process \cite{GregLeeThesis}.  Our process is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the three players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot (see Risk section).  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
 \[ f: S \mapsto v \in \textbf{R} \] 
 that estimates the merit of the feature set $S$ when following Quo's post-draft strategy.  Finally, for a draft outcome $Z = (A_1,A_2,A_3,\phi)$, we calculate $v_i = f(S_i)$ where $S_i$ is the feature set associated with $A_i$, and define the reward signal for player $i$ to be
