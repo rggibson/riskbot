@@ -129,6 +129,13 @@ We investigate three different approaches to playing drafting games: Reinforceme
 
 \subsection{UCT}
 
+UCT is a Monte Carlo planning algorithm that was first presented by~\cite{UCT}. UCT tries to intelligently bias the game tree as it's building it to focus on appealing branches and further search those. At each step, in our case time to pick the next territory, UCT builds upon the sparse game tree from the previous iterations by selecting branches to expand according to the formula
+
+\[ Q(s,a)_{new} = Q(s,a)_{old} + c* \sqrt{\frac{log n(s)}{n(s,a)}}, \]
+
+where $Q(s,a)$ is the value at the current node, $c$ is a exploration constant, $n(s)$ is the number of times the node has been visited and $n(s,a)$ is the number of times each action has been explored. On each rollout, UCT adds one new node to the game tree and then uses Monte Carlo rollout to determine the rest of the game from that node. The $n$-tuple of values it returns (one value per player) are they propagated up the tree.  If UCT was allowed to perform an infinite number of rollouts and the exploration constant was infinitely high, UCT would become strictly Monte Carlo planning. UCT requires two pieces of information from the user, $x$ and $c$ where $x$ is the number of rollouts to perform at each step and $c$ is the exploration constant. For our paper, we refer to our iterations of UCT as UCT($x$, $c$).
+
+For multiplayer UCT, each node stores an $n$-tuple of values, one for each player. When player $i$ is to choose the next branch to expand, the formula maximizes the $i$th value from the $n$-tuples of the children. Multiplayer UCT has most commonly been used in general game playing, for example in CadiaPlayer by~\cite{Cadia}. 
 
 
 % Describe UCT, specifically for multi-player games (like drafting games)
