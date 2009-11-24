@@ -17,7 +17,7 @@
 
 \newtheorem{df}{Definition}
 \newtheorem{notation}{Notation}
-\newtheorem{theorem}{Theorem}[section]
+\newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}[section]
 \newtheorem{col}{Corollary}
 \newcommand{\bt}{\begin{theorem}\em}
@@ -80,7 +80,7 @@ There are a number of games, including both traditional board games and modern c
 in the new hockey game \textit{NHL 10} by EA Sports, a ``fantasy draft'' can be activated at the beginning of a season.  In a fantasy draft, all players are removed from their current teams, and then selected one-by-one by the teams in the league.  Like with Risk, it can be hard to judge which selections will improve a team's chance of winning the most.  %Finally, the video game \textit{Star Wars: Empire at War} contains a drafting-type game where one can choose their ground force composition, execute ``auto-combat,'' and see the outcome of the battle.
 
 Our main contributions in this paper are the following:
-\begin{itemize}
+\begin{itemize} \addtolength{\itemsep}{-0.5\baselineskip}
 	\item a novel adversarial search algorithm, KthBestPick, specifically designed for playing drafting games;
 	\item a method for evaluating the opening draft in Risk using supervised machine learning; and
 	\item a Risk bot, derived from an existing program but augmented with a new drafting strategy, which outperforms a number of difficult opponents.
@@ -124,7 +124,7 @@ We investigate three different approaches to playing drafting games: Reinforceme
 \subsection{Reinforcement Learning}
 
 % Describe reinforcement learning in general and how we applied it to drafting games.
-RL is a machine learning technique where a learning agent takes actions in an environment with the goal of maximizing long-term reward.  A frequently applied reinforcement learning algorithm is Sarsa($\lambda$) \cite{SuttonBarto1998}.  In Sarsa($\lambda$), an agent maintains a set of states representing the environment and a set of valid actions the agent can take in the environment. Time is divided into discrete steps and one action is taken at each step.  At time step $t$, a reward $r_t$ is calculated from observations of the environment.   To choose an action at each step, a behaviour policy is used.  A deterministic policy $\pi$ maps each state $s$ to an action $a$ to take in $s$.  The estimated action-value function for $\pi$, denoted $Q(s,a)$, is the expected total future reward, discounted by a factor $\gamma$, of taking $a$ in $s$ and following $\pi$ thereafter.  A common behaviour policy is the $\epsilon$-greedy policy that selects the most promising action $a = \text{argmax}_{a'} Q(s,a')$ with probability $1-\epsilon$, and a random action otherwise.  At step $t+1$, the previous state-action value $Q(s_t,a_t)$ is updated by a temporal-difference error $\delta$ based on the reward received and our current estimate of the next state-action pair.
+RL is a machine learning technique where a learning agent takes actions in an environment with the goal of maximizing long-term reward.  A frequently applied reinforcement learning algorithm is Sarsa($\lambda$) \cite{SuttonBarto1998}.  In Sarsa($\lambda$), an agent maintains a set of states representing the environment and a set of valid actions the agent can take in the environment. Time is divided into discrete steps and one action is taken at each step.  At time step $t$, a reward $r_t$ is calculated from observations of the environment.   To choose an action at each step, a behaviour policy is used.  A policy $\pi$ maps each state-action pair $(s,a)$ to a probability of taking $a$ in $s$.  The estimated action-value function for $\pi$, denoted $Q(s,a)$, is the expected total future reward, discounted by a factor $\gamma$, of taking $a$ in $s$ and following $\pi$ thereafter.  A common behaviour policy is the $\epsilon$-greedy policy that selects the most promising action $a = \text{argmax}_{a'} Q(s,a')$ with probability $1-\epsilon$, and a random action otherwise.  At step $t+1$, the previous state-action value $Q(s_t,a_t)$ is updated by a temporal-difference error $\delta$ based on the reward received and our current estimate of the next state-action pair.
 %When  $\lambda = 0$, only $Q(s_t,a_t)$ is updated. However, when $0 < \lambda \leq 1$, the sequence of actions performed until the current step receives an update.  
 The update received is multiplied by an eligibility trace, $e(s_t,a_t)$, which is in turn discounted by a factor $\lambda$, according to the following:
 \begin{eqnarray*}
@@ -133,11 +133,31 @@ The update received is multiplied by an eligibility trace, $e(s_t,a_t)$, which i
 \end{eqnarray*}
 and $\alpha$ is a learning rate parameter.  The Sarsa($\lambda$) algorithm has the property that it converges, with probability 1, to an optimal policy as long as all state-action pairs are visited an infinite number of times and the behaviour policy is eventually greedy \cite{SuttonBarto1998}. 
 
+\begin{table}[t]
+	\begin{center}
+		\caption{The point values for an example drafting game.}
+		\label{tab:KthEx}
+		\begin{footnotesize}
+		\begin{tabular}{|c|c|c|c|c|}
+			\hline
+			\bf Player $\backslash$ Action & \bf A & \bf B & \bf C & \bf D \\
+			\hline
+			\bf 1 & 3 & 4 & 2 & 1 \\
+			\hline
+			\bf 2 & 4 & 1 & 2 & 3 \\
+			\hline
+			\bf 3 & 4 & 2 & 3 & 1 \\
+			\hline
+		\end{tabular}
+		\end{footnotesize}
+	\end{center}
+\end{table}
+
 \subsection{UCT}
 
 UCT is a Monte Carlo planning algorithm that was first presented by~\cite{UCT}, and has commonly been used in general game playing, for example in CadiaPlayer by~\cite{Cadia}. UCT tries to intelligently bias the game tree by focusing on appealing branches and further searching those. At each step, UCT builds upon the sparse game tree from the previous iterations by selecting an action $a$ at state $s$ to expand by
 \[ a = \text{argmax}_{a'} \left( Q(s,a') + c* \sqrt{ \log n(s) / n(s,a') } \right), \]
-where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is a exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number where $a$ was taken in $s$.  For drafting games, $Q(s,a)$ is an $n$-tuple of the component-wise average of the reward signal vectors $r(Z)$ seen on all simulations through $s$ where action $a$ was taken.  On each roll out, UCT adds one new node to the game tree and then randomly plays out the rest of the game from that node to obtain $r(Z)$, which is then propagated up the tree.  If UCT was allowed to perform an infinite number of roll outs and the exploration constant was infinitely high,  UCT would become strictly Monte Carlo planning.  We often refer to UCT as UCT$(x,c)$, where $x$ is the number of simulations run and $c$ is the exploration constant.  Once $x$ simulations have been run from the current state $s$, UCT takes the action $a = \text{argmax}_{a'}Q(s,a')$.
+where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number where $a$ was taken in $s$.  For drafting games, $Q(s,a)$ is an $n$-tuple of the component-wise average of the reward signal vectors $r(Z)$ seen on all simulations through $s$ where action $a$ was taken.  On each roll out, UCT adds one new node to the game tree and then randomly plays out the rest of the game from that node to obtain $r(Z)$, which is then propagated up the tree.  If UCT was allowed to perform an infinite number of roll outs and the exploration constant was infinitely high,  UCT would become strictly Monte Carlo planning.  We often refer to UCT as UCT$(x,c)$, where $x$ is the number of simulations run and $c$ is the exploration constant.  Once $x$ simulations have been run from the current state $s$, UCT takes the action $a = \text{argmax}_{a'}Q(s,a')$.
 
 % Describe UCT, specifically for multi-player games (like drafting games)
 
@@ -151,7 +171,9 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is a exploration
 \label{sec:KthBestPick}
 % kthBestPick search
 
-While both RL and UCT can be applied to many different domains, the KthBestPick algorithm focuses specifically on drafting games.  The idea here is that it may not always be best to pick the action which improves our situation the most.  For instance, suppose we are considering two particular actions, A and B, that will both benefit our end-game reward.  Suppose further that we know picking B will be slightly more beneficial to us than picking A.  If no other player will benefit from picking B, but a player will benefit from picking A, then we should consider picking A now, as it seems likely that B will be available for our next pick.  If we choose B now, A may not be available on our next turn.  At each turn, KthBestPick uses a heuristic function to rank the available picks from best (rank 0) to worst (rank equal to the number of picks remaining minus 1).  Then, it estimates the most inferior pick of rank $k$ that we may choose so that we eventually pick all $k$ better-ranked actions (rank 0, 1, ..., $k-1$) with our later picks.  This is done using opponent models to predict the play of the other players, which may or may not be different from the heuristic function.
+While both RL and UCT can be applied to many different domains, the KthBestPick algorithm focuses specifically on drafting games.  Before introducing the algorithm, we consider a small example to build up some intuition for KthBestPick.  Consider the drafting game with four actions, A, B, C, and D, and three players, 1, 2, and 3.  Players pick in numerical order until all actions have been picked (thus player 1 gets two picks).  For each action and each player, we associate a point value that that player receives for making that pick.  A player's reward at the end of the game is simply the sum of the points of his picks.  Suppose the point values are as given in Table \ref{tab:KthEx}, and let's assume that we are player 1.  If we rank picks according to the point values for us only, then B would appear to be the best pick (4 points) and A the second best (3 points).  Following this heuristic alone would have us pick B.  Now if players 2 and 3 are playing optimally, player 2 will follow by picking A, then player 3 will pick C.  This forces us to pick D, leaving us with a reward of $4 + 1 = 5$.  However, assuming our opponents play optimally, we can see that picking A first will lead player 2 to pick D and player 3 to pick C, leaving us to pick B with our last pick.  In this case, we end the game with a reward of $3 + 4 = 7$, a better result.  KthBestPick is designed to act optimally is situations like this.
+
+At each turn, KthBestPick uses a heuristic function to rank the available picks from best (rank 0) to worst (rank equal to the number of picks remaining minus 1).  Then, it estimates the most inferior pick of rank $k$ that we may choose so that we eventually pick all $k$ better-ranked actions (rank 0, 1, ..., $k-1$) with our later picks.  This is done using opponent models to predict the play of the other players, which may or may not be different from the heuristic function.
 
 \begin{algorithm}[t]
 	\caption{KthBestPick($node$, $h$, $m_0$, ..., $m_{n-1}$)}
@@ -190,35 +212,15 @@ While both RL and UCT can be applied to many different domains, the KthBestPick 
 	\end{footnotesize}
 \end{algorithm}
 
-Algorithm \ref{alg:kth} gives the pseudocode for KthBestPick, which takes in the current state $node$, a heuristic function $h$, and a sequence of opponent models $m_0, ..., m_{n-1}$ (one for each player) as parameters.  We first rank the actions according to the heuristic function (line 1) according to the merit of the picks in the active player's perspective.  Next, $k$ is set to one less than the number of picks remaining for the active player (line 3), as we do not have enough picks to consider more inferior actions.  Then, we set our potential pick to the action ranked $k$ (line 4), construct a list containing all of the superior picks (line 5), and initialize $child$ to point to the child node associated with this potential pick.  To determine if this pick is desired, we repeatedly find each of the next picks made by the players according to the opponent models (line 14).  Each model returns the action believed to be picked by the active player at the passed in node.  After updating our $child$ pointer to follow this next pick (line 15), we check if the pick is in our list of superior actions (line 16).  If it is, there are two possible cases.  If the pick was made by caller of the algorithm (line 17), then this is allowed; we remove the pick from the superior list (line 18) and continue.  However, if the pick was made by another player, then we abandon our potential pick (lines 20 and 21), decrement $k$ (line 3), and now consider the new potential pick ranked $k$ (line 4 again).  If the list of superior picks ever becomes empty (line 8), this indicates that the original active player is predicted to pick all of the superior actions, and so we return the current potential pick (line 26).  However, if the game ends while superior actions remain unclaimed (line 9), we instead abandon the potential pick (lines 10 and 11). 
+Algorithm \ref{alg:kth} gives the pseudocode for KthBestPick, which takes in the current state $node$, a heuristic function $h$, and a sequence of opponent models $m_0, ..., m_{n-1}$ (one for each player) as parameters.  We first rank the actions according to the heuristic function (line 1) according to the merit of the picks in the active player's perspective.  Next, $k$ is set to one less than the number of picks remaining for the active player (line 3), as we do not have enough picks to consider more inferior actions.  Then, we set our potential pick to the action ranked $k$ (line 4), construct a list containing all of the superior picks (line 5), and initialize $child$ to point to the child node associated with this potential pick.  To determine if this pick is desired, we repeatedly find each of the next picks made by the players according to the opponent models (line 14).  Each model returns the action believed to be picked by the active player at the passed in node.  After updating our $child$ pointer to follow this next pick (line 15), we check if the pick is in our list of superior actions (line 16).  If it is, there are two possible cases.  If the pick was made by the caller of the algorithm (line 17), then this is allowed; we remove the pick from the superior list (line 18) and continue.  However, if the pick was made by another player, then we abandon our potential pick (lines 20 and 21), decrement $k$ (line 3), and now consider the new potential pick ranked $k$ (line 4 again).  If the list of superior picks ever becomes empty (line 8), this indicates that the original active player is predicted to pick all of the superior actions, and so we return the current potential pick (line 26).  However, if the game ends while superior actions remain unclaimed (line 9), we instead abandon the potential pick (lines 10 and 11). 
 
 % Possible heuristic functions: learn one based on a number of features describing the current state-action space, or can use MaxN-MC.
-There are a number of different possibilities for the heuristic function.  The most obvious choices are one of our other two drafting strategies, RL or UCT.  Both of these techniques store a value for each available action estimating the merit of making that pick, allowing the actions to be sorted as necessary.
+There are a number of different possibilities for the heuristic function.  The most obvious choices are one of our other two drafting strategies, RL or UCT.  Both of these techniques store a value $Q(node,pick)$ for each available action estimating the merit of selecting $pick$, allowing the actions to be sorted as necessary.
 
 % Possible opponent models: KthBestPick (in practice, keep track of repeated calls in one state, and truncate the game to a fixed maximum number of picks remaining), if repeated games then could try to learn an opponent model.  Typically will not be given the explicit opponent drafting strategies.
 As for the opponent models, again there are a few options.  Firstly, we should use KthBestPick as the opponent model for our own play, since we know this is the strategy being used to make our picks.  Typically for the other players, however, we will not be given their explicit drafting strategies.  The simplest approach would be to assume that the opponents are also using KthBestPick to make decisions with an appropriate self-centered heuristic function.  This turns line 14 of Algorithm \ref{alg:kth} into a recursive call, and in this case, KthBestPick can be very costly in computation time.  We can combat this by only considering a fixed number of the highest ranked picks at line 3, and repeating the algorithm iteratively on this number until returning a pick is necessary.  Finally, if we are fortunate enough to have obtained the strategies of our opponents, we can simply pass these into the algorithm.
 
-We now consider a small example to build up intuition behind the KthBestPick algorithm.  Consider the drafting game with four actions, A, B, C, and D, and three players, 1, 2, and 3.  Players pick in numerical order until all actions have been picked (thus player 1 gets two picks).  For each action and each player, we associate a point value that that player receives for making that pick.  A player's reward at the end of the game is simply the sum of the points of his picks.  Suppose the point values are as given in Table \ref{tab:KthEx}, and let's assume that we are player 1.  If we rank picks according to the point values for us only, then B would appear to be the best pick (4 points) and A the second best (3 points).  Following this heuristic alone would have us pick B.  Now if players 2 and 3 are playing optimally, player 2 will follow by picking A, then player 3 will pick C.  This forces us to pick D, leaving us with a reward of $4 + 1 = 5$.  However, if we apply KthBestPick with this heuristic and assume our opponents play optimally, then we will see that picking A first will lead player 2 to pick D and player 3 to pick C, leaving us to pick B with our last pick.  In this case, we end the game with a reward of $3 + 4 = 7$, a better result.  Note that UCT will also conclude that picking A first is a better move, but only after a number of simulations.  KthBestPick, on the other hand, finds the solution with just one ``simulation.'' 
-
-\begin{table}[t]
-	\begin{center}
-		\caption{The point values for an example drafting game.}
-		\label{tab:KthEx}
-		\begin{footnotesize}
-		\begin{tabular}{|c|c|c|c|c|}
-			\hline
-			\bf Player $\backslash$ Action & \bf A & \bf B & \bf C & \bf D \\
-			\hline
-			\bf 1 & 3 & 4 & 2 & 1 \\
-			\hline
-			\bf 2 & 4 & 1 & 2 & 3 \\
-			\hline
-			\bf 3 & 4 & 2 & 3 & 1 \\
-			\hline
-		\end{tabular}
-		\end{footnotesize}
-	\end{center}
-\end{table}
+Note that in the example game described in Table \ref{tab:KthEx}, UCT will also conclude that picking A first is a better move, but only after a number of simulations.  KthBestPick, on the other hand, finds the solution with just one ``simulation.''
 
 \section{Theoretical Analysis}
 
@@ -232,7 +234,8 @@ Firstly, the while loop in Algorithm \ref{alg:kth} (line 8) is not infinite.  Th
 
 \section{Risk}
 
-We use Risk as a testbed for our proposed drafting approaches.  Risk is a strategy board game for two to six players where the objective is to occupy all 42 territories on the board.  The territories are divided into 6 continents, with 4 territories in both Australia and South America, 6 in Africa, 7 in Europe, 9 in North America, and 12 in Asia.  Figure \ref{fig:Conts} depicts their arrangement on the board.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After each player places their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  A player reduced to zero armies on the board is eliminated from the game.  Players receive one reinforcement army for every three territories owned and receive bonus reinforcements for owning entire continents (as depicted in Figure~\ref{fig:Conts}) or trading in cards earned by conquering territories. Full rules can be found on-line\footnote{\url{http://www.hasbro.com/common/instruct/Risk.pdf}}.
+We use Risk as a testbed for our proposed drafting approaches.  Risk is a strategy board game for two to six players where the objective is to occupy all 42 territories on the board.  The territories are divided into 6 continents as labelled in Figure \ref{fig:Conts}.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After players place their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  A player reduced to zero armies on the board is eliminated from the game.  Players receive one reinforcement army for every three territories owned, and receive bonus reinforcements for owning entire continents (as depicted in Figure~\ref{fig:Conts}) or trading in cards earned by conquering territories. Full rules can be found on-line\footnote{http://www.hasbro.com/common/instruct/Risk.pdf}.
+%, with 4 territories in both Australia and South America, 6 in Africa, 7 in Europe, 9 in North America, and 12 in Asia.  Figure \ref{fig:Conts} depicts their arrangement on the board.  In the standard rules, players first take turns selecting the territories until all have been chosen (the drafting sub-game).  After each player places their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  A player reduced to zero armies on the board is eliminated from the game.  Players receive one reinforcement army for every three territories owned and receive bonus reinforcements for owning entire continents (as depicted in Figure~\ref{fig:Conts}) or trading in cards earned by conquering territories. Full rules can be found on-line\footnote{\url{http://www.hasbro.com/common/instruct/Risk.pdf}}.
 
 \begin{figure}[t]
 	\centering
@@ -241,26 +244,28 @@ We use Risk as a testbed for our proposed drafting approaches.  Risk is a strate
 	\label{fig:Conts}
 \end{figure}
 
-The Lux Delux\footnote{\url{http://sillysoft.net/lux/}} game provides a computer version of Risk, along with several AI bots (with source code) to play against, all of which are rule-based.  Each of the included bots has an associated difficulty and a general playing style.  For example, ``Quo'' is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
+The Lux Delux\footnote{http://sillysoft.net/lux/} game provides a computer version of Risk, along with several AI bots (with source code) to play against, all of which are rule-based.  Each of the included bots has an associated difficulty and a general playing style.  For example, ``Quo'' is a difficult bot which tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.
 
-In this paper, we are only concerned with strategies for playing the drafting sub-game at the beginning of Risk.  Strategies for the other phases of Risk are interesting and have been researched (\cite{RiskBots}, \cite{ZuckFelnerKraus2009}), but we do not investigate these here.  In addition, we decided to focus only on three player Risk, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to playing with more players because each player must make more selections per draft.
+In this paper, we are only concerned with strategies for playing the drafting sub-game of Risk.  Strategies for the other phases of Risk are interesting and have been researched (\cite{RiskBots}, \cite{ZuckFelnerKraus2009}), but we do not investigate these here.  In addition, we decided to focus only on three player Risk, as this incorporates the multi-player aspect of drafting games and is arguably more strategically demanding compared to playing with more players because each player must make more selections per draft.
 
 \section{A Machine-Learned Reward Signal}
 
-Our objectives in this paper include both determining what strategies are desirable in drafting games, and finding a strategy in the Risk drafting sub-game that can improve our chances of winning in the full game of Risk.  The latter problem suffers from a few complications.  First, the merit of a strategy for the drafting sub-game may highly depend on the strategy used in post-draft play.  For instance, a drafting strategy that primarily selects territories in North America would not be advisable to play with a post-draft strategy that plays to own Australia at all costs.  With this post-draft strategy, it would make more sense to simply select territories in Australia rather than North America during the draft.  Secondly, as mentioned previously, it is not easy to classify a draft outcome $Z$ as either ``good'' or ``bad'' for player $i$.  This makes it difficult to guide drafting selections towards desirable outcomes.  What we are lacking is a reward signal $r_i(Z)$ that approximates player $i$'s chances of winning from $Z$ when following a given post-draft strategy.  In this section, we describe how we used supervised machine learning to create such a reward signal.
+Our objectives in this paper include both determining what strategies are desirable in drafting games, and finding a strategy in the Risk drafting sub-game that can improve our chances of winning in the full game of Risk.  The latter problem suffers from a few complications.  First, the merit of a strategy for the drafting sub-game may highly depend on the strategy used in post-draft play.  For instance, a drafting strategy that primarily selects territories in North America would not be advisable to play with a post-draft strategy that plays to own Australia at all costs.  %With this post-draft strategy, it would make more sense to simply select territories in Australia rather than North America during the draft.  
+Secondly, as mentioned previously, it is not easy to classify a draft outcome $Z$ as either ``good'' or ``bad'' for player $i$.  This makes it difficult to guide drafting selections towards desirable outcomes.  What we are lacking is a reward signal $r_i(Z)$ that approximates player $i$'s chances of winning from $Z$ when following a given post-draft strategy.  In this section, we describe how we used supervised machine learning to create such a reward signal.
 
-We identified a number of features that are tactically important in Risk.  Many of these features are inspired by those found in the evaluation function described in \cite{RiskBots}.  For each player, our features are described by:
-\begin{itemize}
+We identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by those found in the evaluation function described in \cite{RiskBots}.  For each player, our features are described by:
+\begin{itemize}\addtolength{\itemsep}{-0.5\baselineskip}
 	\item[(i)] for each continent, the number of territories owned in that continent;
 	\item[(ii)] when the player plays in the turn order;
 	\item[(iii)] the number of distinct territories owned by other players which border owned territories (enemy neighbours); and
 	\item[(iv)] the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbours).
 \end{itemize}
-The merit of each feature set is estimated by a process similar to how Lee creates a domain-specific fitness function or meta-model for selecting a set of actions in a Markov decision process \cite{GregLeeThesis}.  Our process is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the three players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot (see Risk section).  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
+The merit of each feature set is estimated by a process similar to how Lee creates a domain-specific fitness function for selecting a set of actions in a Markov decision process \cite{GregLeeThesis}.  Our process is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the three players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot (see Risk section).  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
 \[ f: S \mapsto v \in \textbf{R} \] 
 that estimates the merit of the feature set $S$ when following Quo's post-draft strategy.  Finally, for a draft outcome $Z = (A_1,A_2,A_3,\phi)$, we calculate $v_i = f(S_i)$ where $S_i$ is the feature set associated with $A_i$, and define the reward signal for player $i$ to be
-\[ r_i(Z) = \frac{v_i^+}{v_1^+ + v_2^+ + v_3^+}, \]
-where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ are nonnegative, a learner could allow $f$ to be negative and so we take the max to keep the sign of $r_i(Z)$ correct.  Thus, to maximize reward, the objective of each player is to maximize the estimated merit of her selections while minimizing those of her opponents.
+\[ r_i(Z) = v_i^+ / \left(v_1^+ + v_2^+ + v_3^+\right), \]
+where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ are nonnegative, a learner could allow $f$ to be negative and so we take the max to keep the sign of $r_i(Z)$ correct.  The hope is that $r_i(Z)$ is a good estimate of player $i$'s chance of winning from $Z$.
+%Thus, to maximize reward, the objective of each player is to maximize the estimated merit of her selections while minimizing those of her opponents.
 
 \begin{figure*}[t]
 	\centering
@@ -269,9 +274,10 @@ where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ a
 	\label{fig:MachLearn}
 \end{figure*}
 
-Our general function $f$ is computed from 7,364 random draft outcomes for a total of 22,092 $(S,v)$ pairs.  We use Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) are represented as nominal features and features (iii) and (iv) are represented as numeric.  These weights are displayed in Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring}.  However, there are some features which do not appear in any of the 22,092 feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features are calculated through linear extrapolation of the closest two numbers in the continent counts for the associated continent.  For instance, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
+Our general function $f$ is computed from $7,364$ random draft outcomes for a total of $22,092$ $(S,v)$ pairs.  We use Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) are represented as nominal features and features (iii) and (iv) are  numeric.  These weights are displayed in Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring}.  However, there are some features which do not appear in any of the $22,092$ feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features are calculated through linear extrapolation of the closest two continent counts for the associated continent.  For instance, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
 \[ 36.1487 + (36.1487 - 24.0969) = 48.2005. \]  
-Note that only in rare cases will $f$ be negative (lots of enemy neighbours and low scores elsewhere).  %SHOW DIAGRAM OF LINEAR EXTRAPOLATION FOR NORTH AMERICA?  ONLY IF THERE'S ROOM.
+%Note that only in rare cases will $f$ be negative (lots of enemy neighbours and low scores elsewhere).  
+%SHOW DIAGRAM OF LINEAR EXTRAPOLATION FOR NORTH AMERICA?  ONLY IF THERE'S ROOM.
 
 %\begin{table*}[t]
 %  \begin{center} 
@@ -389,13 +395,11 @@ We now show how to use Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} to
 \begin{eqnarray*}
 % 	f(S_1) &=& [10.7097 + 0.6904 + 10.7207 \\ && +\ 0.9766 + 43.7726 + 23.6086] \\ &&+\ [13.3818 + 18(-0.0719) + 22(0.4799)] \\
 % 				 &=& 113.124,
- 	f(S_1) &=& [10.71 + 0.69 + 10.72 + 0.98 + 43.77 \\ &&+\ 23.61] + [13.38 + 18(-0.07) + 22(0.48)] \\
- 				 &=& 113.12,
+ 	f(S_1) &=& [10.71 + 0.69 + 10.72 + 0.98 + 43.77 \\ &&+\ 23.61] + [13.38 + 18(-0.07) + 22(0.48)] %\\
+% 				 &=& 113.12,
 \end{eqnarray*}
-where the values in the first set of brackets are from Table \ref{tab:ContScoring} and the second set of brackets are from Table \ref{tab:MoreScoring}.  We can similarly compute the values of the feature sets for player 2 (green) and player 3 (red) as %$f(S_2) = 89.4739$ and $f(S_3) = 119.6547$ 
-$f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $r_i(Z)$ is computed via
-\[ r_i(Z) = \frac{f(S_i)}{f(S_1) + f(S_2) + f(S_3)}, \]
-giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
+where the values in the first set of brackets are from Table \ref{tab:ContScoring} and the second set of brackets are from Table \ref{tab:MoreScoring}.  This gives $f(S_1) = 113.12$.  We can similarly compute the values of the feature sets for player 2 (green) and player 3 (red) as %$f(S_2) = 89.4739$ and $f(S_3) = 119.6547$ 
+$f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $r_i(Z)$ is computed via $r_i(Z) = f(S_i) / \left(f(S_1) + f(S_2) + f(S_3) \right)$, giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
 $r_i(Z) = \{0.35, 0.28, 0.37\}$.
 
 \begin{figure}[t]
