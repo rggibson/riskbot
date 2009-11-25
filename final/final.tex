@@ -31,7 +31,6 @@
 \newcommand{\nin}{\noindent}
 
 \usepackage[belowskip=-5pt,aboveskip=5pt]{caption}
-
 \setlength{\intextsep}{10pt plus 2pt minus 2pt}
 
 \newcommand{\bea}{\begin{eqnarray}}
@@ -125,6 +124,7 @@ Finally, Lee's work is closely related to drafting sub-games.  In his thesis \ci
 
 \begin{table}[t]
 	\centering
+		\caption{The point values for an example drafting game.}
 		\label{tab:KthEx}
 		\begin{footnotesize}
 		\begin{tabular}{|c|c|c|c|c|}
@@ -138,7 +138,6 @@ Finally, Lee's work is closely related to drafting sub-games.  In his thesis \ci
 			\bf 3 & 4 & 2 & 3 & 1 \\
 			\hline
 		\end{tabular}
-		\caption{The point values for an example drafting game.}
 		\end{footnotesize}
 \end{table}
 
@@ -220,8 +219,9 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploratio
 
 \begin{table*}[t]
  \centering
-     \label{tab:ContScoring}
-    \begin{footnotesize}
+     \caption{The weights for features of type (i), as computed in Weka.  A * denotes weights derived through linear extrapolation.}
+    \label{tab:ContScoring}      
+     \begin{footnotesize}
     \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
     	\hline
     	  & \bf 0 & \bf 1 & \bf 2  & \bf 3 & \bf 4 & \bf 5 & \bf 6 & \bf 7 & \bf 8 & \bf 9 & \bf 10 & \bf 11 & \bf 12 \\
@@ -239,7 +239,6 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploratio
     	\bf Asia & 27.10 & 23.90 & 23.61 & 23.10 & 23.61 & 23.68 & 19.32 & 15.63 & 17.43 & 13.84 & 10.25* & 6.66* & 3.07* \\
     	\hline
     \end{tabular}
-      \caption{The weights for features of type (i), as computed in Weka.  A * denotes weights derived through linear extrapolation.}
     \end{footnotesize}
 \end{table*}
 
@@ -282,6 +281,7 @@ In this paper, we are only concerned with strategies for playing the drafting su
 
 \begin{table}[t]
 	\centering
+		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
 		\label{tab:MoreScoring}
 		\begin{footnotesize}
 		\begin{tabular}{|c|c|}
@@ -297,7 +297,6 @@ In this paper, we are only concerned with strategies for playing the drafting su
 			Each ordered pair of friendly neighbours & 0.48 \\
 			\hline
 		\end{tabular}
-		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
 		\end{footnotesize}
 	
 \end{table}
