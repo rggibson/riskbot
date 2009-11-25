@@ -15,6 +15,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{enumerate}
+\usepackage[belowskip=-5pt,aboveskip=5pt]{caption}
 
 \newtheorem{df}{Definition}
 \newtheorem{notation}{Notation}
@@ -30,7 +31,6 @@
 
 \newcommand{\nin}{\noindent}
 
-\usepackage[belowskip=-5pt,aboveskip=5pt]{caption}
 \setlength{\intextsep}{10pt plus 2pt minus 2pt}
 
 \newcommand{\bea}{\begin{eqnarray}}
@@ -78,15 +78,15 @@ A \emph{drafting game} is a game played by a set of $n$ players, where items are
 % Talk about search for single agent, minimax for two-player, 0-sum, MaxN for multi-player.  Examples like chess, checkers, etc.
 
 For the past few decades, games have been an exceptional platform for artificial intelligence research.  Many successful computer programs have been developed which play at expert levels in two-player games including %Othello \cite{Othello}, 
-checkers \cite{Chinook} %, chess \cite{DeepBlue},
-and Go \cite{ComputerGo} among others.  These games can be handled reasonably well by classic and modern artificial intelligence techniques, such as minimax search and Monte-Carlo tree search.  However, multi-player (i.e., more than 2 players) games are less understood.  In this paper, we explore strategies for playing multi-player ``drafting'' games.  Informally, a drafting game involves players taking turns selecting from a collection of items without replacement until some end game condition has been met.  At the conclusion of the game, each player receives a reward based on their final collection of items; the selection order is irrelevant.  The objective for each player is to maximize her individual end game reward.  Some challenges associated with drafting games include handling large action spaces and considering how the choices of others should effect our own.
+checkers \cite{Chinook}, chess \cite{DeepBlue}, 
+and Go \cite{ComputerGo}.  These games can be handled reasonably well by classic and modern artificial intelligence techniques, such as minimax search and Monte-Carlo tree search.  However, multi-player (i.e., more than 2 players) games are less understood.  In this paper, we explore strategies for playing multi-player ``drafting'' games.  Informally, a drafting game involves players taking turns selecting from a collection of items without replacement until some end game condition has been met.  At the conclusion of the game, each player receives a reward based on their final collection of items; the selection order is irrelevant.  The objective for each player is to maximize her individual end game reward.  Some challenges associated with drafting games include handling large action spaces and considering how the choices of others should effect our own.
 
 % Also include Risk in this discussion
 There are a number of games, including both traditional board games and modern commercial video games, which either can be modelled as a drafting game or incorporate some kind of draft within part of the game.  A simple example is Tic-Tac-Toe. Here, we can consider the winning player receiving a positive reward, the losing player receiving a negative reward, or both players in a draw receiving zero reward. Another example is the board game Risk by Hasbro Inc., which begins by players drafting the territories on the board until every territory has an owner.  Drafting territories in Risk presents an additional challenge as it is not clear what selections are best in order to eventually win the overall game.  As for video games, sports simulations often include a drafting aspect.  For instance, %when playing through multiple seasons of the baseball game \textit{MLB 09: The Show} from Sony, a rookie draft takes place in between each season, where the human player and the computer opponents take turns choosing from a pool of new players who may then be added to the respective team's roster.  Another example is 
 in the new hockey game \textit{NHL 10} by EA Sports, a ``fantasy draft'' can be activated at the beginning of a season.  In a fantasy draft, all players are removed from their current teams, and then selected one-by-one by the teams in the league.  Like with Risk, it can be hard to judge which selections will improve a team's chance of winning the most.  %Finally, the video game \textit{Star Wars: Empire at War} contains a drafting-type game where one can choose their ground force composition, execute ``auto-combat,'' and see the outcome of the battle.
 
 Our main contributions in this paper are the following:
-\begin{itemize} \addtolength{\itemsep}{-0.5\baselineskip}
+\begin{itemize} %\addtolength{\itemsep}{-0.5\baselineskip}
 	\item a novel adversarial search algorithm, KthBestPick, specifically designed for playing drafting games;
 	\item a method for evaluating the opening draft in Risk using supervised machine learning; and
 	\item a Risk bot, derived from an existing program but augmented with a new drafting strategy, which outperforms a number of difficult opponents.
@@ -219,9 +219,9 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploratio
 
 \begin{table*}[t]
  \centering
-     \caption{The weights for features of type (i), as computed in Weka.  A * denotes weights derived through linear extrapolation.}
-    \label{tab:ContScoring}      
-     \begin{footnotesize}
+      \caption{The weights for features of type (i), as computed in Weka.  Rows denote continents and columns denote territory counts.  Weights denoted with a * are derived through linear extrapolation.}
+    \label{tab:ContScoring}
+    \begin{footnotesize}
     \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
     	\hline
     	  & \bf 0 & \bf 1 & \bf 2  & \bf 3 & \bf 4 & \bf 5 & \bf 6 & \bf 7 & \bf 8 & \bf 9 & \bf 10 & \bf 11 & \bf 12 \\
@@ -314,7 +314,7 @@ Secondly, as mentioned previously, it is not easy to classify a draft outcome $Z
 \end{figure}
 
 We identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by those found in the evaluation function described in \cite{RiskBots}.  For each player, our features are described by:
-\begin{enumerate}[i] \addtolength{\itemsep}{-0.5\baselineskip}
+\begin{enumerate}[(i)] %\addtolength{\itemsep}{-0.5\baselineskip}
 	\item for each continent, the number of territories owned in that continent;
 	\item when the player plays in the turn order;
 	\item the number of distinct territories owned by other players which border owned territories (enemy neighbours); and
@@ -591,7 +591,7 @@ We formally introduced the concept of a drafting game and showed how to use supe
 %This paper has formalized the concept of a drafting game.    We introduced two solutions for playing a drafting game.  Our first approach, MaxN-MC, is a combination of the MaxN algorithm, which generalizes minimax search to multi-player games, and Monte-Carlo simulations, as used in Monte-Carlo tree search algorithms.  Our second technique is KthBestPick, which uses heuristics to rank actions and opponent models to predict which actions will be selected by other players.  
 
 We conclude by listing some possible avenues of further research:
-\begin{itemize} \addtolength{\itemsep}{-0.5\baselineskip}
+\begin{itemize} %\addtolength{\itemsep}{-0.5\baselineskip}
 %	\item determine how to model opponents on-line in Fantasy Risk to learn opponent models for KthBestPick.
 	\item apply our techniques to other drafting games, such as drafting in fantasy sports.  %KthBestPick may perform even better in domains where an obvious heuristic exists, such as in the drafting game depicted in Table \ref{tab:KthEx}.  In fantasy sports, actions are usually grouped into types (eg.~a hockey player's position) where each player must select a certain number of actions of each type.  A numerical value (additive reward) is typically associated with each action (eg.~picking a hockey player) estimating the number of points that pick will provide to the fantasy team.  This value provides a simple heuristic for KthBestPick without the need for another algorithm such as UCT.  KthBestPick can then spend all of its efforts determining which of the highest ranked picks to make depending on the number of picks already made of each type by all the players.
 	\item use a more sophisticated classifer for engineering a reward signal, such as an artificial neural network.  This may alleviate the poor performance of UCT-Quo in Figure \ref{fig:UCTvsUCTvsQUO}, and would provide a new, likely more complex drafting game to compare algorithms against than our current game of Fantasy Risk.
