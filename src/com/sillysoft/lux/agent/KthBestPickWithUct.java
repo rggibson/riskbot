@@ -18,7 +18,7 @@ public class KthBestPickWithUct extends SmartDrafter
      * Factors in to how many roll outs we do, according to how much time we have.
      * The bigger the number, the fewer number of roll outs we'll perform.
      */
-    final protected int MILLSECS_PER_ROLL_OUT = 4;
+//    final protected int MILLSECS_PER_ROLL_OUT = 4;
 
     /**
      * The evaluation function to use
@@ -35,12 +35,17 @@ public class KthBestPickWithUct extends SmartDrafter
      * Current number of simulations we are allowing
      * This will be set to something else if we are obeying time limit (see above parameter)
      */
-    protected int m_numSimulations = 0;
+    protected int m_numSimulations = 3000;
 
     /**
-     * Need this if we are using UCT as heuristic or opponent model
+     * Need this to run UCT simulations
      */
     protected UCT_Drafter2 m_uctDrafter;
+
+    /**
+     * Need this if we are using QuoClone as an opponent model
+     */
+    protected QuoClone m_quoClone;
 
     /**
      * True if we assume we know what algorithms our opponents are using.
@@ -51,7 +56,12 @@ public class KthBestPickWithUct extends SmartDrafter
      * RandomDrafter: must contain "Random"
      * KthBestPickUct: must contain "KthBestPick"
      */
-    protected final boolean USE_ORACLE_MODELS = true;
+    public final boolean USE_ORACLE_MODELS = false;
+
+    /**
+     * The oracles of the opponents
+     */
+    protected String[] m_oracles;
 
     /**
      * Whether we are selfish or not (we assume the opponents' selfishnesses match
@@ -78,7 +88,22 @@ public class KthBestPickWithUct extends SmartDrafter
         {
             m_uctDrafter = (UCT_Drafter2) board.getAgentInstance("UCT_Drafter2");
         }
+        m_quoClone = (QuoClone) board.getAgentInstance("QuoClone");
+
         m_uctDrafter.setPrefs(ID, board);
+        m_quoClone.setPrefs(ID, board);
+
+        m_oracles = new String[board.getNumberOfPlayers()];
+    }
+
+    public void setOracles(String[] oracles)
+    {
+        assert oracles.length == m_oracles.length : "Error: Wrong number of opponent oracles";
+
+        for (int i = 0; i < oracles.length; ++i)
+        {
+            m_oracles[i] = oracles[i];
+        }
     }
 
     @Override
@@ -107,10 +132,10 @@ public class KthBestPickWithUct extends SmartDrafter
         int nextPick = -1;
         int maxNumPicksConsidered = 1;
 
-        if (MAX_PICKS_CONSIDERED == -1)
-        {
-            m_numSimulations = PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size() / MILLSECS_PER_ROLL_OUT;
-        }
+//        if (MAX_PICKS_CONSIDERED == -1)
+//        {
+//            m_numSimulations = PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size() / MILLSECS_PER_ROLL_OUT;
+//        }
 
         // Synchronize the uct drafter's root node
         m_uctDrafter.updateRoot(draftState);
@@ -150,10 +175,20 @@ public class KthBestPickWithUct extends SmartDrafter
 
         if (terr == -1)
         {
-            assert(false);
+            // Time ran out before we could find a pick.
+            // Just pick the first unowned territory we find (this should really never happen)
+            // THIS IS A HACK
+            for (Country country : countries)
+            {
+                if (country.getOwner() == -1)
+                {
+                    terr = country.getCode();
+                    break;
+                }
+            }
         }
 
-        while (System.currentTimeMillis() < alarm)
+        while (MAX_PICKS_CONSIDERED == -1 && System.currentTimeMillis() < alarm)
         {
             Node2 node = m_uctDrafter.getRoot().getChildren().get(terr);
             m_uctDrafter.runUctSimulation(node, node.getDraftState());
@@ -177,7 +212,10 @@ public class KthBestPickWithUct extends SmartDrafter
     private int kthBestPickWithUct(int[] draftState, ArrayList<Integer> unownedCountries, int activePlayer, int numPicksToConsider, long alarm, boolean firstCall, Node2 node)
     {
         // Rank the available picks
-        assert node != null : "Error: null node!";
+        if (node == null)
+        {
+            assert node != null : "Error: null node!";
+        }
         for (int i = node.getNumVisits(); i < m_numSimulations; ++i)
         {
             m_uctDrafter.runUctSimulation(node, draftState);
@@ -239,7 +277,7 @@ public class KthBestPickWithUct extends SmartDrafter
                 currentPlayer = (currentPlayer + 1) % board.getNumberOfPlayers();
                 assert child.getChildren().containsKey(nextPick) : "Error: Illegal child of current node!";
                 Node2 nextChild = child.getChildren().get(nextPick);
-                if (child == null)
+                if (nextChild == null)
                 {
                     nextChild = new Node2(draftState, currentPlayer);
                     child.addChild(nextPick, nextChild);
@@ -249,21 +287,20 @@ public class KthBestPickWithUct extends SmartDrafter
                 // Find the next pick according to the opponent model
                 if (USE_ORACLE_MODELS)
                 {
-                    String currentPlayerName = board.getPlayerName(currentPlayer);
-                    if (currentPlayerName.contains("KthBestPick"))
+                    if (m_oracles[currentPlayer].contains("KthBestPick"))
                     {
                         nextPick = kthBestPickWithUct(draftState, unownedCountries, currentPlayer, numPicksLeft, alarm, false, child);
                     }
-                    else if (currentPlayerName.contains("Random"))
+                    else if (m_oracles[currentPlayer].contains("Random"))
                     {
                         nextPick = unownedCountries.get((int)(Math.random()*unownedCountries.size()));
                     }
-                    else if (currentPlayerName.contains("Greedy"))
+                    else if (m_oracles[currentPlayer].contains("Greedy"))
                     {
                         // TODO: We can model whether a greedy opponent is selfish or not
                         nextPick = getGreedyPick(draftState, unownedCountries, currentPlayer, SELFISH, m_evalFunc);
                     }
-                    else if (currentPlayerName.contains("UCT"))
+                    else if (m_oracles[currentPlayer].contains("UCT"))
                     {
                         for (int i = child.getNumVisits(); i < m_numSimulations; ++i)
                         {
@@ -271,6 +308,10 @@ public class KthBestPickWithUct extends SmartDrafter
                         }
                         int[] bestPick = m_uctDrafter.getNBestPicks(child, 1);
                         nextPick = bestPick[0];
+                    }
+                    else if (m_oracles[currentPlayer].contains("Quo"))
+                    {
+                        nextPick = m_quoClone.getPick(draftState, unownedCountries);
                     }
                     else
                     {
