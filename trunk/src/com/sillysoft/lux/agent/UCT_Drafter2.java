@@ -36,7 +36,7 @@ public class UCT_Drafter2 extends SmartDrafter
      * The number of simulations to run.
      * Set to -1 to abide by the time limit (located in SmartDrafter).
      */
-    private final int NUM_SIMULATIONS = 5000;
+    private final int NUM_SIMULATIONS = -1;
 
     /**
      * The evaluation function to use
