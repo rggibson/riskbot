@@ -28,6 +28,16 @@ public class Node2 {
 	private double value;
 
         /**
+         * We need to back up arrays of values in the MaxN algorithm
+         */
+        private double[] maxNValue;
+
+        /**
+         * Same as value, but for all players
+         */
+        private double[] allValues;
+
+        /**
          * The state this node represents
          */
 	private int[] draftState;
@@ -41,6 +51,8 @@ public class Node2 {
             this.owner = owner;
             numVisits = 0;
             value = 0.0;
+            maxNValue = new double[3]; // HACK
+            allValues = new double[3]; // HACK
             this.draftState = new int[draftState.length];
             System.arraycopy(draftState, 0, this.draftState, 0, draftState.length);
             children = new HashMap<Integer,Node2>();
@@ -110,6 +122,24 @@ public class Node2 {
 	}
 	public void setValue(double value) {
 		this.value = value;
+	}
+	public double[] getMaxNValue() {
+		return maxNValue;
+	}
+	public void setMaxNValue(double[] value) {
+            for (int i = 0; i < maxNValue.length; ++i)
+            {
+                maxNValue[i] = value[i];
+            }
+	}
+	public double[] getAllValues() {
+		return allValues;
+	}
+	public void seAllValues(double[] value) {
+            for (int i = 0; i < allValues.length; ++i)
+            {
+                allValues[i] = value[i];
+            }
 	}
 	public int getOwner()
         {

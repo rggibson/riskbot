@@ -296,6 +296,11 @@ public class UCT_Drafter2 extends SmartDrafter
         }
         double target = values[playerForValue];
         node.setValue(node.getValue() + (1.0 / node.getNumVisits())*(target - node.getValue()));
+        double[] allValues = node.getAllValues();
+        for (int i = 0; i < values.length; ++i)
+        {
+            allValues[i] += (1.0 / node.getNumVisits())*(values[i] - allValues[i]);
+        }
 
         // Propogate the values back
         return values;
