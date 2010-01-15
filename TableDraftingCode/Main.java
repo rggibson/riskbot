@@ -93,16 +93,17 @@ public class Main
         for (int round = 0; round < NUM_ROUNDS; ++round)
         {
             // Scoreboard for this round of matches
-            double[] scores = new double[agents.length];
+            int[] scores = new int[agents.length];
 
             // Create the table for the game
             Item[] items = new Item[NUM_ITEMS];
             for (int i = 0; i < NUM_ITEMS; ++i)
             {
-                double[] values = new double[agents.length];
+                int[] values = new int[agents.length];
                 for (int v = 0; v < values.length; ++v)
                 {
-                    values[v] = (double)rand.nextInt(NUM_VALUES) / NUM_VALUES;
+//                    values[v] = (double)rand.nextInt(NUM_VALUES) / NUM_VALUES;
+                    values[v] = rand.nextInt(NUM_VALUES);
                 }
                 items[i] = new Item(values);
             }

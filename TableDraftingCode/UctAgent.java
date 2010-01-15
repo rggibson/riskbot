@@ -16,7 +16,7 @@ public class UctAgent extends Agent
 {
     private final int NUM_SIMULATIONS = -1;
 
-    private final double CONSTANT = 0.01;
+    private final double CONSTANT = 250;
 
     /**
      * Constructor
