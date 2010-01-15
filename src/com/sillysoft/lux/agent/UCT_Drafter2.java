@@ -76,7 +76,7 @@ public class UCT_Drafter2 extends SmartDrafter
      */
     public int getPick(int[] draftState, ArrayList<Integer> unownedCountries)
     {
-        long alarm = System.currentTimeMillis() + PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*unownedCountries.size();
+        long alarm = System.currentTimeMillis() + PICK_TIME_IN_MILLIS_PER_UNOWNED_TERR*((int)Math.ceil((double)unownedCountries.size() / board.getNumberOfPlayers()));
         
         updateRoot(draftState);
 
