@@ -8,23 +8,31 @@ package com.sillysoft.lux.agent;
 import com.sillysoft.lux.*;
 
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+//import java.io.File;
+//import java.io.FileWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
-
+import java.io.PrintWriter;
+import java.io.FileWriter;
+//import java.util.Iterator;
+import java.util.Arrays;
 /**
  * This drafter cycles through all possible turn orders each game.
  * @author Richard Gibson, Neesha Desai, and Richard Zhao
  */
 public class TurnOrderSwapper extends SmartDrafter
 {
+    protected static final String FANTASY_SCORES_DATA_FILENAME = "C:\\Users\\Richard\\Documents\\NetBeansProjects\\LuxSDK\\LuxSDK\\objectData\\fantasyScores.dat";
+    protected static final String ACTUAL_SCORES_DATA_FILENAME = "C:\\Users\\Richard\\Documents\\NetBeansProjects\\LuxSDK\\LuxSDK\\objectData\\actualScores.dat";
+
+    protected static final boolean PRINT_FANTASY_SCORES = true;
+    protected static final boolean PRINT_ACTUAL_SCORES = true;
+
     /**
      * The names of the players that will be drafting
      */
-    protected static final String[] DRAFTERS = {"RL_Action_Drafter_2",
+    protected static final String[] DRAFTERS = {"RandomDrafter",
                                                 "UCT_Drafter2",
-                                                "GreedyDrafter"  };
+                                                "KthBestPickWithUct"  };
 
     /**
      * The number of orderings we are considering
@@ -50,6 +58,8 @@ public class TurnOrderSwapper extends SmartDrafter
     protected Quo2 m_drafterQuo2ForThisGame;
 
     protected boolean useSmart = true;
+
+    protected static int[] kthPickCounts = new int[10];
 
     /**
      * Constructor
@@ -171,7 +181,7 @@ public class TurnOrderSwapper extends SmartDrafter
             m_drafterQuoForThisGame.setPrefs(ID, board);
             useSmart = false;
         } 
-        else if (DRAFTERS[perm[ID]] == "Quo2")  
+        else if (DRAFTERS[perm[ID]].equals("Quo2"))
         {
             m_drafterQuo2ForThisGame = (Quo2)board.getAgentInstance(DRAFTERS[perm[ID]]);  
             m_drafterQuo2ForThisGame.setPrefs(ID, board);
@@ -183,6 +193,21 @@ public class TurnOrderSwapper extends SmartDrafter
         }
         
         System.out.println("At seat " + ID + " for game " + numGamesPlayed + " is " + DRAFTERS[perm[ID]]);
+
+        // Set opponent oracles for KthBestPick
+        if (DRAFTERS[perm[ID]].contains("KthBestPick"))
+        {
+            KthBestPickWithUct kthBestPickDrafter = (KthBestPickWithUct) m_drafterForThisGame;
+            if (kthBestPickDrafter.USE_ORACLE_MODELS)
+            {
+                String[] oracles = new String[board.getNumberOfPlayers()];
+                for (int i = 0; i < oracles.length; ++i)
+                {
+                    oracles[i] = DRAFTERS[perm[i]];
+                }
+                kthBestPickDrafter.setOracles(DRAFTERS);
+            }
+        }
     }
 
     @Override
@@ -196,7 +221,17 @@ public class TurnOrderSwapper extends SmartDrafter
     {
         if (useSmart)
         {
-            return m_drafterForThisGame.getPick(draftState, unownedCountries);
+            int pick = m_drafterForThisGame.getPick(draftState, unownedCountries);
+            if (DRAFTERS[perm[ID]].contains("KthBestPick"))
+            {
+                KthBestPickWithUct kthDrafter = (KthBestPickWithUct) m_drafterForThisGame;
+                if (kthDrafter.m_lastPickRank >= 1)
+                {
+                    kthPickCounts[kthDrafter.m_lastPickRank - 1]++;
+                }
+            }
+
+            return pick;
         }
         else
         {
@@ -251,13 +286,53 @@ public class TurnOrderSwapper extends SmartDrafter
         fantasyScores.set(numGamesPlayed / numOrderings, currentFanScoresForRound);
         actualScores.set(numGamesPlayed / numOrderings, currentActualScoresForRound);
 
+        if (numGamesPlayed == numOrderings - 1)
+        {
+            // Add the player names to the top of the file
+            String playerNames = "";
+            for (int player = 0; player < board.getNumberOfPlayers(); ++player)
+            {
+                playerNames += "" + DRAFTERS[player] + " ";
+            }
+            playerNames += "\n";
+            if (PRINT_FANTASY_SCORES)
+            {
+                try
+                {
+                    PrintWriter out = new PrintWriter(new FileWriter(FANTASY_SCORES_DATA_FILENAME, true));
+                    out.print(playerNames);
+                    out.close();
+                }
+                catch (Exception e)
+                {
+                    assert(false);
+                }
+            }
+            if (PRINT_ACTUAL_SCORES)
+            {
+                try
+                {
+                    PrintWriter out = new PrintWriter(new FileWriter(ACTUAL_SCORES_DATA_FILENAME, true));
+                    out.print(playerNames);
+                    out.close();
+                }
+                catch (Exception e)
+                {
+                    assert(false);
+                }
+            }
+        }
         if (numGamesPlayed % numOrderings == numOrderings - 1)
         {
+            String fantasyString = "";
+            String actualString = "";
+
             // Print the results
             System.out.println("\n\nFantasy Scores for round " + (numGamesPlayed / numOrderings) + " are:");
             for (int player = 0; player < board.getNumberOfPlayers(); ++player)
             {
                 System.out.println(DRAFTERS[player] + ": " + currentFanScoresForRound[player]);
+                fantasyString += "" + currentFanScoresForRound[player] + " ";
             }
             System.out.println();
 
@@ -265,6 +340,7 @@ public class TurnOrderSwapper extends SmartDrafter
             for (int player = 0; player < board.getNumberOfPlayers(); ++player)
             {
                 System.out.println(DRAFTERS[player] + ": " + currentActualScoresForRound[player]);
+                actualString += "" + currentActualScoresForRound[player] + " ";
             }
             System.out.println();
 
@@ -304,8 +380,10 @@ public class TurnOrderSwapper extends SmartDrafter
             for (int i = 0; i < board.getNumberOfPlayers(); ++i)
             {
                 System.out.println(DRAFTERS[i] + ": " + means[i] + " +- " + (1.96 * standardErrors[i]));
+                fantasyString += " " + means[i] + "+-" + (1.96 * standardErrors[i]) + " ";
             }
             System.out.println("\n\n");
+            fantasyString += "\n";
 
             means = new double[board.getNumberOfPlayers()];
             for (Double[] score : actualScores)
@@ -342,8 +420,39 @@ public class TurnOrderSwapper extends SmartDrafter
             for (int i = 0; i < board.getNumberOfPlayers(); ++i)
             {
                 System.out.println(DRAFTERS[i] + ": " + means[i] + " +- " + (1.96 * standardErrors[i]));
+                actualString += "" + means[i] + "+-" + (1.96 * standardErrors[i]) + " ";
             }
             System.out.println("\n\n");
+            actualString += "\n";
+
+            System.out.println("Running count of picks for kthBest = " + Arrays.toString(kthPickCounts));
+
+            if (PRINT_FANTASY_SCORES)
+            {
+                try
+                {
+                    PrintWriter out = new PrintWriter(new FileWriter(FANTASY_SCORES_DATA_FILENAME, true));
+                    out.print(fantasyString);
+                    out.close();
+                }
+                catch (Exception e)
+                {
+                    assert(false);
+                }
+            }
+            if (PRINT_ACTUAL_SCORES)
+            {
+                try
+                {
+                    PrintWriter out = new PrintWriter(new FileWriter(ACTUAL_SCORES_DATA_FILENAME, true));
+                    out.print(actualString);
+                    out.close();
+                }
+                catch (Exception e)
+                {
+                    assert(false);
+                }
+            }
 
         }
 

@@ -69,6 +69,11 @@ public class KthBestPickWithUct extends SmartDrafter
      */
     final boolean SELFISH = false;
 
+    /**
+     * Counts how many times it makes its top pick, second top pick, etc.
+     */
+    public int m_lastPickRank;
+
     // Constructor
     public KthBestPickWithUct()
     {
@@ -94,6 +99,8 @@ public class KthBestPickWithUct extends SmartDrafter
         m_quoClone.setPrefs(ID, board);
 
         m_oracles = new String[board.getNumberOfPlayers()];
+
+        m_lastPickRank = -1;
     }
 
     public void setOracles(String[] oracles)
@@ -151,6 +158,10 @@ public class KthBestPickWithUct extends SmartDrafter
         do
         {
             nextPick = kthBestPickWithUct(draftState, unownedCountries, ID, maxNumPicksConsidered, alarm, true, m_uctDrafter.getRoot());
+            if (nextPick == -1)
+            {
+                m_lastPickRank = maxNumPicksConsidered - 1;
+            }
             maxNumPicksConsidered++;
 
             if (nextPick != -1)
@@ -186,6 +197,8 @@ public class KthBestPickWithUct extends SmartDrafter
                     break;
                 }
             }
+
+            m_lastPickRank = -1;
         }
 
         while (MAX_PICKS_CONSIDERED == -1 && System.currentTimeMillis() < alarm)
