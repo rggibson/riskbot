@@ -14,13 +14,13 @@ public class Item
     /**
      * How much this item is worth to each player
      */
-    public double[] m_values;
+    public int[] m_values;
 
     /**
      * Constructor
      * @param values The value of this item to each player
      */
-    public Item(double[] values)
+    public Item(int[] values)
     {
         m_values = values;
     }
