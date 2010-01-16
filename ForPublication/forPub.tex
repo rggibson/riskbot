@@ -55,14 +55,14 @@
 \numberwithin{lemma}{section}
 \numberwithin{df}{section}
 
-\title{KthBestPick - A Strategy for Multi-Player Drafting Games with Application to Risk}
+\title{KthBestPick - A Strategy for Multi-Player Drafting Games}
 
 \nocopyright
 
-\author{Neesha Desai, Richard Gibson, Richard Zhao, \and Vadim Bulitko \\
-Department of Computing Science, University of Alberta \\
-Edmonton, Alberta, T6G 2E8, Canada \\
-$\{$neesha$\mid$rggibson$\mid$rxzhao$\mid$bulitko$\}$@cs.ualberta.ca}
+%\author{Neesha Desai, Richard Gibson, and Richard Zhao \\
+%Department of Computing Science, University of Alberta \\
+%Edmonton, Alberta, T6G 2E8, Canada \\
+%$\{$neesha$\mid$rggibson$\mid$rxzhao$\mid$bulitko$\}$@cs.ualberta.ca}
 
 
 \begin{document}
@@ -70,7 +70,7 @@ $\{$neesha$\mid$rggibson$\mid$rxzhao$\mid$bulitko$\}$@cs.ualberta.ca}
 \maketitle
 
 \begin{abstract}
-A \emph{drafting game} is a game played by a set of $n$ players, where items are picked in turn without replacement from a communal collection.  Players attempt to maximize an individual end-game reward based on the unordered sets of choices made by each of the players.  A drafting game could stand alone, or it could be a sub-game of a larger, encompassing competition.  We investigate several approaches to playing drafting games including a new, novel strategy called the KthBestPick algorithm.  In addition, we show how to apply machine learning to guide these approaches when the players' objectives are not clear in the drafting game, but are realized in an encompassing game.  We test our techniques in the standard version of the board game Risk, where play begins with players picking territories in turn.  We find that UCT and KthBestPick yield the strongest drafting strategies. Furthermore, we augment an existing bot with a new drafting strategy to create a program which outperforms the strongest opponents supplied with the computer game Lux Delux, a clone of the board game Risk.
+A \emph{drafting game} is a game played by a set of $n$ players, where items are picked in turn without replacement from a communal collection.  Players attempt to maximize an individual end-game reward based on the unordered sets of choices made by each of the players.  We present a novel strategy for playing drafting games called the KthBestPick algorithm.  KthBestPick is found to exceed a number of baseline strategies in a simple drafting game.  Furthermore, we augment an existing Risk bot with the KthBestPick drafting strategy to outperform the strongest opponents supplied with the computer game Lux Delux, a clone of the board game Risk.
 \end{abstract}
 
 \section{Introduction}
@@ -79,48 +79,42 @@ A \emph{drafting game} is a game played by a set of $n$ players, where items are
 
 For the past few decades, computer games have been a popular platform for artificial intelligence research.  Many successful computer programs have been developed which play at expert levels in two-player games such as Othello \cite{Othello}, 
 checkers \cite{Chinook}, chess \cite{DeepBlue}, 
-and Go \cite{ComputerGo}.  These games can be handled reasonably well by classic and modern artificial intelligence techniques, such as minimax search and Monte-Carlo tree search.  However, multi-player (i.e., more than 2 players) games are less understood.  In this paper, we explore strategies for playing multi-player ``drafting'' games.  Informally, a drafting game involves players taking turns selecting from a collection of items without replacement until some end game condition has been met.  At the conclusion of the game, each player receives a reward based on their final collection of items; the selection order is irrelevant.  The objective for each player is to maximize her individual end game reward.  Some challenges associated with drafting games include handling large action spaces and considering how the choices of others should affect our own.
+and Go \cite{ComputerGo}.  These games can be handled reasonably well by classic and modern artificial intelligence techniques, such as minimax search and Monte-Carlo tree search.  However, multi-player (here and throughout meaning more than 2 players) games are less understood.  In this paper, we explore strategies for playing multi-player ``drafting'' games.  Informally, a drafting game involves players taking turns selecting from a collection of items without replacement until some end game condition has been met.  At the conclusion of the game, each player receives a reward based on their final collection of items; the selection order is irrelevant.  The objective for each player is to maximize her individual end game reward.  Some challenges associated with drafting games include handling large action spaces and considering how the choices of others should affect our own.
 
 % Also include Risk in this discussion
-There are a number of games, including both traditional board games and modern commercial video games, which either can be modelled as a drafting game or incorporate some kind of draft within part of the game.  A simple example is Tic-Tac-Toe. Here, we can consider the winning player receiving a positive reward, the losing player receiving a negative reward, or both players in a draw receiving zero reward. Another example is the board game Risk by Hasbro Inc., which begins by players drafting the territories on the board until every territory has an owner.  Drafting territories in Risk presents an additional challenge as it is not clear what selections are best in order to eventually win the overall game.  As for video games, sports simulations often include a drafting aspect.  For instance, %when playing through multiple seasons of the baseball game \textit{MLB 09: The Show} from Sony, a rookie draft takes place in between each season, where the human player and the computer opponents take turns choosing from a pool of new players who may then be added to the respective team's roster.  Another example is 
-in the new hockey game \textit{NHL 10} by EA Sports, a ``fantasy draft'' can be activated at the beginning of a season.  In a fantasy draft, all players are removed from their current teams, then selected one-by-one by the teams in the league.  Like with Risk, it can be hard to judge which selections will improve a team's chance of winning the most.  %Finally, the video game \textit{Star Wars: Empire at War} contains a drafting-type game where one can choose their ground force composition, execute ``auto-combat,'' and see the outcome of the battle.
+There are a number of games which either can be modelled as a drafting game or incorporate some kind of draft within part of the game.  A simple 2-player example is Tic-Tac-Toe.  Here, we can consider the winning player receiving a positive reward, the losing player receiving a negative reward, or both players in a draw receiving zero reward. Another example is the board game Risk by Hasbro Inc., which begins by players drafting the territories on the board until every territory has an owner.  A player should attempt to select territories so that their chance of winning the overall game is maximized.
+%Drafting territories in Risk presents an additional challenge as it is not clear what selections are best in order to eventually win the overall game.  As for video games, sports simulations often include a drafting aspect.  For instance, %when playing through multiple seasons of the baseball game \textit{MLB 09: The Show} from Sony, a rookie draft takes place in between each season, where the human player and the computer opponents take turns choosing from a pool of new players who may then be added to the respective team's roster.  Another example is 
+%in the new hockey game \textit{NHL 10} by EA Sports, a ``fantasy draft'' can be activated at the beginning of a season.  In a fantasy draft, all players are removed from their current teams, then selected one-by-one by the teams in the league.  Like with Risk, it can be hard to judge which selections will improve a team's chance of winning the most.  %Finally, the video game \textit{Star Wars: Empire at War} contains a drafting-type game where one can choose their ground force composition, execute ``auto-combat,'' and see the outcome of the battle.
 
-Our main contributions in this paper are the following:
-\begin{itemize} %\addtolength{\itemsep}{-0.5\baselineskip}
-	\item a novel adversarial search algorithm, KthBestPick, specifically designed for playing drafting games;
-	\item a method for evaluating the opening draft in Risk using supervised machine learning; and
-	\item a Risk bot, derived from an existing program but augmented with a new drafting strategy, which outperforms a number of difficult opponents.
-\end{itemize}
-The rest of the paper is organized as follows.  First, we formally describe drafting games and explain the potential need to create our own reward signal.  We then discuss related work, followed by an introduction to the drafting strategies we try in Risk.  Next, we outline the basic rules of Risk and show how we apply supervised machine learning to generate a reward signal for the opening draft in Risk.  Finally, we empirically test our algorithms in Risk games, discuss the results, and conclude with some future works.
+The rest of the paper is organized as follows.  First, we formally describe drafting games and discuss related work.  We then introduce our main contribution in this paper, the KthBestPick algorithm, which is specifically designed for playing drafting games.  Next, we test out the algorithm in a simple drafting game before applying it to the opening phase of Risk.  Finally, we discuss the results and conclude with some future works.
 
 \section{Problem Formulation}
 \label{sec:Prob}
 
-%Below, we formalize the concept of a drafting game and discuss the problems we explore associated with such a game.
-\subsection{Drafting games}
-\label{subsec:DraftingGames}
+A \emph{drafting game} is a finite, deterministic, full-information sequential game played by a set of $n \geq 2$ players, which we label 1 through $n$.  The game has a finite set of \emph{picks} (or \emph{actions}, or \emph{items}) $A$ initially available to every player, and players take turns in a predetermined order.  Once a player makes a pick, that pick is then forbidden to all players for the rest of the game.  Play continues until some predefined end game condition is satisfied or all actions in $A$ have been chosen.  At the game's conclusion, the picks made by each of the players induce a partition $Z = \{A_1, ..., A_{n}, \bar{A}\}$ of $A$, where $A_i$ is the unordered set of all picks made by player $i$, and $\bar{A}$ are the actions that were not chosen by any player.  Each player then receives a reward signal $r_i(Z)$ according to the resulting partition $Z$.  Player $i$'s objective is to make picks in such a way as to maximize $r_i(Z)$.  A drafting game does not necessarily have the notion of a winner; players simply attempt to maximize their own individual reward.  On his turn, a player in a drafting game is faced with the following problem: Given the picks made by the players thus far, which of the remaining items should I pick now? %Note that although at the end of the game the player with the highest reward signal is declared the winner, players may be following their own individual and independent objectives.
 
-A \emph{drafting game} is a finite, deterministic, full-information game played by a set of $n \geq 2$ players, which we label 1 through $n$.  The game has a single set of \emph{picks} or actions $A$ initially available to every player.  Once a player makes a pick, that pick is forbidden to all players for the rest of the game.  Play continues until some predefined end game condition is satisfied or all actions in $A$ have been chosen.  At the game's conclusion, the picks made by each of the players induce a partition $Z = \{A_1, ..., A_{n}, \bar{A}\}$ of $A$, where $A_i$ is the set of all picks made by player $i$, and $\bar{A}$ are the actions that were not chosen by any player.  Each player then receives a reward signal $r_i(Z)$ according to the resulting partition $Z$.  Player $i$'s objective is to make picks in such a way as to maximize $r_i(Z)$.  Note that although at the end of the game the player with the highest reward signal is declared the winner, players may be following their own individual and independent objectives.
-
-\subsection{Engineering the reward signal}
-
-Some drafting games, like Tic-Tac-Toe, are stand-alone games which naturally inherit a reward signal from the rules and objectives of the game; for example, the reward signal
-\[ r_i(Z) = \left\{ \begin{array}{cl} 1 & \text{if player $i$ has 3 cells in a row in $Z$,} \\ -1 & \text{if player $j \neq i$ has 3 cells in a row in $Z$,} \\ 0 & \text{otherwise} \end{array} \right. \]
-acts as a clear objective for player $i$ to maximize in Tic-Tac-Toe.  However, in many applications, a drafting game is a precursor to a larger competition involving the same set of players.  For example, in Risk, once players draft territories, the game continues until a single player wins by occupying all territories on the map.  If we want to consider the opening draft as its own separate sub-game, it is not immediately clear what the reward signals should be.  For such a sub-game, the task is to create a reward signal $r_i(Z)$ for each player in the drafting game that correlates with the objectives of each player in the encompassing game.  Throughout this paper, we refer to these %drafting 
-games as ``drafting sub-games.''
+%\subsection{Engineering the reward signal}
+%
+%Some drafting games, like Tic-Tac-Toe, are stand-alone games which naturally inherit a reward signal from the rules and objectives of the game; for example, the reward signal
+%\[ r_i(Z) = \left\{ \begin{array}{cl} 1 & \text{if player $i$ has 3 cells in a row in $Z$,} \\ -1 & \text{if player $j \neq i$ has 3 cells in a row in $Z$,} \\ 0 & \text{otherwise} \end{array} \right. \]
+%acts as a clear objective for player $i$ to maximize in Tic-Tac-Toe.  However, in many applications, a drafting game is a precursor to a larger competition involving the same set of players.  For example, in Risk, once players draft territories, the game continues until a single player wins by occupying all territories on the map.  If we want to consider the opening draft as its own separate sub-game, it is not immediately clear what the reward signals should be.  For such a sub-game, the task is to create a reward signal $r_i(Z)$ for each player in the drafting game that correlates with the objectives of each player in the encompassing game.  Throughout this paper, we refer to these %drafting 
+%games as ``drafting sub-games.''
 
 \section{Related Work}
 
-A widely known approach to computer game playing is the minimax adversarial search algorithm.  It is designed for zero sum games involving two players, denoted Max and Min.  The Max player (assumed to be the active player) performs a search of a game tree rooted at the current state of the game.  Each leaf node of the tree is evaluated by a heuristic function, which returns a value estimating the merit of the state to Max.  These values are then backed up the tree; at nodes belonging to Max, the maximum value of the children is propagated up, whereas at nodes belonging to Min, the minimum value of the children is used.  The Max player then chooses the action leading to the child with the maximum propagated value.
+A widely known approach to game playing is the minimax adversarial search algorithm.  It is designed for zero sum games involving two players, denoted Max and Min.  The Max player (assumed to be the active player) performs a search of a game tree rooted at the current state of the game.  Each leaf node of the tree is evaluated by a heuristic function, which returns a value estimating the merit of the state to Max.  These values are then backed up the tree; at nodes belonging to Max, the maximum value of the children is propagated up, whereas at nodes belonging to Min, the minimum value of the children is used.  The Max player then chooses the action leading to the child with the maximum propagated value.
 
 % MaxN, Paranoid
 % MP-Mix which extends MaxN (was used only for branching factor of 3, and for single winner games)
 
-While minimax search is a traditional strategy employed in many two-player games, it is not applicable to games with $n > 2$ players.  A generalization of traditional minimax search to more players is the MaxN algorithm \cite{MaxN}.  At the leaf nodes of the game tree, a heuristic function now estimates a vector of $n$ merits $(h_1, ..., h_n)$, one for each player.  At nodes belonging to player $i$, the vector with the highest merit $h_i$ is propagated up to the parent.  Thus, players are assumed to be maximizing their own individual payoffs throughout the remainder of the game.  An alternative to MaxN is the Paranoid algorithm \cite{Paranoid}, where the active player assumes that the other players are out to minimize her payoff with complete disregard to their own benefits.  The Paranoid algorithm is essentially equivalent to the minimax algorithm, where the other players are represented as one meta-player (Min) attempting to minimize the individual heuristic value of the active player (Max).  Finally, the MaxN and Paranoid propagation strategies can be dynamically selected according to the game situation.  This is done in the MP-Mix algorithm \cite{ZuckFelnerKraus2009}, along with a third strategy called Offensive.  However, MP-Mix was designed for games with only a single winner, which does not directly fit into our general framework of a drafting game.  On the whole, each of these algorithms perform best when the branching factor (i.e.~action space) is small and when there exists a good evaluation function for approximating the merits of non-terminal states.  In general, drafting games can have a very large branching factor.  We also know of no such evaluation function for the drafting sub-game of Risk.
+While minimax search is a traditional strategy employed in many two-player games, it is not applicable to games with $n > 2$ players.  A generalization of traditional minimax search to more players is the MaxN algorithm \cite{MaxN}.  At the leaf nodes of the game tree, a heuristic function now estimates a vector of $n$ merits $(h_1, ..., h_n)$, one for each player.  At nodes belonging to player $i$, the vector with the highest merit $h_i$ is propagated up to the parent.  Thus, players are assumed to be maximizing their own individual payoffs throughout the remainder of the game.  An alternative to MaxN is the Paranoid algorithm \cite{Paranoid}, where the active player assumes that the other players are out to minimize her payoff with complete disregard to their own benefits.  The Paranoid algorithm is essentially equivalent to the minimax algorithm, where the other players are represented as one meta-player (Min) attempting to minimize the individual heuristic value of the active player (Max).  Finally, the MaxN and Paranoid propagation strategies can be dynamically selected according to the game situation.  This is done in the MP-Mix algorithm \cite{ZuckFelnerKraus2009}, along with a third strategy called Offensive.  However, MP-Mix was designed for games with only a single winner, which does not directly fit into our general framework of a drafting game.  On the whole, each of these algorithms perform best when the branching factor (i.e.~action space) is small and when there exists a good evaluation function for approximating the merits of non-terminal states.  In general, drafting games can have a very large branching factor and evaluation functions may be unknown; in particular, we know of no such evaluation function for the drafting stage of Risk.
 
-% Meta-models for reducing action space
+An algorithm more suited for large actions spaces and requiring no evaluation function is UCT \cite{UCT}, a Monte Carlo planning algorithm that has commonly been used in general game playing, for example in CadiaPlayer \cite{Cadia}.  UCT tries to intelligently bias the game tree by focusing on appealing branches and further searching those.  At each step, UCT builds upon the sparse game tree from the previous iterations by selecting an action $a$ at state $s$ to expand by
+\[ a = \text{argmax}_{a'} \left( Q(s,a') + c \sqrt{ \log n(s) / n(s,a') } \right), \]
+where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number of times $a$ has been taken in $s$.  For drafting games, $Q(s,a)$ is the average of the reward signal $r_i(Z)$ (assuming it is player $i$'s turn at $s$) seen on all simulations through $s$ where action $a$ was taken.  On each roll out, UCT adds one new node to the game tree and then randomly plays out the rest of the game from that node to obtain $r(Z)$, which is then propagated up the tree.  %If UCT was allowed to perform an infinite number of roll outs and the exploration constant was constant,  UCT would become strictly Monte Carlo planning.  We refer to UCT as UCT$(x,c)$, where $x$ is the number of simulations run and $c$ is the exploration constant.  
+After running numerous simulations from the current state $s$, UCT takes the action $\text{argmax}_{a}Q(s,a)$.
 
-Finally, Lee's work is closely related to drafting sub-games.  In his thesis \cite{GregLeeThesis}, Lee combines heuristic search with a machine-learned fitness function to pick a set of actions from a large library, which an agent is then restricted to in a Markov Decision Process.  The objective is to find a small set of actions which enable the agent to behave as close to optimal as possible in its domain, relative to having access to the entire library of actions.  Our work with drafting sub-games can be seen as an extension of Lee's work from a single-agent problem to a competitive multi-agent problem, where we replace heuristic search with adversarial methods. 
+Finally, there has been some progress on the problem of drafting in sports leagues.  Many professional sports use a drafting procedure where teams sequentially select entry-level players based on the teams' current needs and scouting reports of the players' skills.  Brams and Straffin \cite{PrisonAndDrafting} examine very small games where each team has its own order of preference of the entering players.  They use a MaxN-type approach to find optimal drafting strategies, but hint that the approach is ill-advised for larger drafts due to a prohibitively large branching factor.  In addition, Fry et.~al \cite{SportsDrafting} solve a deterministic dynamic program through linear programming to determine a team's best drafting strategy and apply it to a fantasy football draft.  However, a key ingredient in their model is that each team has positional (quarterback, running back, etc.) needs and limits its picks to a fixed number of players for each position.  In general, we are not concerned with items being categorized or restricted to competitors in any way.
 
 \begin{table}[t]
 	\centering
@@ -141,10 +135,8 @@ Finally, Lee's work is closely related to drafting sub-games.  In his thesis \ci
 		\end{footnotesize}
 \end{table}
 
-\section{Drafting Game Strategies}
+\section{The KthBestPick Algorithm}
 \label{sec:drafting}
-
-We investigate two different approaches to playing drafting games: UCT and a novel adversarial search algorithm for drafting games, KthBestPick.  We discuss each of these below.
 
 \begin{algorithm}[t]
 	\caption{KthBestPick($node$, $N$, $h$, $m_0$, ..., $m_{n-1}$)}
@@ -182,13 +174,6 @@ We investigate two different approaches to playing drafting games: UCT and a nov
 	\end{algorithmic}
 	\end{footnotesize}
 \end{algorithm}
-
-\subsection{UCT}
-
-UCT is a Monte Carlo planning algorithm that was first presented by~\cite{UCT}, and has commonly been used in general game playing, for example in CadiaPlayer by~\cite{Cadia}. 
-UCT tries to intelligently bias the game tree by focusing on appealing branches and further searching those. At each step, UCT builds upon the sparse game tree from the previous iterations by selecting an action $a$ at state $s$ to expand by
-\[ a = \text{argmax}_{a'} \left( Q(s,a') + c \sqrt{ \log n(s) / n(s,a') } \right), \]
-where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number of times $a$ has been taken in $s$.  For drafting games, $Q(s,a)$ is the average of the reward signal $r_i(Z)$ (assuming it is player $i$'s turn at $s$) seen on all simulations through $s$ where action $a$ was taken.  On each roll out, UCT adds one new node to the game tree and then randomly plays out the rest of the game from that node to obtain $r(Z)$, which is then propagated up the tree.  If UCT was allowed to perform an infinite number of roll outs and the exploration constant was constant,  UCT would become strictly Monte Carlo planning.  We refer to UCT as UCT$(x,c)$, where $x$ is the number of simulations run and $c$ is the exploration constant.  Once $x$ simulations have been run from the current state $s$, UCT takes the action $a = \text{argmax}_{a'}Q(s,a')$.
 
 % Describe UCT, specifically for multi-player games (like drafting games)
 
@@ -230,11 +215,11 @@ where $Q(s,a)$ is the estimated value of taking $a$ at $s$, $c$ is an exploratio
     \end{footnotesize}
 \end{table*}
 
-\subsection{The KthBestPick Algorithm}
-\label{sec:KthBestPick}
+%\subsection{The KthBestPick Algorithm}
+%\label{sec:KthBestPick}
 % kthBestPick search
 
-While UCT can be applied to many different domains, the KthBestPick algorithm focuses specifically on drafting games.  Before introducing the algorithm, we consider a small example to build up some intuition for KthBestPick.  Consider the drafting game with four actions, $A$, $B$, $C$, and $D$, and three players, 1, 2, and 3.  Players pick in numerical order until all actions have been picked (thus player 1 gets two picks).  For each action and each player, we associate a point value that that player receives for making that pick.  A player's reward at the end of the game is simply the sum of the points of his picks.  Suppose the point values are as given in Table \ref{tab:KthEx}, and let's assume that we are player 1.  If we rank picks according to the point values for us only, then $B$ would appear to be the best pick (4 points) and $A$ the second best (3 points).  Following this heuristic alone would have us pick $B$.  Now if players 2 and 3 are playing optimally, player 2 will follow by picking $A$, then player 3 will pick $C$.  This forces us to pick $D$, leaving us with a reward of $4 + 1 = 5$.  However, assuming our opponents play optimally, we can see that picking $A$ first will lead player 2 to pick $D$ and player 3 to pick $C$, leaving us to pick $B$ with our last pick.  In this case, we end the game with a reward of $3 + 4 = 7$, a better result.  KthBestPick is designed to act optimally in situations like this.
+Before introducing the algorithm, we consider a small example to build up some intuition for KthBestPick.  Consider the drafting game with four actions, $A$, $B$, $C$, and $D$, and three players, 1, 2, and 3.  Players pick in numerical order until all actions have been picked (thus player 1 gets two picks).  For each action and each player, we associate a point value that that player receives for making that pick.  A player's reward at the end of the game is simply the sum of the points of his picks.  Suppose the point values are as given in Table \ref{tab:KthEx}, and let's assume that we are player 1.  If we rank picks according to the point values for us only, then $B$ would appear to be the best pick (4 points) and $A$ the second best (3 points).  Following this heuristic alone would have us pick $B$.  Now if players 2 and 3 are playing optimally, player 2 will follow by picking $A$, then player 3 will pick $C$.  This forces us to pick $D$, leaving us with a reward of $4 + 1 = 5$.  However, assuming our opponents play optimally, we can see that picking $A$ first will lead player 2 to pick $D$ and player 3 to pick $C$, leaving us to pick $B$ with our last pick.  In this case, we end the game with a reward of $3 + 4 = 7$, a better result.  KthBestPick is designed to act intelligently in situations like this.
 
 At each turn, KthBestPick uses a heuristic function to rank the available picks from best (rank 0) to worst.  Then, it estimates the most inferior pick of rank $k$ that we may choose so that we eventually pick all $k$ better-ranked actions with our later picks.  This is done using opponent models to predict the play of the other players, which may or may not be different from the heuristic function.
 
@@ -248,15 +233,15 @@ As for the opponent models, again there are a few options.  Firstly, we should u
 
 Note that in the example game described in Table \ref{tab:KthEx}, UCT will also conclude that picking $A$ first is a better move, but only after a number of simulations.  KthBestPick, on the other hand, finds the solution with just one ``simulation.''
 
-\section{Theoretical Analysis}
-
-\begin{theorem1}
-	\label{thm:Kth}
-	KthBestPick always returns an action.
-\end{theorem1}
-\begin{proof}
-Firstly, the while loop in Algorithm \ref{alg:kth} (line 8) is not infinite.  This is because drafting games are finite and acyclic (no state can be repeated), and each pass through the loop makes one more action.  Thus the condition at line 9 must eventually be met.  Now consider the value of $k$ in the for loop at line 3.  If $k = 0$, then the $betterPicks$ list is set to empty (line 5), implying that the while loop condition (line 8) is false and we return our pick (line 26).
-\end{proof}
+%\section{Theoretical Analysis}
+%
+%\begin{theorem1}
+%	\label{thm:Kth}
+%	KthBestPick always returns an action.
+%\end{theorem1}
+%\begin{proof}
+%Firstly, the while loop in Algorithm \ref{alg:kth} (line 8) is not infinite.  This is because drafting games are finite and acyclic (no state can be repeated), and each pass through the loop makes one more action.  Thus the condition at line 9 must eventually be met.  Now consider the value of $k$ in the for loop at line 3.  If $k = 0$, then the $betterPicks$ list is set to empty (line 5), implying that the while loop condition (line 8) is false and we return our pick (line 26).
+%\end{proof}
 
 \section{Risk}
 
@@ -291,6 +276,10 @@ In this paper, we are only concerned with strategies for playing the drafting su
 \end{table}
 
 \section{A Machine-Learned Reward Signal}
+
+% Meta-models for reducing action space
+
+Finally, Lee's work is closely related to drafting sub-games.  In his thesis \cite{GregLeeThesis}, Lee combines heuristic search with a machine-learned fitness function to pick a set of actions from a large library, which an agent is then restricted to in a Markov Decision Process.  The objective is to find a small set of actions which enable the agent to behave as close to optimal as possible in its domain, relative to having access to the entire library of actions.  Our work with drafting sub-games can be seen as an extension of Lee's work from a single-agent problem to a competitive multi-agent problem, where we replace heuristic search with adversarial methods. 
 
 Our objectives in this paper include both determining what strategies are desirable in drafting games, and finding a strategy in the Risk drafting sub-game that can improve our chances of winning in the full game of Risk.  The latter problem suffers from a few complications.  First, the merit of a strategy may highly depend on how we act in the rest of the Risk game.  For instance, a drafting strategy that primarily selects territories in North America would not be advisable to play with a post-draft strategy that plays to own Australia at all costs.  %With this post-draft strategy, it would make more sense to simply select territories in Australia rather than North America during the draft.  
 Secondly, as mentioned previously, it is not easy to classify a draft outcome $Z$ as either ``good'' or ``bad'' for player $i$.  This makes it difficult to guide drafting selections towards desirable outcomes.  What we are lacking is a reward signal $r_i(Z)$ that approximates player $i$'s chances of winning from $Z$ when following a given post-draft strategy.  In this section, we describe how we used supervised machine learning to create such a reward signal.
