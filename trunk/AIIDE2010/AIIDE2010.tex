@@ -82,7 +82,7 @@ For the past few decades, computer games have been a popular platform for artifi
 checkers \cite{Chinook}, chess \cite{DeepBlue}, 
 and Go \cite{ComputerGo}.  However, games involving more than two players (multi-player) are generally less understood.  In this paper, we describe how to create stronger bots for playing the multi-player game Risk by Hasbro Inc.  In the standard rules of Risk, the game begins with the players drafting the territories on the board until every territory has an owner.  Our work here focuses  on improving overall performance by developing an intelligent system for playing the opening territory draft phase of Risk.
 
-The rest of the paper is organized as follows.  First, we provide an outline for the rules of Risk.  Second, we discuss related work, including traditional minimax search, its extension to multi-player games, MaxN, and the Monte-Carlo tree search algorithm UCT.  We then describe how our system drafts territories in Risk.  Our approach combines MaxN and UCT in a novel way to search the game tree, and uses a machine-learned evaluation function to measure draft outcomes.  Next, using a computer version of Risk, we test our bot against a number of others programs provided with the Risk software and provide the empirical results.  Finally, we discuss the results and conclude with some future works.
+The rest of the paper is organized as follows.  First, we provide an outline for the rules of Risk.  Second, we discuss related work, including traditional minimax search, its extension to multi-player games, MaxN, and the Monte-Carlo tree search algorithm UCT.  We then describe how our system drafts territories in Risk.  Our approach combines MaxN and UCT in a novel way to search the game tree, and uses a machine-learned evaluation function to measure draft outcomes.  Next, using a computer version of Risk, we test our bot against a number of others programs and provide the empirical results.  Finally, we discuss the results and conclude with some future works.
 
 \section{Problem Formulation}
 \label{sec:Prob}
@@ -196,12 +196,12 @@ We manually identified a number of features that are tactically important in dra
 \[ f: S \mapsto v \in \textbf{R} \] 
 that estimates the merit of the feature set $S$ when following Quo's post-draft strategy.  Finally, for a draft outcome $Z = (A_1,A_2,A_3,\emptyset)$ with $A_i$ being the set of player $i$'s territory selections, we calculate $v_i = f(S_i)$ where $S_i$ is the feature set associated with $A_i$, and define the value of the draft outcome $Z$ for player $i$ to be
 \[ V_i(Z) = v_i^+ / \left(v_1^+ + v_2^+ + v_3^+\right), \]
-where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ are nonnegative, a learner could allow $f$ to be negative and so we take the max to keep the sign of $V_i(Z)$ correct.  
+where $v_i^+ = \max(0, v_i)$.  Note that even though all training values $v_i$ are nonnegative, a learner could allow $f$ to be negative and so we take the max to $V_i(Z) \in [0,1]$.  
 %Thus, $V_i(Z) \in [0, 1]$ approximately measures the value of our selections relative to the picks made by the other players, providing an estimate of player $i$'s chance of winning from $Z$.
-Thus, $V_i(Z) \in [0, 1]$.  To maximize this value, player $i$ attempts to maximize the estimated merit $v_i$ of his or her selections while minimizing those of the opponents.
+Thus, player $i$ attempts to maximize the estimated merit $v_i$ of his or her selections while minimizing those of the opponents.
 
 Our general function $f$ was computed off-line from $7364$ random draft outcomes for a total of $22092$ $(S,v)$ pairs.  We used Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) were represented as nominal features and features (iii) and (iv) were numeric.  Thus, $f(S)$ can be calculated by simply summing the weights, displayed in Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring}, of the features present in $S$.  However, there are some features of type (i) which did not appear in any of the $22092$ feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features were calculated through linear extrapolation of the closest two continent counts for the associated continent.  As an example, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
-\[ 36.1487 + (36.1487 - 24.0969) = 48.2005. \]  
+\[ 36.15 + (36.15 - 24.10) = 48.20. \]  
 
 %\begin{table*}[t]
 %  \begin{center} 
@@ -276,7 +276,7 @@ We now show how to use Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} to
 \end{eqnarray*}
 where the values in the first set of brackets are from Table \ref{tab:ContScoring} and the second set of brackets are from Table \ref{tab:MoreScoring}.  This gives $f(S_1) = 113.12$.  We can similarly compute the values of the feature sets for player 2 (green) and player 3 (red) as %$f(S_2) = 89.4739$ and $f(S_3) = 119.6547$ 
 $f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $V_i(Z)$ is computed via $V_i(Z) = f(S_i) / \left(f(S_1) + f(S_2) + f(S_3) \right)$, giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
-$V(Z) = \{0.35, 0.28, 0.37\}$.
+$V(Z) = (0.35, 0.28, 0.37)$.
 
 \section{Empirical Evaluation}
 
