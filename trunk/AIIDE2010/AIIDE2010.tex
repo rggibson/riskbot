@@ -112,18 +112,6 @@ A widely known approach to game playing is the minimax adversarial search algori
 
 While minimax search is traditionally employed in many two-player games, it is not applicable to games with $n > 2$ players.  A generalization of traditional minimax search to more players is the max$^\text{n}$ algorithm \cite{MaxN}.  At the leaf nodes of the game tree, a heuristic function now estimates a vector of $n$ merits $(v_1, ..., v_n)$, one for each player.  At nodes belonging to player $i$, the vector with the highest merit $v_i$ is propagated up to the parent.  Thus, players are assumed to be maximizing their own individual payoffs throughout the remainder of the game.  An alternative to max$^\text{n}$ is the Paranoid algorithm \cite{Paranoid}, where the active player assumes that the other players are out to minimize his or her payoff with complete disregard to their own benefits.  The Paranoid algorithm is essentially equivalent to the minimax algorithm, where the other players are represented as one meta-player (Min) attempting to minimize the individual heuristic value of the active player (Max).  Finally, the max$^\text{n}$ and Paranoid propagation strategies can be dynamically selected according to the game situation.  This is done in the MP-Mix algorithm \cite{ZuckFelnerKraus2009}, along with a third strategy called Offensive.  On the whole, these algorithms perform best when the branching factor (i.e.~action space) is small and when there exists a good evaluation function for approximating the merits of non-terminal states.  Unfortunately, when drafting in Risk the first player has 42 actions to choose from initially, and we know of no such evaluation function to use for territory selection.
 
-An algorithm more suited for large actions spaces and requiring no evaluation function is UCT \cite{UCT}, a Monte Carlo planning algorithm that has commonly been used in general game playing, for example in CadiaPlayer \cite{Cadia}.  UCT tries to intelligently bias the game tree by simulating games that focus on appealing branches of the tree.  At each step, UCT builds upon the sparse game tree from the previous simulations by selecting an action $a$ at state $s$ to expand by
-\[ a = \text{argmax}_{a'} \left( Q_i(s,a') + c \sqrt{ \log n(s) / n(s,a') } \right), \]
-where $Q_i(s,a)$ is the estimated value for player $i$ of taking $a$ at $s$, $i$ is the active player at $s$, $c$ is an exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number of times $a$ has been taken in $s$.  The estimate $Q_i(s,a)$ is equal to the average final game value player $i$ received on previous simulations where $s$ was visited and $a$ was taken at $s$.  On each simulation, UCT adds one new node to the game tree and then randomly plays out the rest of the game.  After running numerous simulations from the current state $s$, UCT takes the action $\text{argmax}_{a}Q_i(s,a)$.
-
-Finally, playing Risk in particular has garnered some attention from the AI community.  Firstly, the program MARS \cite{RiskBots} is a multi-agent system for Risk that deploys an agent in each territory on the board.  The system's actions for placing armies, conducting attacks, and fortifying territories are determined through ``bids" submitted by the territory agents.  These bids evaluate the territories via hand-tuned features and parameter values.  Secondly, Zuckerman, Felner, and Kraus used Risk as a testbed for their MP-Mix algorithm \cite{ZuckFelnerKraus2009}.  To do so, they restricted the branching factor to only 3 promising moves, where a move represented an entire sequence of territories to conquer.  However, both of these approaches use a Risk variant where territories are randomly assigned to begin the game rather than selected by the players.  We are not aware of any previous work regarding the drafting phase of Risk.
-
-\section{Our Approach}
-
-For drafting territories in Risk, we use a hybrid of both the max$^\text{n}$ algorithm and UCT.  Since max$^\text{n}$ is not very practical when there are many possible actions and no known evaluation functions, we use UCT to both restrict the branching factor and evaluate non-terminal positions in the max$^\text{n}$ tree.  In addition, rather than simulating entire Risk games, we instead derive scores for draft outcomes using supervised machine learning for UCT to pass back up the tree.  We now describe our hybrid algorithm and the score derivation technique below.
-
-\subsection{Combining max$^\text{n}$ and UCT}
-
 \begin{algorithm}[t]
 	\caption{max$^\text{n}$+UCT($s$, $d$, $M$, $c$)}
 	\label{alg:maxNUct}
@@ -149,6 +137,25 @@ For drafting territories in Risk, we use a hybrid of both the max$^\text{n}$ alg
 	\end{footnotesize}
 \end{algorithm}
 
+An algorithm more suited for large actions spaces and requiring no evaluation function is UCT \cite{UCT}, a Monte Carlo planning algorithm that has commonly been used in general game playing, for example in CadiaPlayer \cite{Cadia}.  UCT tries to intelligently bias the game tree by simulating games that focus on appealing branches of the tree.  At each step, UCT builds upon the sparse game tree from the previous simulations by selecting an action $a$ at state $s$ to expand by
+\[ a = \text{argmax}_{a'} \left( Q_i(s,a') + c \sqrt{ \log n(s) / n(s,a') } \right), \]
+where $Q_i(s,a)$ is the estimated value for player $i$ of taking $a$ at $s$, $i$ is the active player at $s$, $c$ is an exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number of times $a$ has been taken in $s$.  The estimate $Q_i(s,a)$ is equal to the average final game value player $i$ received on previous simulations where $s$ was visited and $a$ was taken at $s$.  On each simulation, UCT adds one new node to the game tree and then randomly plays out the rest of the game.  After running numerous simulations from the current state $s$, UCT takes the action $\text{argmax}_{a}Q_i(s,a)$.
+
+Finally, playing Risk in particular has garnered some attention from the AI community.  Firstly, the program MARS \cite{RiskBots} is a multi-agent system for Risk that deploys an agent in each territory on the board.  The system's actions for placing armies, conducting attacks, and fortifying territories are determined through ``bids" submitted by the territory agents.  These bids evaluate the territories via hand-tuned features and parameter values.  Secondly, Zuckerman, Felner, and Kraus used Risk as a testbed for their MP-Mix algorithm \cite{ZuckFelnerKraus2009}.  To do so, they restricted the branching factor to only 3 promising moves, where a move represented an entire sequence of territories to conquer.  However, both of these approaches use a Risk variant where territories are randomly assigned to begin the game rather than selected by the players.  We are not aware of any previous work regarding the drafting phase of Risk.
+
+\section{Our Approach}
+
+\begin{figure*}[t]
+	\centering
+	\includegraphics[scale=0.75]{../ForPublication/figs/MaxNExample.png}
+	\caption{An example game tree involving 3 players.  Numbered circles represent player decision points and black squares indicate terminal nodes, with the values of the terminal node to each player staggered below.}
+	\label{fig:MaxNEx}
+\end{figure*}
+
+For drafting territories in Risk, we use a hybrid of both the max$^\text{n}$ algorithm and UCT.  Since max$^\text{n}$ is not very practical when there are many possible actions and no known evaluation functions, we use UCT to both restrict the branching factor and evaluate non-terminal positions in the max$^\text{n}$ tree.  In addition, rather than simulating entire Risk games, we instead derive scores for draft outcomes using supervised machine learning for UCT to pass back up the tree.  We now describe our hybrid algorithm and the score derivation technique below.
+
+\subsection{Combining max$^\text{n}$ and UCT}
+
 % Intuition as to why it might be better than UCT
 Let's assume that we have some fixed time limit $t$ to take an action.  When trying to decide which action to take at the root node of a game tree, UCT runs as many simulations from the root as possible in $t$ units of time.  This results in a lot of visits to nodes near the root of the tree, providing a thorough estimate of the value of each of these states.  However, on average, nodes deeper in the tree are visited fewer times because each simulation takes a single path through the game tree.  Rather than spending all of this time evaluating the root, we may be able to make a more informed decision if we have a better estimate of the future moves we and our opponents might later take.  Our algorithm distributes the simulations not only at the root of the tree, but also at deeper nodes along promising lines of play.
 
@@ -158,14 +165,15 @@ The hybrid max$^\text{n}$+UCT algorithm is provided in Algorithm \ref{alg:maxNUc
 
 % Example that we can talk about both here and when we first mention max^n?
 
+Consider the example game tree in Figure \ref{fig:MaxNEx} where players 1 (the active player), 2, and 3 must each take an action in turn, followed by a final forced action by player 1.  Note that the average payouts for player 1 at the 4 terminal nodes below branch $m$ (300) are much less than those under branch $l$ (977.5).  However, assuming players 2 and 3 play optimally, the correct choice for player 1 is to play $m$ for an eventual value of 1100 rather than $l$ for 900.  Because UCT plays randomly at initial visits to nodes and explores according to the parameter $c$, it will likely take many simulations for the average payouts passing through $m$ to be greater than those passing through $l$.  For example, with a small exploration constant $c$, unless the first simulation through $m$ happens to follow the path to the terminal node labelled $T$, future simulations from the root will avoid $m$ for some time.  If $c$ is too large, each of $l$, $m$, and $r$ will be explored roughly equally to start and the early estimates will approximately be the average payouts of the terminal nodes beneath them. In either case, $l$ will incorrectly appear to be the better choice to UCT until enough simulations are run.  
+
+
 \begin{figure*}[t]
 	\centering
-	\includegraphics[scale=0.75]{../ForPublication/figs/MaxNExample.png}
-	\caption{An example game tree involving 3 players.  Numbered circles represent player decision points and black squares indicate terminal nodes, with the values of the terminal node to each player staggered below.}
-	\label{fig:MaxNEx}
-\end{figure*}
-
-Consider the example game tree in Figure \ref{fig:MaxNEx} where players 1 (the active player), 2, and 3 must each take an action in turn, followed by a final forced action by player 1.  Note that the average payouts for player 1 at the 4 terminal nodes below branch $m$ (300) are much less than those under branch $l$ (977.5).  However, assuming players 2 and 3 play optimally, the correct choice for player 1 is to play $m$ for an eventual value of 1100 rather than $l$ for 900.  Because UCT plays randomly at initial visits to nodes and explores according to the parameter $c$, it will likely take many simulations for the average payouts passing through $m$ to be greater than those passing through $l$.  For example, with a small exploration constant $c$, unless the first simulation through $m$ happens to follow the path to the terminal node labelled $T$, future simulations from the root will avoid $m$ for some time.  If $c$ is too large, each of $l$, $m$, and $r$ will be explored roughly equally to start and the early estimates will approximately be the average payouts of the terminal nodes beneath them. In either case, $l$ will incorrectly appear to be the better choice to UCT until enough simulations are run.  
+	\includegraphics[scale=0.5]{../ForPublication/figs/MachineLearner.png}
+	\caption{The process described for obtaining a general function $f$ for estimating the merit of each feature set in Risk draft outcomes (adapted from \cite[Figure 5.1]{GregLeeThesis}).}
+	\label{fig:MachLearn}
+\end{figure*} 
 
 Let's now walk through an application of max$^\text{n}$+UCT to the example in Figure \ref{fig:MaxNEx} with maximum depth $d = 4$.  First, $M$ UCT simulations are run from the root, providing estimates of the 3 possible actions $l$, $m$, and $r$.  Assuming the estimate for $r$ is the lowest, max$^\text{n}$+UCT then effectively cuts off this branch from the search (as indicated in Figure \ref{fig:MaxNEx} by the dashed red box) as player 1 has only 2 actions remaining.  Next, in a depth-first ordering, at most $M$ simulations are run from each of the two remaining nodes for player 2, and similarly the branch with the lowest estimate is cut off (as this is players 2's last action).  At most $M$ simulations are also run at the two remaining player 3 nodes and again the sub-branch with the lowest estimate is cut (the red boxes are omitted for these two cuts).  Finally, by making a trivial modification so that no UCT simulations are run at nodes with only 1 action, we reach the two terminal nodes labelled $S$ and $T$.  The value of these two nodes are passed back up the tree, and we now take action $m$ at the root as it leads to the highest value for player 1.  With enough exploration, only a small number of simulations $M$ need to be performed at each of the 5 nodes to achieve this result with max$^\text{n}$+UCT.  As mentioned above, if $M$ is small, UCT will likely decide to take action $l$ after only $5M$ simulations.
 
@@ -176,13 +184,6 @@ One issue with applying UCT simulations, however, is that Risk is not well-suite
 \subsection{Evaluating Draft Outcomes}
 
 Our learning technique is closely related to Lee's work \cite{GregLeeThesis} of combining single-agent heuristic search with a machine-learned fitness function to pick a set of actions from a large library.  Lee's objective is to find a small set of actions which allow the agent to behave as close to optimal as possible in a Markov decision process, relative to having access to the entire library of actions.  Our approach here can be seen as an extension of Lee's work from a single-agent problem to a competitive multi-agent problem, where we replace single-agent search with our max$^\text{n}$+UCT adversarial method. 
-
-\begin{figure*}[t]
-	\centering
-	\includegraphics[scale=0.5]{../ForPublication/figs/MachineLearner.png}
-	\caption{The process described for obtaining a general function $f$ for estimating the merit of each feature set in Risk draft outcomes (adapted from \cite[Figure 5.1]{GregLeeThesis}).}
-	\label{fig:MachLearn}
-\end{figure*} 
 
 \begin{table*}[t]
  \centering
@@ -208,36 +209,6 @@ Our learning technique is closely related to Lee's work \cite{GregLeeThesis} of 
     \end{tabular}
     \end{footnotesize}
 \end{table*}
-
-\begin{table}[t]
-	\centering
-		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
-		\label{tab:MoreScoring}
-		\begin{footnotesize}
-		\begin{tabular}{|c|c|}
-			\hline
-			\textbf{Feature} & \textbf{Points} \\
-			\hline
-			First to play & 13.38 \\
-			\hline
-			Second to play & 5.35 \\
-			\hline
-			Each unique enemy neighbor & -0.07 \\
-			\hline
-			Each ordered pair of friendly neighbors & 0.48 \\
-			\hline
-		\end{tabular}
-		\end{footnotesize}
-	
-\end{table}
-
-\begin{figure}[t]
-	\centering
-	\includegraphics[scale=0.3]{../ForPublication/figs/DraftExample.png}
-	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  %Territories connected by a line are also considered adjacent or bordering. 
-	Modified from Lux Delux.}
-	\label{fig:DraftExample}
-\end{figure}
 
 We manually identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by the calculation of highest ``bids'' \cite{RiskBots}.  For each player, our features are described by: (i) for each continent, the number of territories owned in that continent; (ii) when the player plays in the turn order; (iii) the number of distinct territories owned by other players which border owned territories (enemy neighbors); and (iv) the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbors).  Our process for estimating the merit of a feature set is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the 3 players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot provided with the Lux Delux software package.  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
 \[ f: S \mapsto v \in \textbf{R} \] 
@@ -315,6 +286,28 @@ Our general function $f$ was computed off-line from $7364$ random draft outcomes
 %  \end{center}
 %\end{table*}
 
+\begin{table}[t]
+	\centering
+		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
+		\label{tab:MoreScoring}
+		\begin{footnotesize}
+		\begin{tabular}{|c|c|}
+			\hline
+			\textbf{Feature} & \textbf{Points} \\
+			\hline
+			First to play & 13.38 \\
+			\hline
+			Second to play & 5.35 \\
+			\hline
+			Each unique enemy neighbor & -0.07 \\
+			\hline
+			Each ordered pair of friendly neighbors & 0.48 \\
+			\hline
+		\end{tabular}
+		\end{footnotesize}
+	
+\end{table}
+
 We now show how to use Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} to compute $V_i(Z)$ for the draft outcome given in Figure \ref{fig:DraftExample}.  Player 1 (blue) has 4 territories in Australia, 0 in South America, 2 in Africa, 1 in North America, 3 in Europe, and 4 in Asia.  In addition, player 1 has 18 distinct enemy neighbours and 22 ordered pairs of friendly neighbours.  Assuming player 1 is first to play, $f(S_1)$ is computed as
 \begin{eqnarray*}
 % 	f(S_1) &=& [10.7097 + 0.6904 + 10.7207 \\ && +\ 0.9766 + 43.7726 + 23.6086] \\ &&+\ [13.3818 + 18(-0.0719) + 22(0.4799)] \\
@@ -325,6 +318,15 @@ We now show how to use Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} to
 where the values in the first set of brackets are from Table \ref{tab:ContScoring} and the second set of brackets are from Table \ref{tab:MoreScoring}.  This gives $f(S_1) = 113.12$.  We can similarly compute the values of the feature sets for player 2 (green) and player 3 (red) as %$f(S_2) = 89.4739$ and $f(S_3) = 119.6547$ 
 $f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $V_i(Z)$ is computed via $V_i(Z) = f(S_i) / \left(f(S_1) + f(S_2) + f(S_3) \right)$, giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
 $\vec{V}(Z) = (0.35, 0.28, 0.37)$.
+
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[scale=0.3]{../ForPublication/figs/DraftExample.png}
+	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  %Territories connected by a line are also considered adjacent or bordering. 
+	Modified from Lux Delux.}
+	\label{fig:DraftExample}
+\end{figure}
 
 \section{Empirical Evaluation}
 
