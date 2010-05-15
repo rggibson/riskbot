@@ -55,9 +55,10 @@
 \numberwithin{lemma}{section}
 \numberwithin{df}{section}
 
-\title{Drafting Territories in the Board Game Risk\\ Submission \#}
+\title{A Technique for Drafting Territories in the Board Game Risk%\\ Submission \#
+}
 
-\nocopyright
+%\nocopyright
 
 \author{Author(s) Name(s) Go Here in 12 Point Bold Times Type}
 %\author{Neesha Desai, Richard Gibson, and Richard Zhao \\
@@ -193,25 +194,25 @@ Our learning technique is closely related to Lee's work \cite{GregLeeThesis} of 
  \centering
       \caption{The weights for features of type (i), as computed in Weka.  Rows denote continents and columns denote territory counts.  Weights denoted with a * are derived through linear extrapolation.}
     \label{tab:ContScoring}
-    \begin{footnotesize}
+    \begin{small}
     \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
     	\hline
     	  & \bf 0 & \bf 1 & \bf 2  & \bf 3 & \bf 4 & \bf 5 & \bf 6 & \bf 7 & \bf 8 & \bf 9 & \bf 10 & \bf 11 & \bf 12 \\
     	 \hline
     	\bf Australia & 2.97 & 0 & 8.45 & 9.99 & 10.71 & - & - & - & - & - & - & - & - \\
     	\hline
-    	\bf South Amer. & 0.69 & 1.23 & 3.90 & 0 & 17.72 & - & - & - & - & - & - & - & - \\
+    	\bf S.~Amer. & 0.69 & 1.23 & 3.90 & 0 & 17.72 & - & - & - & - & - & - & - & - \\
     	\hline
     	\bf Africa & 14.40 & 12.87 & 10.72 & 7.16 & 1.23 & 0 & 29.80 & - & - & - & - & - & - \\
     	\hline
-    	\bf North Amer. & 3.11 & 0.98 & 0 & 2.17 & 7.15 & 19.35 & 24.82 & 24.10 & 36.15 & 48.20* & - & - & - \\
+    	\bf N.~Amer. & 3.11 & 0.98 & 0 & 2.17 & 7.15 & 19.35 & 24.82 & 24.10 & 36.15 & 48.20* & - & - & - \\
     	\hline
     	\bf Europe & 42.44 & 45.11 & 43.11 & 43.77 & 41.35 & 50.77 & 43.85 & 36.93* & - & - & - & - & - \\
     	\hline
     	\bf Asia & 27.10 & 23.90 & 23.61 & 23.10 & 23.61 & 23.68 & 19.32 & 15.63 & 17.43 & 13.84 & 10.25* & 6.66* & 3.07* \\
     	\hline
     \end{tabular}
-    \end{footnotesize}
+    \end{small}
 \end{table*}
 
 We manually identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by the calculation of highest ``bids'' \cite{RiskBots}.  For each player, our features are described by: (i) for each continent, the number of territories owned in that continent; (ii) when the player plays in the turn order; (iii) the number of distinct territories owned by other players which border owned territories (enemy neighbors); and (iv) the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbors).  Our process for estimating the merit of a feature set is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the 3 players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot provided with the Lux Delux software package.  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
@@ -294,7 +295,7 @@ Our general function $f$ was computed off-line from $7364$ random draft outcomes
 	\centering
 		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
 		\label{tab:MoreScoring}
-		\begin{footnotesize}
+%		\begin{footnotesize}
 		\begin{tabular}{|c|c|}
 			\hline
 			\textbf{Feature} & \textbf{Points} \\
@@ -308,7 +309,7 @@ Our general function $f$ was computed off-line from $7364$ random draft outcomes
 			Each ordered pair of friendly neighbors & 0.48 \\
 			\hline
 		\end{tabular}
-		\end{footnotesize}
+%		\end{footnotesize}
 	
 \end{table}
 
@@ -327,7 +328,7 @@ $\vec{V}(Z) = (0.35, 0.28, 0.37)$.
 \begin{figure}[t]
 	\centering
 	\includegraphics[scale=0.3]{../ForPublication/figs/DraftExample.png}
-	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  %Territories connected by a line are also considered adjacent or bordering. 
+	\caption{An example of a draft outcome.  The territories picked by players 1, 2, and 3 are blue, green, and red respectively.  Territories connected by a line are also considered adjacent or bordering. 
 	Modified from Lux Delux.}
 	\label{fig:DraftExample}
 \end{figure}
@@ -337,30 +338,69 @@ $\vec{V}(Z) = (0.35, 0.28, 0.37)$.
 \begin{figure*}[t]
 	\centering
 	\subfigure[]{
-		\includegraphics[scale=.4]{../ForPublication/figs/KthEvilKillBotColor.png}
-		\label{fig:QuoKthEpKill}
+		\includegraphics[scale=.4]{GreedyRandomUct.png}
+		\label{fig:GreedyRandomUct}
 	} %\hspace{5pt}
 	\subfigure[]{
-		\includegraphics[scale=.4]{../ForPublication/figs/KthEvilQuoColor.png}
-		\label{fig:KthQuoEvilP}
+		\includegraphics[scale=.4]{gamesWon.png}
+		\label{fig:gamesWon}
 	} %\hspace{5pt}
 	\subfigure[]{
-		\includegraphics[scale=.4]{../ForPublication/figs/KthRandomUCTColor.png}
-		\label{fig:KthUctRan}
+		\includegraphics[scale=.4]{BoscoeKillQuo.png}
+		\label{fig:BoscoeKillbotQuo}
 	}
 	\caption[]{Risk bot performances.  Error bars indicate 95\% confidence intervals.}
 	\label{fig:RiskResults}
 \end{figure*}
 
-We created a ``UCT-Quo'' bot by replacing the drafting rules of the Quo bot provided in Lux Delux with the UCT algorithm.  The Quo bot is one of the strongest bots provided by the game, according to the game designers.  For comparison, we also created a ``Random-Quo'' and a ``Greedy-Quo'' bot that replace Quo's drafting rules with a random drafting strategy and a greedy strategy, respectively.  We ran several preliminary matches consisting of only UCT-Quo bots with different exploration parameters and found that $c=0.25$ provided the best results.  Thus, UCT-Quo used $c=0.25$ in all later experiments.  As mentioned previously, UCT-Quo ran $M = 3000$ simulations from the root decision point.  We also pitted UCT-Quo against four other existing bots in the game Lux Delux: Quo, KillBot, Boscoe and EvilPixie.
+% Mention how fast each simulation was
 
-We present the experimental results in Figure \ref{fig:RiskResults}.  For each combination, the winning percentages of each bot over 50 rounds of games are reported.  Each round consisted of 6 games, one for each of the $3!$ turn orderings of the players.  All games were run with the Lux Delux settings ``selected countries'' and ``placed armies'' turned on, and ``cards'' turned off.  In addition, although Lux Delux does not automatically impose a time limit per turn, we enforced our own time limit of $750 \left \lceil \ell / 3 \right \rceil$ milliseconds, where $\ell$ equals the number of territories left to be picked.  For example, on the first turn each player has $0.75 * \left \lceil 42 / 3 \right \rceil = 10.5$ seconds to make a pick.  All experiments were run on a Pentium Dual-Core CPU 2.1 GHz with 4GB 332.5 MHz DDR2 RAM.  
+We created a ``UCT-Quo'' bot by replacing the drafting rules of the Quo bot provided in Lux Delux with our approach of combining UCT and the machine-learned evaluation function.  The Quo bot is one of the four strongest bots provided by the game, according to the game designers.  For comparison, we also created a ``Random-Quo'' and a ``Greedy-Quo'' bot that replace Quo's drafting rules with a random drafting strategy and a ``greedy" strategy, respectively.  The greedy strategy works as follows: At any state $\hat{s}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made, using the same features as described in the previous section.  We can then calculate $\hat{V}_i(\hat{s}) = f(\hat{S_i}) / (f(\hat{S_1}) + f(\hat{S_2}) + f(\hat{S_3}))$ of the state $\hat{s}$, where $f$ is our machine-learned evaluation function.  Greedy picks the territory which leads to the state $\hat{s}$ with the greatest $\hat{V}_i(\hat{s})$ value, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  For example, on an empty board, we can conclude from Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} that Greedy will always open by picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe) because Europe has the biggest increase in score from 0 to 1 territory.  
+Greedy can be seen as a 1-ply lookahead search that uses $\hat{V}_i(\hat{s})$ as an evaluation function, despite $f$ being designed to only evaluate draft outcomes.  
 
-The blue bars of Figure \ref{fig:QuoKthEpKill} show that KillBot was the strongest among Boscoe, KillBot, and Quo, having won roughly sixty percent of the games against these two opponents.  However, when the fixed hand-coded drafting strategy of Quo was replaced by our UCT algorithm, UCT-Quo did significantly better than Quo against the same two opponents, having won over 70\% of the games (the red bars).  This result demonstrates that drafting territories is an important stage of Risk.
+We ran several preliminary matches consisting of only UCT-Quo bots with different exploration parameters and found that $c=0.01$ provided the best results.  Thus, UCT-Quo used $c=0.01$ in all later experiments.  For each pick, UCT-Quo ran $3000$ simulations from the root decision point, taking less than one second per pick on an Intel Core 2 Duo CPU at 2.00 GHz with 4GB of RAM.  We also pitted UCT-Quo against the four difficult bots in the game Lux Delux: Quo, EvilPixie, KillBot, and Boscoe.
 
-Figure \ref{fig:KthUctRan} shows that UCT-Quo came first place against Greedy-Quo and Random-Quo in terms of both the average draft evaluation score from our machine-learned outcome evaluator (leftmost bars), and in number of actual game wins (rightmost bars).  This suggests that for the given time limit, UCT is preferred over a simple greedy strategy for drafting Risk territories.  Furthermore, since Random-Quo wins only a small percentage of games despite having an identical post-draft strategy as its opponents, we have further evidence that the drafting phase in Risk is crucial to success.  Finally, note that the similarity in shape between the leftmost and rightmost bars shows that the draft outcome evaluator gives a decent approximation of Quo's chances of winning from the outcome.
+We present the experimental results in Figure \ref{fig:RiskResults}.  For each combination of 3 bots that were tested, 50 rounds of games were played to completion where 1 round consisted of 6 games, one for each of the $3!$ turn orderings of the bots.  All games were run with the Lux Delux settings ``selected countries'' and ``placed armies'' turned on, and ``cards'' turned off.  
 
-Finally, Figure \ref{fig:totalWins} shows the total number of wins by each of the five bots in a round-robin tournament between the five bots, UCT-Quo, Quo, KillBot, EvilPixie, and Boscoe, the last four all provided by the game itself.  The five bots were competing in three-player matches where each bot competed against all combinations of two other bots.  Ten matches were played in total and the number of games won were tallied.  The graph clearly shows that UCT-Quo is superier to all four bots provided by the game.
+Firstly, Figure \ref{fig:GreedyRandomUct} shows that UCT-Quo came first place against Greedy-Quo and Random-Quo in terms of both the average draft evaluation score from our machine-learned outcome evaluator (leftmost bars), and in number of actual games won (rightmost bars).  This suggests that UCT is a good choice for drafting Risk territories.  Furthermore, since Random-Quo wins only a small percentage of games despite having an identical post-draft strategy as its opponents, we have evidence that the drafting phase in Risk is crucial to success.  Finally, note that the similarity in shape between the leftmost and rightmost bars suggests that our draft outcome evaluator does a good job at approximating Quo's chances of winning from an outcome. 
+
+Next, a five-bot round robin tournament consisting of UCT-Quo and the four difficult Lux Delux bots was played and the total number of wins for each bot in the tournament is shown in Figure \ref{fig:gamesWon}.  The five bots were competing in three-player matches where each bot competed against all combinations of two other bots for a total of 10 combinations.  The results clearly show that UCT-Quo is superior to the other four bots as it wins nearly double and nearly triple the number of games as the next closest competitors Killbot and Quo respectively.  Full results of the tournament are provided in Table \ref{tab:roundRobin}.
+
+\begin{table}[t]
+	\centering
+		\caption{Results of the five-bot round robin tournament.  Error values give 95\% confidence intervals of win totals for each bot per matchup.} 
+		\label{tab:roundRobin}
+%		\begin{footnotesize}
+		\begin{tabular}{|cp{10pt}p{5pt}p{18pt}|cp{10pt}p{5pt}p{18pt}|}
+			\hline
+			\textbf{Matchup} & \multicolumn{3}{c|}{\textbf{No.~of Wins}} & \textbf{Matchup} & \multicolumn{3}{c|}{\textbf{No.~of Wins}} \\
+			\hline
+			UCT-Quo & 190 & $\pm$ & 14.00 & 	UCT-Quo & 234 & $\pm$ & 13.56 \\   
+			Quo & 54 & $\pm$ & 12.47 & 				Quo &  53 & $\pm$ & 12.65 \\
+			EvilPixie & 56 & $\pm$ & 13.03 & 	Boscoe & 13 & $\pm$ & 7.31 \\  
+			\hline
+			UCT-Quo & 181 & $\pm$ & 12.80 & 	UCT-Quo & 190 & $\pm$ & 16.08\\
+			Quo & 60 & $\pm$ & 14.82 & 				EvilPixie &  51 & $\pm$ & 12.98\\
+			Killbot & 59 & $\pm$ & 12.10 & 		Killbot &  59 & $\pm$ & 11.44\\
+			\hline
+			UCT-Quo & 254 & $\pm$ & 12.47 & 	UCT-Quo & 230 & $\pm$ & 12.20\\
+			EvilPixie & 36 & $\pm$ & 11.56 & 	Killbot &  68 & $\pm$ & 11.80\\
+			Boscoe & 10 & $\pm$ & 6.26 & 			Boscoe &  2 & $\pm$ & 2.74\\
+			\hline
+			Quo & 105 & $\pm$ & 10.19 & 			Quo & 126 & $\pm$ & 9.39 \\
+			EvilPixie & 90 & $\pm$ & 10.84 & 	EvilPixie &  128 & $\pm$ & 8.00 \\
+			Killbot & 105 & $\pm$ & 8.04 & 		Boscoe &  46 & $\pm$ & 10.42 \\
+			\hline
+			Quo & 67 & $\pm$ & 7.20 & 				EvilPixie & 63 & $\pm$ & 7.31 \\
+			Killbot & 185 & $\pm$ & 10.57 & 	Killbot &  181 & $\pm$ & 10.80 \\
+			Boscoe & 48 & $\pm$ & 8.84 & 			Boscoe &  56 & $\pm$ & 9.95 \\
+			\hline
+		\end{tabular}
+%		\end{footnotesize}
+	
+\end{table}
+
+Finally, we compare two particular results from the round robin tournament in Figure \ref{fig:BoscoeKillbotQuo}.  The blue bars show that KillBot was the strongest among Boscoe, KillBot, and Quo, having won roughly 60\% of the games against these two opponents.  However, when the hand-coded drafting strategy of Quo was replaced by our UCT approach, we see that UCT-Quo did significantly better than Quo against the same two opponents, having won over 75\% of the games (the red bars).  This result again demonstrates that drafting territories is an important stage of Risk, and that combining UCT with an automated evaluation function is an effective computational approach to this problem.
 
 \section{Conclusions}
 
@@ -368,7 +408,7 @@ Finally, Figure \ref{fig:totalWins} shows the total number of wins by each of th
 
 % Summarize 
 
-We presented a technique for drafting territories in the board game Risk.  Our approach combines the UCT algorithm with a machine-learned draft outcome evaluator to trim the length of each UCT simulation.  The augmented UCT-Quo bot outperformed all of the difficult bots tested within Lux Delux, including the Quo bot itself.  Our experiments indicate that the drafting stage is an important part of Risk, and combining UCT with an evaluation function is an effective computational approach for territory drafting. 
+We presented a technique for drafting territories in the board game Risk.  Our approach combines the UCT algorithm with a machine-learned draft outcome evaluator to trim the length of each UCT simulation.  The augmented UCT-Quo bot outperformed all of the difficult bots tested within Lux Delux, including the Quo bot itself.  Our experiments indicate that the drafting stage is an important part of Risk, and combining UCT with an evaluation function is an effective means of drafting territories.  As mentioned, our drafting technique is quite fast (less than a second per pick) and could be appealing to anyone making a bot for a future commercial version of Risk.
 
 We see potential future work stemming from using UCT and a machine-learned evaluator in other types of games, particularly in other drafting-type scenarios such as in fantasy sports leagues.  Furthermore, many sports video games include a rookie or fantasy draft component and a UCT approach could provide a more intelligent opponent than current implementations.  Finally, we suspect that a more sophisticated supervised learning technique than simple linear regression may improve the performance of our Risk bot.  
 
