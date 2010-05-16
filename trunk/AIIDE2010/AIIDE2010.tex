@@ -80,7 +80,7 @@ In the standard rules of the board game Risk, players take turns selecting or ``
 % Talk about search for single agent, minimax for two-player, 0-sum, max$^\text{n}$ for multi-player.  Examples like chess, checkers, etc.
 
 For the past few decades, computer games have been a popular platform for artificial intelligence research.  Many successful computer programs (bots) play at expert levels in two-player games such as checkers \cite{Chinook}, Othello \cite{Othello}, and
-chess \cite{DeepBlue}.  These are popular two player games where both players share complete information about the game states.  Such games are handled well by classical minimax search with alpha-beta pruning and some evaluation function (often hand-tuned) for intermediate states.  
+chess \cite{DeepBlue}.  These are popular two-player games where both players share complete information about the game states.  Such games are handled well by classical minimax search with alpha-beta pruning and some evaluation function (often hand-tuned) for intermediate states.  
 
 However, games involving more than two players (multi-player) are generally less understood.  In this paper, we describe how to create stronger bots for playing the multi-player game Risk by Hasbro Inc.  In the standard rules of Risk, the game begins with the players drafting the territories on the board until every territory has an owner.  Our work here focuses on improving overall performance by developing an intelligent system for playing the opening territory draft phase of Risk.
 
