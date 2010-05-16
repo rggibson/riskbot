@@ -55,7 +55,7 @@
 \numberwithin{lemma}{section}
 \numberwithin{df}{section}
 
-\title{A Technique for Drafting Territories in the Board Game Risk%\\ Submission \#
+\title{An Automated Technique for Drafting Territories in the Board Game Risk%\\ Submission \#
 }
 
 %\nocopyright
@@ -84,14 +84,7 @@ chess \cite{DeepBlue}.  These are popular two player games where both players sh
 
 However, games involving more than two players (multi-player) are generally less understood.  In this paper, we describe how to create stronger bots for playing the multi-player game Risk by Hasbro Inc.  In the standard rules of Risk, the game begins with the players drafting the territories on the board until every territory has an owner.  Our work here focuses on improving overall performance by developing an intelligent system for playing the opening territory draft phase of Risk.
 
-The rest of the paper is organized as follows.  First, we provide an outline for the rules of Risk.  Second, we discuss related work, including traditional minimax search, its extension to multi-player games, max$^\text{n}$, and the Monte-Carlo tree search algorithm UCT.  We then describe how our system drafts territories in Risk.  Our approach combines UCT with a machine-learned evaluation function to search the game tree up to the end of the drafting phase, where an estimate of the merits of the draft outcomes are propagated back.  Next, using a computer version of Risk, we create a bot that uses our drafting technique and pit it against a number of others programs.  The empirical results show that our bot outperforms all of its opponents, even those using post-draft strategies identical to our own.  This suggests that the drafting phase is a very meaningful part of Risk.  Finally, we summarize the results and conclude with some future works.
-
-\section{Risk}
-\label{sec:Prob}
-
-% Rules of Risk, particularly the drafting stage
-Risk is a strategy board game for two to six players where the objective is to occupy all 42 territories on the board.  The territories are divided into 6 continents as labelled in Figure \ref{fig:Conts}.  In the standard rules, players first take turns selecting the territories until all have been chosen.  After players place their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  A player reduced to zero armies on the board is eliminated from the game.  Players receive one reinforcement army for every three territories owned, and receive bonus reinforcements for owning entire continents (as depicted in Figure~\ref{fig:Conts}). %or trading in cards earned by conquering territories. 
-Full rules can be found on-line \cite{Risk}.
+The rest of the paper is organized as follows.  First, we provide an outline for the rules of Risk and a computer version of the board game, Lux Delux.  Second, we discuss related work, including traditional minimax search, its extension to multi-player games, max$^\text{n}$, and the Monte-Carlo tree search algorithm UCT.  We then describe how our system drafts territories in Risk.  Our approach combines UCT with a machine-learned evaluation function to search the game tree up to the end of the drafting phase, where an estimate of the merits of the draft outcomes are propagated back.  Next, using a computer version of Risk, we create a bot that uses our drafting technique and pit it against a number of others programs.  The empirical results show that our bot outperforms all of its opponents, even those using post-draft strategies identical to our own.  This suggests that the drafting phase is a very meaningful part of Risk.  Finally, we summarize the results and conclude with some future works.
 
 \begin{figure}[t]
 	\centering
@@ -100,10 +93,24 @@ Full rules can be found on-line \cite{Risk}.
 	\label{fig:Conts}
 \end{figure}
 
+\section{Risk and Lux Delux}
+\label{sec:Prob}
+
+\begin{figure*}[t]
+	\centering
+	\includegraphics[scale=0.54]{../ForPublication/figs/MachineLearner.png}
+	\caption{The process described for obtaining a general function $f$ for estimating the merit of each feature set in Risk draft outcomes (adapted from \cite[Figure 5.1]{GregLeeThesis}).}
+	\label{fig:MachLearn}
+\end{figure*} 
+
+% Rules of Risk, particularly the drafting stage
+Risk is a strategy board game for two to six players where the objective is to occupy all 42 territories on the board.  The territories are divided into 6 continents as labelled in Figure \ref{fig:Conts}.  In the standard rules, players first take turns selecting the territories until all have been chosen.  After players place their initial armies among their selected territories, players then take turns until only one player remains.  On a turn, in sequence a player may place reinforcements, conduct attacks on opposing territories, and tactically maneuver armies amongst owned territories.  Attacks are resolved by dice rolls, where the number of dice is dependent on the number of attacking and defending armies.  A player reduced to zero armies on the board is eliminated from the game.  Players receive one reinforcement army for every three territories owned, and receive bonus reinforcements for owning entire continents (as depicted in Figure~\ref{fig:Conts}). %or trading in cards earned by conquering territories. 
+Full rules can be found on-line \cite{Risk}.
+
 The Lux Delux (Sillysoft 2010) \nocite{Lux} %\cite{Lux} %(Sillysoft 2010)  %\footnote{http://sillysoft.net/lux/} 
 game is a commercialized computer version of Risk, providing several rule-based bots with source code to play against.  Each of the included bots has an associated difficulty and a general playing style.  For example, ``Quo'' is a difficult bot that tries to form a cluster of adjacent territories and methodically expand that cluster.  We use the Lux Delux environment in all of our computations and experiments.  
 
-In this paper, we are only concerned with strategies for playing the opening territory selection phase of Risk.  In addition, we focus only on three player Risk, as this incorporates the multi-player aspect and is arguably more strategically demanding compared to playing with more players.  With fewer players, each player must make more selections in the opening draft.  Since we are only concerned with playing the opening draft of Risk, we simply use the Quo bot's rules for our own post-draft play. 
+In this paper, we are only concerned with strategies for playing the opening territory selection phase of Risk.  In addition, we focus only on three player Risk, as this incorporates the multi-player aspect and is arguably more strategically demanding compared to playing with more players.  With fewer players, each player must make more selections in the opening draft.  Since we are concerned with improving territory selection in Risk, we chose to use the Quo bot's rules for the post-draft play. 
 
 \section{Related Work}
 
@@ -111,6 +118,13 @@ A widely known approach to game playing is the minimax adversarial search algori
 
 % max$^\text{n}$, Paranoid
 % MP-Mix which extends max$^\text{n}$ (was used only for branching factor of 3, and for single winner games)
+
+\begin{figure*}[t]
+	\centering
+	\includegraphics[scale=0.57]{TerritoryValues.png}
+	\caption{The weights for features of type (i), as computed in Weka.  Data points with a red square are derived through linear extrapolation.}
+	\label{fig:TerritoryValues}
+\end{figure*} 
 
 While minimax search is traditionally employed in many two-player games, it is not applicable to games with $n > 2$ players.  A generalization of traditional minimax search to more players is the max$^\text{n}$ algorithm \cite{MaxN}.  At the leaf nodes of the game tree, a heuristic function now estimates a vector of $n$ merits $(v_1, ..., v_n)$, one for each player.  At nodes belonging to player $i$, the vector with the highest merit $v_i$ is propagated up to the parent.  Thus, players are assumed to be maximizing their own individual payoffs throughout the remainder of the game.  An alternative to max$^\text{n}$ is the Paranoid algorithm \cite{Paranoid}, where the active player assumes that the other players are out to minimize his or her payoff with complete disregard to their own benefits.  The Paranoid algorithm is essentially equivalent to the minimax algorithm, where the other players are represented as one meta-player (Min) attempting to minimize the individual heuristic value of the active player (Max).  Finally, the max$^\text{n}$ and Paranoid propagation strategies can be dynamically selected according to the game situation.  This is done in the MP-Mix algorithm \cite{ZuckFelnerKraus2009}, along with a third strategy called Offensive.  On the whole, these algorithms perform best when the branching factor (i.e.~action space) is small and when there exists a good evaluation function for approximating the merits of non-terminal states.  Unfortunately, when drafting in Risk the first player has 42 actions to choose from initially, and we know of no such evaluation function to use for territory selection.
 
@@ -140,7 +154,8 @@ While minimax search is traditionally employed in many two-player games, it is n
 %\end{algorithm}
 
 An algorithm more suited for large actions spaces and requiring no evaluation function is UCT \cite{UCT}, a Monte Carlo planning algorithm that has been used effectively in Computer Go \cite{ComputerGo} and general game playing, for example in CadiaPlayer \cite{Cadia}.  UCT tries to intelligently bias the game tree by simulating games that focus on appealing branches of the tree.  At each step, UCT builds upon the sparse game tree from the previous simulations by selecting an action $a$ at state $s$ to expand by
-\[ a = \text{argmax}_{a'} \left( Q_i(s,a') + c \sqrt{ \log n(s) / n(s,a') } \right), \]
+%\[ a = \text{argmax}_{a'} \left( Q_i(s,a') + c \sqrt{ \log n(s) / n(s,a') } \right), \]
+\[ a = \text{argmax}_{a'} \left( Q_i(s,a') + c \sqrt{ \frac{\log n(s)}{n(s,a')} } \right), \]
 where $Q_i(s,a)$ is the estimated value for player $i$ of taking $a$ at $s$, $i$ is the active player at $s$, $c$ is an exploration constant, $n(s)$ is the number of times $s$ has been visited, and $n(s,a)$ is the number of times $a$ has been taken in $s$.  The estimate $Q_i(s,a)$ is equal to the average final game value player $i$ received on previous simulations where $s$ was visited and $a$ was taken at $s$.  This final game value is typically 1 for a win and 0 for a loss in win-lose type games.  On each simulation, UCT adds one new node to the game tree and then randomly plays out the rest of the game.  After running numerous simulations from the current state $s$, UCT takes the action $\text{argmax}_{a}Q_i(s,a)$.
 
 We now describe some previous work related to drafting territories in Risk.  One related area is the problem of drafting athletes in sports leagues, to which some progress has been made.  Many professional sports use a drafting procedure where teams sequentially select entry-level players based on the teams' current needs and scouting reports of the players' skills.  Brams and Straffin \cite{PrisonAndDrafting} examine very small games where each team has its own order of preference of the entering players.  They use a max$^\text{n}$-type approach to find optimal drafting strategies, but hint that the approach is ill-advised for larger drafts due to a prohibitively large branching factor.  In addition, Fry et.~al \cite{SportsDrafting} solve a deterministic dynamic programming problem through linear programming to determine a team's best drafting strategy and apply it to a fantasy football draft.  However, a key ingredient in their model is that each team has positional (quarterback, running back, etc.) needs and must limit its picks to a fixed number of players for each position.  For Risk drafting, we are not concerned with restricting territories to competitors in any way.
@@ -172,60 +187,83 @@ Finally, playing Risk in particular has garnered some attention from the AI comm
 %Consider the example game tree in Figure \ref{fig:MaxNEx} where players 1 (the active player), 2, and 3 must each take an action in turn, followed by a final forced action by player 1.  Note that the average payouts for player 1 at the 4 terminal nodes below branch $m$ (300) are much less than those under branch $l$ (977.5).  However, assuming players 2 and 3 play optimally, the correct choice for player 1 is to play $m$ for an eventual value of 1100 rather than $l$ for 900.  Because UCT plays randomly at initial visits to nodes and explores according to the parameter $c$, it will likely take many simulations for the average payouts passing through $m$ to be greater than those passing through $l$.  For example, with a small exploration constant $c$, unless the first simulation through $m$ happens to follow the path to the terminal node labelled $T$, future simulations from the root will avoid $m$ for some time.  If $c$ is too large, each of $l$, $m$, and $r$ will be explored roughly equally to start and the early estimates will approximately be the average payouts of the terminal nodes beneath them. In either case, $l$ will incorrectly appear to be the better choice to UCT until enough simulations are run.  
 %
 %
-\begin{figure*}[t]
-	\centering
-	\includegraphics[scale=0.5]{../ForPublication/figs/MachineLearner.png}
-	\caption{The process described for obtaining a general function $f$ for estimating the merit of each feature set in Risk draft outcomes (adapted from \cite[Figure 5.1]{GregLeeThesis}).}
-	\label{fig:MachLearn}
-\end{figure*} 
 %
 %Let's now walk through an application of max$^\text{n}$+UCT to the example in Figure \ref{fig:MaxNEx} with maximum depth $d = 4$.  First, $M$ UCT simulations are run from the root, providing estimates of the 3 possible actions $l$, $m$, and $r$.  Assuming the estimate for $r$ is the lowest, max$^\text{n}$+UCT then effectively cuts off this branch from the search (as indicated in Figure \ref{fig:MaxNEx} by the dashed red box) as player 1 has only 2 actions remaining.  Next, in a depth-first ordering, at most $M$ simulations are run from each of the two remaining nodes for player 2, and similarly the branch with the lowest estimate is cut off (as this is players 2's last action).  At most $M$ simulations are also run at the two remaining player 3 nodes and again the sub-branch with the lowest estimate is cut (the red boxes are omitted for these two cuts).  Finally, by making a trivial modification so that no UCT simulations are run at nodes with only 1 action, we reach the two terminal nodes labelled $S$ and $T$.  The value of these two nodes are passed back up the tree, and we now take action $m$ at the root as it leads to the highest value for player 1.  With enough exploration, only a small number of simulations $M$ need to be performed at each of the 5 nodes to achieve this result with max$^\text{n}$+UCT.  As mentioned above, if $M$ is small, UCT will likely decide to take action $l$ after only $5M$ simulations.
 %
 %The depth parameter $d$ allows max$^\text{n}$+UCT to be used in time-constrained scenarios by making repeated calls and iteratively increasing $d$, much like in the single-agent search algorithm IDA$^*$ \cite{IdaStar}.  For Risk drafting, we start with $d = 0$ and increase $d$ by the number of players, 3, after each completion of the algorithm.  In addition, we found through preliminary experiments that $M = 3000$ provided enough simulations for UCT to provide decent estimates for the values of selecting each territory, and that moderately increasing this number resulted in no significant improvement.  Note that calling max$^\text{n}$+UCT($s$, $0$, $M$, $c$) is equivalent to calling UCT($c$) at $s$ for $M$ simulations.  
 %
 
-We use UCT as our main algorithm for drafting territories in Risk, since max$^\text{n}$ and other traditional search algorithms are not practical when there are many possible actions and no known evaluation functions.  One issue with applying UCT simulations, however, is that Risk is not well-suited to numerous runs of the entire game as games typically last a long time.  Furthermore, if all players play randomly in Risk, there is no guarantee that the game will even end.  Since UCT simulates games randomly beyond previously stored states in its search tree, the algorithm is unlikely to complete more than a small number of simulations, leading to poor estimates of the possible actions.  To increase the rate at which simulations can be performed, we instead simulate only the initial drafting portion of the game, which has a fixed length (the number of territories remaining to be selected) regardless of random play.  This is done by evaluating each draft outcome with a numerical score that estimates our probability of winning the entire game of Risk from that draft outcome.  These scores are generated off-line using supervised machine learning, which we now describe.
+We use UCT as our main algorithm for drafting territories in Risk, since max$^\text{n}$ and other traditional search algorithms are not practical when there are many possible actions and no known evaluation functions.  One issue with applying UCT simulations, however, is that Risk is not well-suited to numerous runs of the entire game as games typically last many turns and dice rolls introduce a lot of randomness in the results.  Furthermore, if all players play randomly in Risk, there is no guarantee that the game will even end.  Since UCT simulates games randomly beyond previously stored states in its search tree, the algorithm is unlikely to complete more than a small number of simulations, leading to poor estimates of the possible actions.  To increase the rate at which simulations can be performed, we instead simulate only the initial drafting portion of the game, which has a fixed length (the number of territories remaining to be selected) regardless of random play.  This is done by evaluating each draft outcome with a numerical score that estimates our probability of winning the entire game of Risk from that draft outcome.  These scores are generated off-line using supervised machine learning, which we now describe.
 %
 %\subsection{Evaluating Draft Outcomes}
 
 Our learning technique is closely related to Lee's work \cite{GregLeeThesis} of combining single-agent heuristic search with a machine-learned fitness function to pick a set of actions from a large library.  Lee's objective is to find a small set of actions which allow the agent to behave as close to optimal as possible in a Markov decision process, relative to having access to the entire library of actions.  Our approach here can be seen as an extension of Lee's work from a single-agent problem to a competitive multi-agent problem, where we replace single-agent search with an adversarial method, UCT. 
 
-\begin{table*}[t]
- \centering
-      \caption{The weights for features of type (i), as computed in Weka.  Rows denote continents and columns denote territory counts.  Weights denoted with a * are derived through linear extrapolation.}
-    \label{tab:ContScoring}
-    \begin{small}
-    \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
-    	\hline
-    	  & \bf 0 & \bf 1 & \bf 2  & \bf 3 & \bf 4 & \bf 5 & \bf 6 & \bf 7 & \bf 8 & \bf 9 & \bf 10 & \bf 11 & \bf 12 \\
-    	 \hline
-    	\bf Australia & 2.97 & 0 & 8.45 & 9.99 & 10.71 & - & - & - & - & - & - & - & - \\
-    	\hline
-    	\bf S.~Amer. & 0.69 & 1.23 & 3.90 & 0 & 17.72 & - & - & - & - & - & - & - & - \\
-    	\hline
-    	\bf Africa & 14.40 & 12.87 & 10.72 & 7.16 & 1.23 & 0 & 29.80 & - & - & - & - & - & - \\
-    	\hline
-    	\bf N.~Amer. & 3.11 & 0.98 & 0 & 2.17 & 7.15 & 19.35 & 24.82 & 24.10 & 36.15 & 48.20* & - & - & - \\
-    	\hline
-    	\bf Europe & 42.44 & 45.11 & 43.11 & 43.77 & 41.35 & 50.77 & 43.85 & 36.93* & - & - & - & - & - \\
-    	\hline
-    	\bf Asia & 27.10 & 23.90 & 23.61 & 23.10 & 23.61 & 23.68 & 19.32 & 15.63 & 17.43 & 13.84 & 10.25* & 6.66* & 3.07* \\
-    	\hline
-    \end{tabular}
-    \end{small}
-\end{table*}
+%\begin{table*}[t]
+% \centering
+%      \caption{The weights for features of type (i), as computed in Weka.  Rows denote continents and columns denote territory counts.  Weights denoted with a * are derived through linear extrapolation.}
+%    \label{tab:ContScoring}
+%    \begin{small}
+%    \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+%    	\hline
+%    	  & \bf 0 & \bf 1 & \bf 2  & \bf 3 & \bf 4 & \bf 5 & \bf 6 & \bf 7 & \bf 8 & \bf 9 & \bf 10 & \bf 11 & \bf 12 \\
+%    	 \hline
+%    	\bf Australia & 2.97 & 0 & 8.45 & 9.99 & 10.71 & - & - & - & - & - & - & - & - \\
+%    	\hline
+%    	\bf S.~Amer. & 0.69 & 1.23 & 3.90 & 0 & 17.72 & - & - & - & - & - & - & - & - \\
+%    	\hline
+%    	\bf Africa & 14.40 & 12.87 & 10.72 & 7.16 & 1.23 & 0 & 29.80 & - & - & - & - & - & - \\
+%    	\hline
+%    	\bf N.~Amer. & 3.11 & 0.98 & 0 & 2.17 & 7.15 & 19.35 & 24.82 & 24.10 & 36.15 & 48.20* & - & - & - \\
+%    	\hline
+%    	\bf Europe & 42.44 & 45.11 & 43.11 & 43.77 & 41.35 & 50.77 & 43.85 & 36.93* & - & - & - & - & - \\
+%    	\hline
+%    	\bf Asia & 27.10 & 23.90 & 23.61 & 23.10 & 23.61 & 23.68 & 19.32 & 15.63 & 17.43 & 13.84 & 10.25* & 6.66* & 3.07* \\
+%    	\hline
+%    \end{tabular}
+%    \end{small}
+%\end{table*}
 
-We manually identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by the calculation of highest ``bids'' \cite{RiskBots}.  For each player, our features are described by: (i) for each continent, the number of territories owned in that continent; (ii) when the player plays in the turn order; (iii) the number of distinct territories owned by other players which border owned territories (enemy neighbors); and (iv) the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbors).  Our process for estimating the merit of a feature set is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the 3 players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot provided with the Lux Delux software package.  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
+\begin{table}[t]
+	\centering
+		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
+		\label{tab:MoreScoring}
+%		\begin{footnotesize}
+		\begin{tabular}{|c|c|}
+			\hline
+			\textbf{Feature} & \textbf{Weight} \\
+			\hline
+			First to play & 13.38 \\
+			\hline
+			Second to play & 5.35 \\
+			\hline
+			Each unique enemy neighbor & -0.07 \\
+			\hline
+			Each ordered pair of friendly neighbors & 0.48 \\
+			\hline
+		\end{tabular}
+%		\end{footnotesize}
+	
+\end{table}
+
+We manually identified a number of features that are tactically important in draft outcomes of Risk.  Many of these features are inspired by the calculation of highest ``bids'' \cite{RiskBots}.  For each player, our features are described by: 
+\begin{itemize}
+\item[(i)] for each continent, the number of territories owned in that continent; \item[(ii)] when the player plays in the turn order; \item[(iii)] the number of distinct territories owned by other players which border owned territories (enemy neighbors); and \item[(iv)] the number of distinct ordered pairs of owned territories which are adjacent (friendly neighbors).
+\end{itemize}  Our process for estimating the merit of a feature set is depicted in Figure \ref{fig:MachLearn}.  First, we collect many draft outcomes, each obtained by randomly assigning all 42 territories evenly among the 3 players.  Then, for each draft outcome, 100 games are played to completion where each player follows the post-draft strategy of the Quo bot provided with the Lux Delux software package.  Each player $i$, $i=1,2,3$, has a set of features $S_i$ associated with each outcome.  Each feature set is assigned a value $v_i \in \{0,1,...,100\}$ equal to the number of games that player $i$ eventually won from the associated draft outcome.  This provides a collection of feature set value pairs $\{(S_i, v_i)\}$ of size equal to three times the number of draft outcomes collected.  Next, supervised machine learning is applied to obtain a general function
 \[ f: S \mapsto v \in \textbf{R} \] 
 that estimates the merit of the feature set $S$ when following Quo's post-draft strategy.  Finally, for a draft outcome $Z = (A_1,A_2,A_3)$ with $A_i$ being the set of player $i$'s territory selections, we calculate $v_i = f(S_i)$ where $S_i$ is the feature set associated with $A_i$, and define the value of the draft outcome $Z$ for player $i$ to be
-\[ V_i(Z) = v_i^+ / \left(v_1^+ + v_2^+ + v_3^+\right), \]
+%\begin{equation}
+%	\label{eq:evalFunc}
+%	V_i(Z) = \frac{v_i^+}{\left(v_1^+ + v_2^+ + v_3^+\right)},
+%\end{equation}
+\[ V_i(Z) = \frac{v_i^+}{\left(v_1^+ + v_2^+ + v_3^+\right)}, \]
 where $v_i^+ = \max(0, v_i)$.  
 %Note that even though all training values $v_i$ are nonnegative, a learner could allow $f$ to be negative and so we take the max to ensure $V_i(Z) \in [0,1]$.  
 %Thus, $V_i(Z) \in [0, 1]$ approximately measures the value of our selections relative to the picks made by the other players, providing an estimate of player $i$'s chance of winning from $Z$.
 Thus, player $i$ attempts to maximize the estimated merit $v_i$ of his or her selections while minimizing those of the opponents.
 
-Our general function $f$ was computed off-line from $7364$ random draft outcomes for a total of $22092$ $(S,v)$ pairs.  We used Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) were represented as nominal features and features (iii) and (iv) were numeric.  Thus, $f(S)$ can be calculated by simply summing the weights, displayed in Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring}, of the features present in $S$.  However, there are some features of type (i) which did not appear in any of the $22092$ feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features were calculated through linear extrapolation of the closest two continent counts for the associated continent.  As an example, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
-\[ 36.15 + (36.15 - 24.10) = 48.20. \]  
+Our general function $f$ was computed off-line from $7364$ random draft outcomes for a total of $22092$ $(S,v)$ pairs.  We used Weka \cite{Weka} to weight each individual feature using Weka's linear regression classifier (with no attribute selection), where features (i) and (ii) were represented as nominal features and features (iii) and (iv) were numeric.  Thus, $f(S)$ can be calculated by simply summing the weights, displayed in Figure \ref{fig:TerritoryValues} and Table \ref{tab:MoreScoring}, of the features present in $S$.  However, there are some features of type (i) which did not appear in any of the $22092$ feature sets because of their unlikeliness of occurring through random drafting; for instance, there were no cases where one player owned all 9 territories of North America.  The weights of these features were calculated through linear extrapolation of the closest two continent counts for the associated continent.  %As an example, the weight for owning all 9 territories in North America is calculated from the weights for owning 8 territories and 7 territories in North America via
+%\[ 36.15 + (36.15 - 24.10) = 48.20. \]  
 
 %\begin{table*}[t]
 %  \begin{center} 
@@ -291,40 +329,6 @@ Our general function $f$ was computed off-line from $7364$ random draft outcomes
 %  \end{center}
 %\end{table*}
 
-\begin{table}[t]
-	\centering
-		\caption{The weights for features (ii), (iii), and (iv) as computed in Weka.} 
-		\label{tab:MoreScoring}
-%		\begin{footnotesize}
-		\begin{tabular}{|c|c|}
-			\hline
-			\textbf{Feature} & \textbf{Points} \\
-			\hline
-			First to play & 13.38 \\
-			\hline
-			Second to play & 5.35 \\
-			\hline
-			Each unique enemy neighbor & -0.07 \\
-			\hline
-			Each ordered pair of friendly neighbors & 0.48 \\
-			\hline
-		\end{tabular}
-%		\end{footnotesize}
-	
-\end{table}
-
-We now show how to use Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} to compute $V_i(Z)$ for the draft outcome given in Figure \ref{fig:DraftExample}.  Player 1 (blue) has 4 territories in Australia, 0 in South America, 2 in Africa, 1 in North America, 3 in Europe, and 4 in Asia.  In addition, player 1 has 18 distinct enemy neighbours and 22 ordered pairs of friendly neighbours.  Assuming player 1 is first to play, $f(S_1)$ is computed as
-\begin{eqnarray*}
-% 	f(S_1) &=& [10.7097 + 0.6904 + 10.7207 \\ && +\ 0.9766 + 43.7726 + 23.6086] \\ &&+\ [13.3818 + 18(-0.0719) + 22(0.4799)] \\
-% 				 &=& 113.124,
- 	f(S_1) &=& [10.71 + 0.69 + 10.72 + 0.98 + 43.77 \\ &&+\ 23.61] + [13.38 + 18(-0.07) + 22(0.48)] \\
- 				 &=& 113.12,
-\end{eqnarray*}
-where the values in the first set of brackets are from Table \ref{tab:ContScoring} and the second set of brackets are from Table \ref{tab:MoreScoring}.  This gives $f(S_1) = 113.12$.  We can similarly compute the values of the feature sets for player 2 (green) and player 3 (red) as %$f(S_2) = 89.4739$ and $f(S_3) = 119.6547$ 
-$f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $V_i(Z)$ is computed via $V_i(Z) = f(S_i) / \left(f(S_1) + f(S_2) + f(S_3) \right)$, giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
-$\vec{V}(Z) = (0.35, 0.28, 0.37)$.
-
-
 \begin{figure}[t]
 	\centering
 	\includegraphics[scale=0.3]{../ForPublication/figs/DraftExample.png}
@@ -333,29 +337,42 @@ $\vec{V}(Z) = (0.35, 0.28, 0.37)$.
 	\label{fig:DraftExample}
 \end{figure}
 
-\section{Empirical Evaluation}
-
 \begin{figure*}[t]
 	\centering
 	\subfigure[]{
-		\includegraphics[scale=.4]{GreedyRandomUct.png}
+		\includegraphics[scale=.45]{GreedyRandomUct.png}
 		\label{fig:GreedyRandomUct}
 	} %\hspace{5pt}
 	\subfigure[]{
-		\includegraphics[scale=.4]{gamesWon.png}
+		\includegraphics[scale=.45]{gamesWon.png}
 		\label{fig:gamesWon}
 	} %\hspace{5pt}
 	\subfigure[]{
-		\includegraphics[scale=.4]{BoscoeKillQuo.png}
-		\label{fig:BoscoeKillbotQuo}
+		\includegraphics[scale=.45]{BoscoeKillQuo.png}
+		\label{fig:BoscoeKillBotQuo}
 	}
 	\caption[]{Risk bot performances.  Error bars indicate 95\% confidence intervals.}
 	\label{fig:RiskResults}
 \end{figure*}
 
+We now show how to use Figure \ref{fig:TerritoryValues} and Table \ref{tab:MoreScoring} to compute $V_i(Z)$ for the draft outcome given in Figure \ref{fig:DraftExample}.  Player 1 (blue) has 4 territories in Australia, 0 in South America, 2 in Africa, 1 in North America, 3 in Europe, and 4 in Asia.  In addition, player 1 has 18 distinct enemy neighbours and 22 ordered pairs of friendly neighbours.  Assuming player 1 is first to play, $f(S_1)$ is computed as
+\begin{eqnarray*}
+% 	f(S_1) &=& [10.7097 + 0.6904 + 10.7207 \\ && +\ 0.9766 + 43.7726 + 23.6086] \\ &&+\ [13.3818 + 18(-0.0719) + 22(0.4799)] \\
+% 				 &=& 113.124,
+ 	f(S_1) &=& [10.71 + 0.69 + 10.72 + 0.98 + 43.77 \\ &&+\ 23.61] + [13.38 + 18(-0.07) + 22(0.48)] \\
+ 				 &=& 113.12,
+\end{eqnarray*}
+where the values in the first set of brackets are from Figure \ref{fig:TerritoryValues} and the second set of brackets are from Table \ref{tab:MoreScoring}.  This gives $f(S_1) = 113.12$.  We can similarly compute the values of the feature sets for player 2 (green) and player 3 (red) as %$f(S_2) = 89.4739$ and $f(S_3) = 119.6547$ 
+$f(S_2) = 89.47$ and $f(S_3) = 119.65$ respectively, where player 2 is second to play.  Finally, $V_i(Z)$ is computed via %$V_i(Z) = f(S_i) / \left(f(S_1) + f(S_2) + f(S_3) \right)$, 
+\[ V_i(Z) = \frac{f(S_i)}{\left(f(S_1) + f(S_2) + f(S_3) \right)}, \]
+giving us %$r_i(Z) = \{0.3509, 0.2776, 0.3712\}$ 
+$\vec{V}(Z) = (0.35, 0.28, 0.37)$.
+
+\section{Empirical Evaluation}
+
 % Mention how fast each simulation was
 
-We created a ``UCT-Quo'' bot by replacing the drafting rules of the Quo bot provided in Lux Delux with our approach of combining UCT and the machine-learned evaluation function.  The Quo bot is one of the four strongest bots provided by the game, according to the game designers.  For comparison, we also created a ``Random-Quo'' and a ``Greedy-Quo'' bot that replace Quo's drafting rules with a random drafting strategy and a ``greedy" strategy, respectively.  The greedy strategy works as follows: At any state $\hat{s}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made, using the same features as described in the previous section.  We can then calculate $\hat{V}_i(\hat{s}) = f(\hat{S_i}) / (f(\hat{S_1}) + f(\hat{S_2}) + f(\hat{S_3}))$ of the state $\hat{s}$, where $f$ is our machine-learned evaluation function.  Greedy picks the territory which leads to the state $\hat{s}$ with the greatest $\hat{V}_i(\hat{s})$ value, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  For example, on an empty board, we can conclude from Tables \ref{tab:ContScoring} and \ref{tab:MoreScoring} that Greedy will always open by picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe) because Europe has the biggest increase in score from 0 to 1 territory.  
+We created a ``UCT-Quo'' bot by replacing the drafting rules of the Quo bot provided in Lux Delux with our approach of combining UCT and the machine-learned evaluation function.  The Quo bot is one of the four strongest bots provided by the game, according to the game designers.  For comparison, we also created a ``Random-Quo'' and a ``Greedy-Quo'' bot that replace Quo's drafting rules with a random drafting strategy and a ``greedy" strategy, respectively.  The greedy strategy works as follows: At any state $\hat{s}$ in the draft (i.e.~a partial assignment of territories to players), we can obtain temporary feature sets $\hat{S_1}, \hat{S_2}, \hat{S_3}$ for each player of the current selections made, using the same features as described in the previous section.  We can then calculate $\hat{V}_i(\hat{s}) = f(\hat{S_i}) / (f(\hat{S_1}) + f(\hat{S_2}) + f(\hat{S_3}))$ of the state $\hat{s}$, where $f$ is our machine-learned evaluation function.  Greedy picks the territory which leads to the state $\hat{s}$ with the greatest $\hat{V}_i(\hat{s})$ value, breaking ties by selecting randomly among the territories with the fewest number of unoccupied neighbours.  For example, on an empty board, we can conclude from Figure \ref{fig:TerritoryValues} and \ref{tab:MoreScoring} that Greedy will always open by picking a territory in Europe with exactly three neighbours (the fewest of all territories in Europe) because Europe has the biggest increase in score from 0 to 1 territory.  
 Greedy can be seen as a 1-ply lookahead search that uses $\hat{V}_i(\hat{s})$ as an evaluation function, despite $f$ being designed to only evaluate draft outcomes.  
 
 We ran several preliminary matches consisting of only UCT-Quo bots with different exploration parameters and found that $c=0.01$ provided the best results.  Thus, UCT-Quo used $c=0.01$ in all later experiments.  For each pick, UCT-Quo ran $3000$ simulations from the root decision point, taking less than one second per pick on an Intel Core 2 Duo CPU at 2.00 GHz with 4GB of RAM.  We also pitted UCT-Quo against the four difficult bots in the game Lux Delux: Quo, EvilPixie, KillBot, and Boscoe.
@@ -364,7 +381,7 @@ We present the experimental results in Figure \ref{fig:RiskResults}.  For each c
 
 Firstly, Figure \ref{fig:GreedyRandomUct} shows that UCT-Quo came first place against Greedy-Quo and Random-Quo in terms of both the average draft evaluation score from our machine-learned outcome evaluator (leftmost bars), and in number of actual games won (rightmost bars).  This suggests that UCT is a good choice for drafting Risk territories.  Furthermore, since Random-Quo wins only a small percentage of games despite having an identical post-draft strategy as its opponents, we have evidence that the drafting phase in Risk is crucial to success.  Finally, note that the similarity in shape between the leftmost and rightmost bars suggests that our draft outcome evaluator does a good job at approximating Quo's chances of winning from an outcome. 
 
-Next, a five-bot round robin tournament consisting of UCT-Quo and the four difficult Lux Delux bots was played and the total number of wins for each bot in the tournament is shown in Figure \ref{fig:gamesWon}.  The five bots were competing in three-player matches where each bot competed against all combinations of two other bots for a total of 10 combinations.  The results clearly show that UCT-Quo is superior to the other four bots as it wins nearly double and nearly triple the number of games as the next closest competitors Killbot and Quo respectively.  Full results of the tournament are provided in Table \ref{tab:roundRobin}.
+Next, a five-bot round robin tournament consisting of UCT-Quo and the four difficult Lux Delux bots was played and the total number of wins for each bot in the tournament is shown in Figure \ref{fig:gamesWon}.  The five bots were competing in three-player matches where each bot competed against all combinations of two other bots for a total of 10 combinations.  The results clearly show that UCT-Quo is superior to the other four bots as it wins nearly double and nearly triple the number of games as the next closest competitors KillBot and Quo respectively.  Full results of the tournament are provided in Table \ref{tab:roundRobin}.
 
 \begin{table}[t]
 	\centering
@@ -381,18 +398,18 @@ Next, a five-bot round robin tournament consisting of UCT-Quo and the four diffi
 			\hline
 			UCT-Quo & 181 & $\pm$ & 12.80 & 	UCT-Quo & 190 & $\pm$ & 16.08\\
 			Quo & 60 & $\pm$ & 14.82 & 				EvilPixie &  51 & $\pm$ & 12.98\\
-			Killbot & 59 & $\pm$ & 12.10 & 		Killbot &  59 & $\pm$ & 11.44\\
+			KillBot & 59 & $\pm$ & 12.10 & 		KillBot &  59 & $\pm$ & 11.44\\
 			\hline
 			UCT-Quo & 254 & $\pm$ & 12.47 & 	UCT-Quo & 230 & $\pm$ & 12.20\\
-			EvilPixie & 36 & $\pm$ & 11.56 & 	Killbot &  68 & $\pm$ & 11.80\\
+			EvilPixie & 36 & $\pm$ & 11.56 & 	KillBot &  68 & $\pm$ & 11.80\\
 			Boscoe & 10 & $\pm$ & 6.26 & 			Boscoe &  2 & $\pm$ & 2.74\\
 			\hline
 			Quo & 105 & $\pm$ & 10.19 & 			Quo & 126 & $\pm$ & 9.39 \\
 			EvilPixie & 90 & $\pm$ & 10.84 & 	EvilPixie &  128 & $\pm$ & 8.00 \\
-			Killbot & 105 & $\pm$ & 8.04 & 		Boscoe &  46 & $\pm$ & 10.42 \\
+			KillBot & 105 & $\pm$ & 8.04 & 		Boscoe &  46 & $\pm$ & 10.42 \\
 			\hline
 			Quo & 67 & $\pm$ & 7.20 & 				EvilPixie & 63 & $\pm$ & 7.31 \\
-			Killbot & 185 & $\pm$ & 10.57 & 	Killbot &  181 & $\pm$ & 10.80 \\
+			KillBot & 185 & $\pm$ & 10.57 & 	KillBot &  181 & $\pm$ & 10.80 \\
 			Boscoe & 48 & $\pm$ & 8.84 & 			Boscoe &  56 & $\pm$ & 9.95 \\
 			\hline
 		\end{tabular}
@@ -400,7 +417,9 @@ Next, a five-bot round robin tournament consisting of UCT-Quo and the four diffi
 	
 \end{table}
 
-Finally, we compare two particular results from the round robin tournament in Figure \ref{fig:BoscoeKillbotQuo}.  The blue bars show that KillBot was the strongest among Boscoe, KillBot, and Quo, having won roughly 60\% of the games against these two opponents.  However, when the hand-coded drafting strategy of Quo was replaced by our UCT approach, we see that UCT-Quo did significantly better than Quo against the same two opponents, having won over 75\% of the games (the red bars).  This result again demonstrates that drafting territories is an important stage of Risk, and that combining UCT with an automated evaluation function is an effective computational approach to this problem.
+Finally, we compare two particular results from the round robin tournament in Figure \ref{fig:BoscoeKillBotQuo}.  The blue bars show that KillBot was the strongest among Boscoe, KillBot, and Quo, having won roughly 60\% of the games against these two opponents.  However, when the hand-coded drafting strategy of Quo was replaced by our UCT approach, we see that UCT-Quo did significantly better than Quo against the same two opponents, having won over 75\% of the games (the red bars).  This result again demonstrates that drafting territories is an important stage of Risk, and that combining UCT with an automated evaluation function is an effective computational approach to this problem.
+
+UCT-Quo's typical strategy is to claim many neighboring territories in North America and prevent a player from claiming all of South America or Africa by selecting the last available territory in those continents when necessary.  This behavior can be understood from Figure \ref{fig:TerritoryValues} as the weights for having many territories in North America are much larger than the weights for having few to no territories there.  In addition, there are large increases in weight from having all but one territory to having every territory in South America and Africa.  Since UCT-Quo uses $V_i(Z)$ to evaluate draft outcomes, it believes its chances of winning are better if it stops its opponents from beginning the game with all of South America or Africa.
 
 \section{Conclusions}
 
@@ -410,7 +429,7 @@ Finally, we compare two particular results from the round robin tournament in Fi
 
 We presented a technique for drafting territories in the board game Risk.  Our approach combines the UCT algorithm with a machine-learned draft outcome evaluator to trim the length of each UCT simulation.  The augmented UCT-Quo bot outperformed all of the difficult bots tested within Lux Delux, including the Quo bot itself.  Our experiments indicate that the drafting stage is an important part of Risk, and combining UCT with an evaluation function is an effective means of drafting territories.  As mentioned, our drafting technique is quite fast (less than a second per pick) and could be appealing to anyone making a bot for a future commercial version of Risk.
 
-We see potential future work stemming from using UCT and a machine-learned evaluator in other types of games, particularly in other drafting-type scenarios such as in fantasy sports leagues.  Furthermore, many sports video games include a rookie or fantasy draft component and a UCT approach could provide a more intelligent opponent than current implementations.  Finally, we suspect that a more sophisticated supervised learning technique than simple linear regression may improve the performance of our Risk bot.  
+We see potential future work stemming from using UCT and a machine-learned evaluator in other types of games, particularly in other drafting-type scenarios such as in fantasy sports leagues.  Furthermore, many sports video games include a rookie or fantasy draft component and a UCT approach could provide a more intelligent opponent than current implementations.  These and other drafting "games" are convenient because the number of turns each player gets is typically fixed, guaranteeing that UCT simulations will terminate after a predictable amount of time (by possibly using a draft outcome evaluator).  Finally, we suspect that a more sophisticated supervised learning technique than simple linear regression may improve the performance of our Risk bot.  
 
 %\section*{Acknowledgments}
 %We would like to thank Vadim Bulitko for directing us to Lee's thesis and for suggesting Fantasy Risk.  %We would also like to thank SillySoft for providing full source code of their Risk bots in Lux Delux.
